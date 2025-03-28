@@ -1,0 +1,17 @@
+# This YAML file defines all machines that Ansible needs to know about to run playbooks and configure machines.
+all:
+  hosts:
+    # The following line defines how this machine will be refered to in ansible scripts.
+    main-site:
+      # This one tells ansible that this host is reached using incus, and the name of the machine in incus is `main-site`.
+      ansible_incus_host: main-site
+  # You can set variables here to use in your ansible playbooks. For example, you can set the flags here to set them dynamically when setting up the challenge.
+  vars:
+    # Do not change these.
+    ansible_connection: community.general.incus
+    ansible_user: root
+    ansible_incus_remote: local
+    # Name of your track. Do not change.
+    ansible_incus_project: {{ data.name }}
+
+    # Add variables if needed here.

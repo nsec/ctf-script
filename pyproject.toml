@@ -1,0 +1,35 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[project]
+name = "ctf-script"
+authors = [{ name = "NorthSec Challenge Designers", email = "info@nsec.io" }]
+description = "NorthSec CTF challenges"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "jinja2==3.1.5",
+    "pyyaml<7",
+    "jsonschema==4.23.0",
+    "coloredlogs==15.0.1",
+    "setuptools",
+    "argcomplete",
+    "black",
+]
+version = "1.0.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+coderunner = ["pybadges", "standard-imghdr ; python_version >= \"3.13\""]
+
+[project.scripts]
+ctf = "ctf.__main__:main"
+
+[tool.poetry]
+
+packages = [{ include = "ctf" }]

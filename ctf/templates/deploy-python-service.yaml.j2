@@ -1,0 +1,115 @@
+# This is the main ansible script to deploy the challenge.
+
+# Example on how to run stuff on all hosts of the track
+- name: "Install Python, PIP and VirtualEnvironment on each host"
+  hosts: "*"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    # This is a helper task that loads the tracks' `track.yaml` file and loads the flags as
+    # ansible facts (like variables) to use in subsequent steps. The key is the `discourse` tag
+    # of the flag. See the "Create flag file" task later in this file for an example on how to use/print the flags.
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+        
+    - name: Initial System Upgrade
+      ansible.builtin.apt:
+        update_cache: true
+        install_recommends: false
+        upgrade: full
+
+    - name: Install Python3 and dependencies
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+          - virtualenv
+        state: present
+
+# Run this only on the `main-site` host. Sets up apache2 and php.
+- name: Specific tasks for "main-site"
+  hosts: "main-site"
+  tasks:
+    - name: Create service user
+      ansible.builtin.user:
+        name: service
+        shell: /bin/sh
+        state: present
+
+    - name: Copy the application
+      ansible.builtin.copy:
+        src: "challenge/{{ '{{ item.src }}' }}"
+        dest: /home/service/
+        owner: "{{ '{{ item.owner }}' }}"
+        group: "{{ '{{ item.group }}' }}"
+        mode: "{{ '{{ item.mode }}' }}"
+      loop:
+        - src: app.py
+          owner: root
+          group: root
+          mode: '0644'
+        - src: flag-1.txt
+          owner: service
+          group: service
+          mode: '0600'
+
+    - name: Python PIP install virtual environment
+      ansible.builtin.pip:
+        chdir: /home/service/
+        virtualenv: /home/service/
+        state: present
+        name:
+          - flask
+
+    # Example on how to use flags that were loaded in the "Load Flags" task earlier in the file.
+    - name: Create flag file
+      ansible.builtin.copy:
+        dest: /home/service/flag-rce.txt
+        owner: service
+        group: service
+        mode: '0644'
+        content: |
+          {{ '{{' }} track_flags.{{ data.name | replace("-","_") }}_flag_1 {{ '}}' }} (2/2)
+          {{ '{{ "" }}' }}
+
+    - name: Create systemctl service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/my_track.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=My track systemd service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=service
+          Group=service
+          WorkingDirectory=/home/service
+          ExecStart=/home/service/bin/flask run --port 5000 -h ::
+          Restart=on-failure
+          RestartSec=3s
+
+          [Install]
+          WantedBy=default.target
+
+    - name: Start my_track service
+      ansible.builtin.service:
+        name: my_track.service
+        state: restarted
+        enabled: true
+        daemon_reload: true
+
+# If you have many servers in your track with different deployments, it's probably better to separate them in ansible playbooks and import them like this.
+# - import_playbook: main-website.yaml
+# - import_playbook: challenge-robots.yaml
+# - import_playbook: challenge-lfi.yaml
+# - import_playbook: challenge-xxe.yaml
+        
