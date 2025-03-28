@@ -17,9 +17,15 @@ import coloredlogs
 import jinja2
 import yaml
 
-import ctf.validate_json_schemas
-import ctf.validators
-from ctf.utils import find_root_directory, parse_track_yaml
+from ctf.utils import (
+    find_ctf_root_directory,
+    get_ctf_script_root_directory,
+    get_ctf_script_schemas_directory,
+    get_ctf_script_templates_directory,
+    parse_track_yaml,
+)
+from ctf.validate_json_schemas import validate_with_json_schemas
+from ctf.validators import ValidationError, validators_list
 
 try:
     import pybadges
@@ -29,10 +35,12 @@ except ImportError:
     _has_pybadges = False
 
 LOG = logging.getLogger()
-LOG.setLevel(logging.DEBUG)
+LOG.setLevel(level=logging.DEBUG)
 coloredlogs.install(level="DEBUG", logger=LOG)
 
-ROOT_DIRECTORY = find_root_directory()
+CTF_ROOT_DIRECTORY = find_ctf_root_directory()
+TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
+SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
 
 
 @unique
@@ -42,7 +50,7 @@ class Template(Enum):
     FILES_ONLY = "files-only"
     TRACK_YAML_ONLY = "track-yaml-only"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -52,25 +60,25 @@ class OutputFormat(Enum):
     CSV = "csv"
     YAML = "yaml"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
 def requires_pybadges(f):
     def wrapper(*args, **kwargs):
         if not _has_pybadges:
-            LOG.fatal("Module pybadges was not found.")
-            exit(1)
+            LOG.critical(msg="Module pybadges was not found.")
+            exit(code=1)
 
         f(*args, **kwargs)
 
     return wrapper
 
 
-def terraform_binary():
-    path = shutil.which("tofu")
+def terraform_binary() -> str:
+    path = shutil.which(cmd="tofu")
     if not path:
-        path = shutil.which("terraform")
+        path = shutil.which(cmd="terraform")
 
     if not path:
         raise Exception("Couldn't find Terraform or OpenTofu")
@@ -78,37 +86,41 @@ def terraform_binary():
     return path
 
 
-def new(args):
-    LOG.info(f"Creating a new track: {args.name}")
-    if not re.match(r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", args.name):
-        LOG.fatal(
-            """The track name Valid instance names must fulfill the following requirements:
+def new(args: argparse.Namespace) -> None:
+    LOG.info(msg=f"Creating a new track: {args.name}")
+    if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=args.name):
+        LOG.critical(
+            msg="""The track name Valid instance names must fulfill the following requirements:
 * The name must be between 1 and 63 characters long;
 * The name must contain only letters, numbers and dashes from the ASCII table;
 * The name must not start with a digit or a dash;
 * The name must not end with a dash."""
         )
-        exit(1)
+        exit(code=1)
 
-    directory = f"{ROOT_DIRECTORY}/challenges/{args.name}"
-
-    if os.path.exists(directory):
+    if os.path.exists(
+        path=(
+            new_challenge_directory := os.path.join(
+                CTF_ROOT_DIRECTORY, "challenges", args.name
+            )
+        )
+    ):
         if args.force:
-            LOG.debug(f"Deleting {directory}")
-            shutil.rmtree(directory)
+            LOG.debug(msg=f"Deleting {new_challenge_directory}")
+            shutil.rmtree(new_challenge_directory)
         else:
-            LOG.fatal(
+            LOG.critical(
                 "Track already exists with that name. Use `--force` to overwrite the track."
             )
-            exit(1)
+            exit(code=1)
 
-    os.mkdir(directory)
+    os.mkdir(new_challenge_directory)
 
-    LOG.debug(f"Directory {directory} created.")
+    LOG.debug(msg=f"Directory {new_challenge_directory} created.")
 
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(
-            f"{ROOT_DIRECTORY}/scripts/templates", encoding="utf-8"
+            searchpath=TEMPLATES_ROOT_DIRECTORY, encoding="utf-8"
         )
     )
 
@@ -132,7 +144,7 @@ def new(args):
     ipv6_address = f"216:3eff:fe{rb[0]}{rb[1]}:{rb[2]}{rb[3]}{rb[4]}{rb[5]}"
     full_ipv6_address = f"{ipv6_subnet}:{ipv6_address}"
 
-    track_template = env.get_template("track.yaml.j2")
+    track_template = env.get_template(name="track.yaml.j2")
     render = track_template.render(
         data={
             "name": args.name,
@@ -141,46 +153,62 @@ def new(args):
             "template": args.template.value,
         }
     )
-    with open(f"{directory}/track.yaml", "w", encoding="utf-8") as f:
+    with open(
+        file=(p := os.path.join(new_challenge_directory, "track.yaml")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(render)
 
-    LOG.debug("Wrote track.yaml.")
+    LOG.debug(msg=f"Wrote {p}.")
 
-    posts_directory = f"{directory}/posts"
+    posts_directory = os.path.join(new_challenge_directory, "posts")
 
-    os.mkdir(posts_directory)
+    os.mkdir(path=posts_directory)
 
-    track_template = env.get_template("topic.yaml.j2")
+    LOG.debug(msg=f"Directory {posts_directory} created.")
+
+    track_template = env.get_template(name="topic.yaml.j2")
     render = track_template.render(data={"name": args.name})
-    with open(f"{posts_directory}/{args.name}.yaml", "w", encoding="utf-8") as f:
+    with open(
+        file=(p := os.path.join(posts_directory, f"{args.name}.yaml")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(render)
 
-    LOG.debug(f"Wrote {args.name}.yaml")
+    LOG.debug(msg=f"Wrote {p}.")
 
-    track_template = env.get_template("post.yaml.j2")
+    track_template = env.get_template(name="post.yaml.j2")
     render = track_template.render(data={"name": args.name})
-    with open(f"{posts_directory}/flag1.yaml", "w", encoding="utf-8") as f:
+    with open(
+        file=(p := os.path.join(posts_directory, "flag1.yaml")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(render)
 
-    LOG.debug("Wrote flag1.yaml")
+    LOG.debug(msg=f"Wrote {p}.")
 
     if args.template == Template.TRACK_YAML_ONLY:
         return
 
-    files_directory = f"{directory}/files"
+    files_directory = os.path.join(new_challenge_directory, "files")
 
-    os.mkdir(files_directory)
+    os.mkdir(path=files_directory)
 
-    LOG.debug(f"Wrote {files_directory}")
+    LOG.debug(msg=f"Directory {files_directory} created.")
 
     if args.template == Template.FILES_ONLY:
         return
 
-    terraform_directory = f"{directory}/terraform"
+    terraform_directory = os.path.join(new_challenge_directory, "terraform")
 
-    os.mkdir(terraform_directory)
+    os.mkdir(path=terraform_directory)
 
-    track_template = env.get_template("main.tf.j2")
+    LOG.debug(msg=f"Directory {terraform_directory} created.")
+
+    track_template = env.get_template(name="main.tf.j2")
 
     render = track_template.render(
         data={
@@ -191,88 +219,120 @@ def new(args):
             "full_ipv6_address": full_ipv6_address,
         }
     )
-    with open(f"{terraform_directory}/main.tf", "w", encoding="utf-8") as f:
+    with open(
+        file=(p := os.path.join(terraform_directory, "main.tf")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(render)
 
-    LOG.debug("Wrote main.tf")
+    LOG.debug(msg=f"Wrote {p}.")
 
     os.symlink(
-        f"{ROOT_DIRECTORY}/.deploy/common/variables.tf",
-        f"{terraform_directory}/variables.tf",
+        src=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common", "variables.tf"),
+        dst=(p := os.path.join(terraform_directory, "variables.tf")),
     )
-    LOG.debug("Wrote variables.tf")
+
+    LOG.debug(msg=f"Wrote {p}.")
 
     os.symlink(
-        f"{ROOT_DIRECTORY}/.deploy/common/versions.tf",
-        f"{terraform_directory}/versions.tf",
+        src=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common", "versions.tf"),
+        dst=(p := os.path.join(terraform_directory, "versions.tf")),
     )
-    LOG.debug("Wrote versions.tf")
 
-    ansible_directory = f"{directory}/ansible"
+    LOG.debug(msg=f"Wrote {p}.")
 
-    os.mkdir(ansible_directory)
+    ansible_directory = os.path.join(new_challenge_directory, "ansible")
 
-    track_template = env.get_template(f"deploy-{args.template}.yaml.j2")
+    os.mkdir(path=ansible_directory)
+
+    LOG.debug(msg=f"Directory {ansible_directory} created.")
+
+    track_template = env.get_template(name=f"deploy-{args.template}.yaml.j2")
     render = track_template.render(data={"name": args.name})
-    with open(f"{ansible_directory}/deploy.yaml", "w", encoding="utf-8") as f:
+    with open(
+        file=(p := os.path.join(ansible_directory, "deploy.yaml")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(render)
 
-    LOG.debug("Wrote deploy.yaml")
+    LOG.debug(msg=f"Wrote {p}.")
 
-    track_template = env.get_template("inventory.j2")
+    track_template = env.get_template(name="inventory.j2")
     render = track_template.render(data={"name": args.name})
-    with open(f"{ansible_directory}/inventory", "w", encoding="utf-8") as f:
+    with open(
+        file=(p := os.path.join(ansible_directory, "inventory")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
         f.write(render)
 
-    LOG.debug("Wrote ansible inventory file")
+    LOG.debug(msg=f"Wrote {p}.")
 
-    challenge_directory = f"{ansible_directory}/challenge"
+    challenge_directory = os.path.join(ansible_directory, "challenge")
 
-    os.mkdir(challenge_directory)
+    os.mkdir(path=challenge_directory)
+
+    LOG.debug(msg=f"Directory {challenge_directory} created.")
 
     if args.template == Template.APACHE_PHP:
-        track_template = env.get_template("index.php.j2")
+        track_template = env.get_template(name="index.php.j2")
         render = track_template.render(data={"name": args.name})
-        with open(f"{challenge_directory}/index.php", "w", encoding="utf-8") as f:
+        with open(
+            file=(p := os.path.join(challenge_directory, "index.php")),
+            mode="w",
+            encoding="utf-8",
+        ) as f:
             f.write(render)
 
-        LOG.debug("Wrote index.php")
+        LOG.debug(msg=f"Wrote {p}.")
 
     if args.template == Template.PYTHON_SERVICE:
-        track_template = env.get_template("app.py.j2")
+        track_template = env.get_template(name="app.py.j2")
         render = track_template.render(data={"name": args.name})
-        with open(f"{challenge_directory}/app.py", "w", encoding="utf-8") as f:
+        with open(
+            file=(p := os.path.join(challenge_directory, "app.py")),
+            mode="w",
+            encoding="utf-8",
+        ) as f:
             f.write(render)
 
-        LOG.debug("Wrote app.py")
+        LOG.debug(msg=f"Wrote {p}.")
 
-        with open(f"{challenge_directory}/flag-1.txt", "w", encoding="utf-8") as f:
+        with open(
+            file=(p := os.path.join(challenge_directory, "flag-1.txt")),
+            mode="w",
+            encoding="utf-8",
+        ) as f:
             f.write("FLAG-CHANGEME (1/2)\n")
 
-        LOG.debug("Wrote flag-1.txt")
+        LOG.debug(msg=f"Wrote {p}.")
 
 
-def destroy(args):
-    LOG.info("tofu destroy...")
+def destroy(args: argparse.Namespace) -> None:
+    LOG.info(msg="tofu destroy...")
 
-    if not os.path.exists(f"{ROOT_DIRECTORY}/.deploy/modules.tf"):
-        LOG.fatal("Nothing to destroy.")
-        exit(1)
+    if not os.path.exists(
+        path=(path := os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "modules.tf"))
+    ):
+        LOG.critical(msg="Nothing to destroy.")
+        exit(code=1)
 
-    with open(f"{ROOT_DIRECTORY}/.deploy/modules.tf", "r") as f:
+    with open(file=path, mode="r") as f:
         modules_tf = f.read()
 
     tracks = set(
         re.findall(
-            r"^module \"track-([a-z][a-z0-9\-]{0,61}[a-z0-9])\"",
-            modules_tf,
-            re.MULTILINE,
+            pattern=r"^module \"track-([a-z][a-z0-9\-]{0,61}[a-z0-9])\"",
+            string=modules_tf,
+            flags=re.MULTILINE,
         )
     )
 
     r = (
         subprocess.run(
-            ["incus", "project", "get-current"],
+            args=["incus", "project", "get-current"],
             check=True,
             capture_output=True,
         )
@@ -284,8 +344,8 @@ def destroy(args):
         projects = {
             project["name"]
             for project in json.loads(
-                subprocess.run(
-                    ["incus", "project", "list", "--format=json"],
+                s=subprocess.run(
+                    args=["incus", "project", "list", "--format=json"],
                     check=False,
                     capture_output=True,
                 ).stdout.decode()
@@ -294,35 +354,32 @@ def destroy(args):
 
         projects = list((projects - tracks))
         if len(projects) == 0:
-            LOG.fatal(
-                "No project to switch to. This should never happen as the default should always exists."
+            LOG.critical(
+                msg="No project to switch to. This should never happen as the default should always exists."
             )
-            exit(1)
+            exit(code=1)
 
-        LOG.info(
-            f"Running `incus project switch {'default' if 'default' in projects else projects[0]}`"
-        )
-        subprocess.run(
-            [
-                "incus",
-                "project",
-                "switch",
-                "default" if "default" in projects else projects[0],
-            ],
-            check=True,
-        )
+        cmd = [
+            "incus",
+            "project",
+            "switch",
+            "default" if "default" in projects else projects[0],
+        ]
+
+        LOG.info(msg=f"Running `{' '.join(cmd)}`")
+        subprocess.run(args=cmd, check=True)
 
     subprocess.run(
-        [terraform_binary(), "destroy", "-auto-approve"],
-        cwd=f"{ROOT_DIRECTORY}/.deploy/",
+        args=[terraform_binary(), "destroy", "-auto-approve"],
+        cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
         check=False,
     )
 
     projects = [
         project["name"]
         for project in json.loads(
-            subprocess.run(
-                ["incus", "project", "list", "--format=json"],
+            s=subprocess.run(
+                args=["incus", "project", "list", "--format=json"],
                 check=False,
                 capture_output=True,
             ).stdout.decode()
@@ -332,8 +389,8 @@ def destroy(args):
     networks = [
         network["name"]
         for network in json.loads(
-            subprocess.run(
-                ["incus", "network", "list", "--format=json"],
+            s=subprocess.run(
+                args=["incus", "network", "list", "--format=json"],
                 check=False,
                 capture_output=True,
             ).stdout.decode()
@@ -343,8 +400,8 @@ def destroy(args):
     network_acls = [
         network_acl["name"]
         for network_acl in json.loads(
-            subprocess.run(
-                ["incus", "network", "acl", "list", "--format=json"],
+            s=subprocess.run(
+                args=["incus", "network", "acl", "list", "--format=json"],
                 check=False,
                 capture_output=True,
             ).stdout.decode()
@@ -352,32 +409,34 @@ def destroy(args):
     ]
 
     for module in re.findall(
-        r"^module \"track-([a-z][a-z0-9\-]{0,61}[a-z0-9])\"", modules_tf, re.MULTILINE
+        pattern=r"^module \"track-([a-z][a-z0-9\-]{0,61}[a-z0-9])\"",
+        string=modules_tf,
+        flags=re.MULTILINE,
     ):
         if module == "common":
             continue
 
         if module in projects:
-            LOG.warning(f"The project {module} was not destroyed properly.")
+            LOG.warning(msg=f"The project {module} was not destroyed properly.")
             if (
                 args.force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
-                    ["incus", "project", "delete", module, "--force"],
+                    args=["incus", "project", "delete", module, "--force"],
                     check=False,
                     capture_output=True,
                     input=b"yes\n",
                 )
 
         if (tmp_module := module[0:15]) in networks:
-            LOG.warning(f"The network {tmp_module} was not destroyed properly.")
+            LOG.warning(msg=f"The network {tmp_module} was not destroyed properly.")
             if (
                 args.force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
-                    ["incus", "network", "delete", tmp_module],
+                    args=["incus", "network", "delete", tmp_module],
                     check=False,
                     capture_output=True,
                 )
@@ -385,26 +444,28 @@ def destroy(args):
         if (tmp_module := module) in network_acls or (
             tmp_module := f"{module}-default"
         ) in network_acls:
-            LOG.warning(f"The network ACL {tmp_module} was not destroyed properly.")
+            LOG.warning(msg=f"The network ACL {tmp_module} was not destroyed properly.")
             if (
                 args.force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
-                    ["incus", "network", "acl", "delete", tmp_module],
+                    args=["incus", "network", "acl", "delete", tmp_module],
                     check=False,
                     capture_output=True,
                 )
 
-    LOG.info("Successfully destroyed every track")
+    LOG.info(msg="Successfully destroyed every track")
 
 
-def flags(args):
+def flags(args: argparse.Namespace) -> None:
     tracks = set()
-    for entry in os.listdir(f"{ROOT_DIRECTORY}/challenges/"):
-        if os.path.isdir(f"{ROOT_DIRECTORY}/challenges/{entry}") and os.path.exists(
-            os.path.join(ROOT_DIRECTORY, "challenges", entry, "track.yaml")
-        ):
+    for entry in os.listdir(
+        path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
+    ):
+        if os.path.isdir(
+            s=(track_directory := os.path.join(challenges_directory, entry))
+        ) and os.path.exists(path=os.path.join(track_directory, "track.yaml")):
             if not args.tracks:
                 tracks.add(entry)
             elif entry in args.tracks:
@@ -412,57 +473,63 @@ def flags(args):
 
     flags = []
     for track in tracks:
-        LOG.debug(f"Parsing track.yaml for track {track}")
-        track_yaml = parse_track_yaml(track)
+        LOG.debug(msg=f"Parsing track.yaml for track {track}")
+        track_yaml = parse_track_yaml(track_name=track)
 
         if len(track_yaml["flags"]) == 0:
-            LOG.debug(f"No flag in track {track}. Skipping...")
+            LOG.debug(msg=f"No flag in track {track}. Skipping...")
             continue
 
         flags.extend(track_yaml["flags"])
 
     if not flags:
-        LOG.warning("No flag found...")
+        LOG.warning(msg="No flag found...")
         return
 
     if args.format == OutputFormat.JSON:
-        print(json.dumps(flags, indent=2))
+        print(json.dumps(obj=flags, indent=2))
     elif args.format == OutputFormat.CSV:
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=flags[0].keys())
+        writer = csv.DictWriter(f=output, fieldnames=flags[0].keys())
         writer.writeheader()
-        writer.writerows(flags)
+        writer.writerows(rowdicts=flags)
         print(output.getvalue())
     elif args.format == OutputFormat.YAML:
-        print(yaml.safe_dump(flags))
+        print(yaml.safe_dump(data=flags))
 
 
-def generate(args):
+def generate(args: argparse.Namespace) -> set[str]:
     # Get the list of tracks.
     tracks = set()
 
-    for entry in os.listdir(f"{ROOT_DIRECTORY}/challenges/"):
+    for entry in os.listdir(
+        path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
+    ):
         if args.tracks and entry not in args.tracks:
             continue
 
-        if not os.path.isdir(os.path.join(ROOT_DIRECTORY, "challenges", entry)):
+        if not os.path.isdir(
+            s=(track_directory := os.path.join(challenges_directory, entry))
+        ):
             continue
 
         if not os.path.exists(
-            os.path.join(ROOT_DIRECTORY, "challenges", entry, "terraform", "main.tf")
+            path=os.path.join(track_directory, "terraform", "main.tf")
         ):
             continue
 
         tracks.add(entry)
 
-    LOG.debug(f"Found {len(tracks)} tracks")
+    LOG.debug(msg=f"Found {len(tracks)} tracks")
 
     if tracks:
         # Generate the Terraform modules file.
-        with open(f"{ROOT_DIRECTORY}/.deploy/modules.tf", "w+") as fd:
+        with open(
+            file=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "modules.tf"), mode="w+"
+        ) as fd:
             template = jinja2.Environment().from_string(
-                textwrap.dedent(
-                    """\
+                source=textwrap.dedent(
+                    text="""\
                     module "common" {
                       source = "./common"
                     }
@@ -482,14 +549,14 @@ def generate(args):
             fd.write(template.render(tracks=tracks, production=args.production))
 
         subprocess.run(
-            [terraform_binary(), "init", "-upgrade"],
-            cwd=f"{ROOT_DIRECTORY}/.deploy/",
+            args=[terraform_binary(), "init", "-upgrade"],
+            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             stdout=subprocess.DEVNULL,
             check=True,
         )
         subprocess.run(
-            [terraform_binary(), "validate"],
-            cwd=f"{ROOT_DIRECTORY}/.deploy/",
+            args=[terraform_binary(), "validate"],
+            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             check=True,
         )
 
@@ -498,12 +565,12 @@ def generate(args):
 
 def deploy(args):
     # Run generate first.
-    tracks = generate(args)
+    tracks = generate(args=args)
 
     try:
         subprocess.run(
-            [terraform_binary(), "apply", "-auto-approve"],
-            cwd=f"{ROOT_DIRECTORY}/.deploy/",
+            args=[terraform_binary(), "apply", "-auto-approve"],
+            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             check=True,
         )
     except subprocess.CalledProcessError:
@@ -512,40 +579,40 @@ def deploy(args):
         )
 
         if (input("Do you want to clean and start over? [Y/n] ").lower() or "y") != "y":
-            exit(1)
+            exit(code=1)
 
         args.force = True
-        destroy(args)
+        destroy(args=args)
 
         subprocess.run(
-            [terraform_binary(), "apply", "-auto-approve"],
-            cwd=f"{ROOT_DIRECTORY}/.deploy/",
+            args=[terraform_binary(), "apply", "-auto-approve"],
+            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             check=True,
         )
 
     for track in tracks:
-        LOG.debug(f"Parsing track.yaml for track {track}")
-        track_yaml = parse_track_yaml(track)
+        LOG.debug(msg=f"Parsing track.yaml for track {track}")
+        track_yaml = parse_track_yaml(track_name=track)
 
-        LOG.info(f"Running deploy.yaml with ansible for track {track}...")
-        path = os.path.join(ROOT_DIRECTORY, "challenges", track, "ansible")
-        if not os.path.exists(path):
+        LOG.info(msg=f"Running deploy.yaml with ansible for track {track}...")
+        path = os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "ansible")
+        if not os.path.exists(path=path):
             continue
 
         subprocess.run(
-            ["ansible-playbook", "deploy.yaml", "-i", "inventory"],
+            args=["ansible-playbook", "deploy.yaml", "-i", "inventory"],
             cwd=path,
             check=True,
         )
 
         artifacts_path = os.path.join(path, "artifacts")
-        if os.path.exists(artifacts_path):
+        if os.path.exists(path=artifacts_path):
             shutil.rmtree(artifacts_path)
 
         if not args.production:
             incus_list = json.loads(
-                subprocess.run(
-                    ["incus", "list", f"--project={track}", "--format", "json"],
+                s=subprocess.run(
+                    args=["incus", "list", f"--project={track}", "--format", "json"],
                     check=True,
                     capture_output=True,
                 ).stdout.decode()
@@ -558,7 +625,7 @@ def deploy(args):
                 )[0]["address"]
                 ipv6_to_container_name[ipv6_address] = machine["name"]
 
-            LOG.debug(f"Mapping: {ipv6_to_container_name}")
+            LOG.debug(msg=f"Mapping: {ipv6_to_container_name}")
 
             for service in track_yaml["services"]:
                 if service.get("dev_port_mapping"):
@@ -573,7 +640,7 @@ def deploy(args):
                         .replace(":0", ":")
                     ]
                     subprocess.run(
-                        [
+                        args=[
                             "incus",
                             "config",
                             "device",
@@ -590,8 +657,8 @@ def deploy(args):
                         check=True,
                     )
 
-            LOG.info(f"Running `incus --project={track} list`")
-            subprocess.run(["incus", f"--project={track}", "list"], check=True)
+            LOG.info(msg=f"Running `incus --project={track} list`")
+            subprocess.run(args=["incus", f"--project={track}", "list"], check=True)
 
     if not args.production and args.tracks:
         track_index = input(
@@ -606,31 +673,38 @@ Which? """
             and (track_index := int(track_index))
             and 0 < track_index <= len(args.tracks)
         ):
-            LOG.info(f"Running `incus project switch {args.tracks[track_index - 1]}`")
+            LOG.info(
+                msg=f"Running `incus project switch {args.tracks[track_index - 1]}`"
+            )
             subprocess.run(
-                ["incus", "project", "switch", args.tracks[track_index - 1]], check=True
+                args=["incus", "project", "switch", args.tracks[track_index - 1]],
+                check=True,
             )
         elif track_index:
-            LOG.warning(f"Could not switch project, unrecognized input: {track_index}.")
+            LOG.warning(
+                msg=f"Could not switch project, unrecognized input: {track_index}."
+            )
 
 
-def check(args):
+def check(args: argparse.Namespace) -> None:
     # Run generate first.
-    generate(args)
+    generate(args=args)
 
     # Then run terraform plan.
     subprocess.run(
-        [terraform_binary(), "plan"], cwd=f"{ROOT_DIRECTORY}/.deploy/", check=True
+        args=[terraform_binary(), "plan"],
+        cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
+        check=True,
     )
 
 
 @requires_pybadges
-def stats(args):
-    LOG.debug("Generating statistics...")
+def stats(args: argparse.Namespace) -> None:
+    LOG.debug(msg="Generating statistics...")
     stats = {}
     tracks = []
-    for entry in os.listdir(f"{ROOT_DIRECTORY}/challenges/"):
-        if os.path.isdir(f"{ROOT_DIRECTORY}/challenges/{entry}"):
+    for entry in os.listdir(os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
+        if os.path.isdir(os.path.join(CTF_ROOT_DIRECTORY, "challenges", entry)):
             if not args.tracks:
                 tracks.append(entry)
             elif entry in args.tracks:
@@ -647,7 +721,7 @@ def stats(args):
     stats["flag_count_per_value"] = {}
     challenge_designers = set()
     for track in tracks:
-        track_yaml = parse_track_yaml(track)
+        track_yaml = parse_track_yaml(track_name=track)
         number_of_flags = len(track_yaml["flags"])
         if track_yaml["integrated_with_scenario"]:
             stats["number_of_tracks_integrated_with_scenario"] += 1
@@ -670,15 +744,19 @@ def stats(args):
             challenge_designers.add(challenge_designer)
 
         stats["number_of_files"] = 0
-        if os.path.exists(f"{ROOT_DIRECTORY}/challenges/{track}/files"):
-            for file in os.listdir(f"{ROOT_DIRECTORY}/challenges/{track}/files"):
+        if os.path.exists(
+            path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "files")
+        ):
+            for file in os.listdir(
+                path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "files")
+            ):
                 stats["number_of_files"] += 1
     stats["number_of_challenge_designers"] = len(challenge_designers)
 
     print(json.dumps(stats, indent=2))
     if args.generate_badges:
-        LOG.info("Generating badges...")
-        os.makedirs(".badges", exist_ok=True)
+        LOG.info(msg="Generating badges...")
+        os.makedirs(name=".badges", exist_ok=True)
         write_badge(
             "flag",
             pybadges.badge(left_text="Flags", right_text=str(stats["number_of_flags"])),  # type: ignore
@@ -725,48 +803,50 @@ def stats(args):
             ),
         )
 
-    LOG.debug("Done...")
+    LOG.debug(msg="Done...")
 
 
-def validate(args: argparse.Namespace):
-    LOG.info("Starting ctf validate...")
+def validate(args: argparse.Namespace) -> None:
+    LOG.info(msg="Starting ctf validate...")
 
-    LOG.info(f"Found {len(ctf.validators.validators_list)} Validators")
+    LOG.info(msg=f"Found {len(validators_list)} Validators")
 
-    validators = [
-        validator_class() for validator_class in ctf.validators.validators_list
-    ]
+    validators = [validator_class() for validator_class in validators_list]
 
     tracks = []
-    for track in os.listdir(f"{ROOT_DIRECTORY}/challenges/"):
-        if os.path.isdir(f"{ROOT_DIRECTORY}/challenges/{track}") and os.path.exists(
-            f"{ROOT_DIRECTORY}/challenges/{track}/track.yaml"
+    for track in os.listdir(path=os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
+        if os.path.isdir(
+            s=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track)
+        ) and os.path.exists(
+            path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "track.yaml")
         ):
             tracks.append(track)
 
-    LOG.info(f"Found {len(tracks)} tracks")
+    LOG.info(msg=f"Found {len(tracks)} tracks")
 
-    errors: list[ctf.validators.ValidationError] = []
+    errors: list[ValidationError] = []
 
-    LOG.info("Validating track.yaml files against JSON Schema...")
-    ctf.validate_json_schemas.validate_with_json_schemas(
-        schema=f"{ROOT_DIRECTORY}/schemas/track.yaml.json",
-        files_pattern=f"{ROOT_DIRECTORY}/challenges/*/track.yaml",
+    LOG.info(msg="Validating track.yaml files against JSON Schema...")
+    validate_with_json_schemas(
+        schema=os.path.join(SCHEMAS_ROOT_DIRECTORY, "track.yaml.json"),
+        files_pattern=os.path.join(CTF_ROOT_DIRECTORY, "challenges", "*", "track.yaml"),
     )
-    LOG.info("Validating discourse post YAML files against JSON Schema...")
-    ctf.validate_json_schemas.validate_with_json_schemas(
-        schema=f"{ROOT_DIRECTORY}/schemas/post.json",
-        files_pattern=f"{ROOT_DIRECTORY}/challenges/*/posts/*.yaml",
+    LOG.info(msg="Validating discourse post YAML files against JSON Schema...")
+    validate_with_json_schemas(
+        schema=os.path.join(SCHEMAS_ROOT_DIRECTORY, "post.json"),
+        files_pattern=os.path.join(
+            CTF_ROOT_DIRECTORY, "challenges", "*", "posts", "*.yaml"
+        ),
     )
 
-    LOG.info("Validating terraform files format...")
+    LOG.info(msg="Validating terraform files format...")
     r = subprocess.run(
-        ["tofu", "fmt", "-no-color", "-check", "-recursive", ROOT_DIRECTORY],
+        args=["tofu", "fmt", "-no-color", "-check", "-recursive", CTF_ROOT_DIRECTORY],
         capture_output=True,
     )
     if r.returncode != 0:
         errors.append(
-            ctf.validators.ValidationError(
+            ValidationError(
                 error_name="Tofu format",
                 error_description="Error when checking terraform files formatting. Please run `tofu fmt -recursive ./`",
                 details={
@@ -774,9 +854,9 @@ def validate(args: argparse.Namespace):
                         [
                             *([out] if (out := r.stdout.decode().strip()) else []),
                             *re.findall(
-                                r"(Failed to read file .+)$",
-                                r.stderr.decode().strip(),
-                                re.MULTILINE,
+                                pattern=r"(Failed to read file .+)$",
+                                string=r.stderr.decode().strip(),
+                                flags=re.MULTILINE,
                             ),
                         ]
                     )
@@ -785,20 +865,20 @@ def validate(args: argparse.Namespace):
         )
 
     for validator in validators:
-        LOG.info(f"Running {type(validator).__name__}")
+        LOG.info(msg=f"Running {type(validator).__name__}")
         for track in tracks:
-            errors += validator.validate(track)
+            errors += validator.validate(track_name=track)
 
     # Get the errors from finalize()
     for validator in validators:
         errors += validator.finalize()
 
     if not errors:
-        LOG.info("No error found!")
+        LOG.info(msg="No error found!")
     else:
-        LOG.error(f"{len(errors)} errors found.")
+        LOG.error(msg=f"{len(errors)} errors found.")
         LOG.error(
-            "{:<30} {:<20} {:<40} {:<80}".format(
+            msg="{:<30} {:<20} {:<40} {:<80}".format(
                 "============Error============",
                 "=======Track=======",
                 "=================Details================",
@@ -807,18 +887,20 @@ def validate(args: argparse.Namespace):
         )
         for error in errors:
             LOG.error(
-                "{:<30} {:<20} {:<40} {:<80}".format(
+                msg="{:<30} {:<20} {:<40} {:<80}".format(
                     error.error_name,
                     error.track_name,
                     str(error.details),
                     error.error_description,
                 )
             )
-        exit(1)
+        exit(code=1)
 
 
-def write_badge(name: str, svg: str):
-    with open(f".badges/badge-{name}.svg", "w", encoding="utf-8") as f:
+def write_badge(name: str, svg: str) -> None:
+    with open(
+        file=os.path.join(".badges", f"badge-{name}.svg"), mode="w", encoding="utf-8"
+    ) as f:
         f.write(svg)
 
 
@@ -964,13 +1046,13 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.isdir(f"{ROOT_DIRECTORY}/challenges/"):
+    if not os.path.isdir(s=(p := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))):
         LOG.error(
-            f"Directory `{ROOT_DIRECTORY}/challenges/` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
+            msg=f"Directory `{p}` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
         )
-        exit(1)
+        exit(code=1)
 
-    args.func(args)
+    args.func(args=args)
 
 
 if __name__ == "__main__":

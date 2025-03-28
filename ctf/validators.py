@@ -2,9 +2,9 @@ import abc
 import os
 from dataclasses import dataclass
 
-from ctf.utils import find_root_directory, parse_post_yamls, parse_track_yaml
+from ctf.utils import find_ctf_root_directory, parse_post_yamls, parse_track_yaml
 
-ROOT_DIRECTORY = find_root_directory()
+ROOT_DIRECTORY = find_ctf_root_directory()
 
 
 @dataclass
@@ -31,8 +31,12 @@ class FilesValidator(Validator):
         self.files_mapping = {}
 
     def validate(self, track_name: str) -> list[ValidationError]:
-        if os.path.exists(f"{ROOT_DIRECTORY}/challenges/{track_name}/files"):
-            for file in os.listdir(f"{ROOT_DIRECTORY}/challenges/{track_name}/files"):
+        if os.path.exists(
+            path=(
+                path := os.path.join(ROOT_DIRECTORY, "challenges", track_name, "files")
+            )
+        ):
+            for file in os.listdir(path=path):
                 if file not in self.files_mapping:
                     self.files_mapping[file.lower().strip()] = []
                 self.files_mapping[file.lower().strip()].append(track_name)
@@ -60,7 +64,7 @@ class FlagsValidator(Validator):
         self.flags_mapping = {}
 
     def validate(self, track_name: str) -> list[ValidationError]:
-        track_yaml = parse_track_yaml(track_name)
+        track_yaml = parse_track_yaml(track_name=track_name)
         for flag in track_yaml["flags"]:
             flag_string = flag["flag"].lower().strip()
             if flag_string not in self.flags_mapping:
@@ -90,7 +94,7 @@ class DiscoursePostsAskGodTagValidator(Validator):
         self.discourse_tags_mapping = {}
 
     def validate(self, track_name: str) -> list[ValidationError]:
-        track_yaml = parse_track_yaml(track_name)
+        track_yaml = parse_track_yaml(track_name=track_name)
         discourse_triggers = []
         for flag in track_yaml["flags"]:
             discourse_trigger = flag.get("tags", {}).get("discourse")
@@ -101,7 +105,7 @@ class DiscoursePostsAskGodTagValidator(Validator):
                 self.discourse_tags_mapping[discourse_trigger].append(track_name)
 
         errors = []
-        discourse_posts = parse_post_yamls(track_name)
+        discourse_posts = parse_post_yamls(track_name=track_name)
         for discourse_post in discourse_posts:
             if discourse_post.get("trigger", {}).get("type", "") == "flag":
                 if discourse_post["trigger"]["tag"] not in discourse_triggers:

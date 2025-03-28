@@ -7,37 +7,44 @@ import jsonschema
 import coloredlogs
 
 LOG = logging.getLogger()
+
 if __name__ == "__main__":
-    LOG.addHandler(logging.StreamHandler())
-    LOG.setLevel(logging.DEBUG)
+    LOG.addHandler(hdlr=logging.StreamHandler())
+    LOG.setLevel(level=logging.DEBUG)
     coloredlogs.install(level="DEBUG", logger=LOG)
 
 
-def validate_with_json_schemas(schema: str, files_pattern: str):
-    LOG.info("Starting JSON Schema validator")
-    LOG.info(f"Schema: {schema}")
+def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
+    LOG.info(msg="Starting JSON Schema validator")
+    LOG.info(msg=f"Schema: {schema}")
 
-    schema = json.load(open(schema, "r", encoding="utf-8"))
+    schema = json.load(open(file=schema, mode="r", encoding="utf-8"))
+
+    if not isinstance(schema, dict):
+        LOG.error(msg=f"Loaded schema was not a dictionary: {schema}")
+        exit(code=1)
 
     errors = []
-    for file in glob.glob(files_pattern):
-        LOG.info(f"Validating {file}")
-        yaml_document = yaml.safe_load(open(file, "r", encoding="utf-8"))
+    for file in glob.glob(pathname=files_pattern):
+        LOG.info(msg=f"Validating {file}")
+        yaml_document = yaml.safe_load(
+            stream=open(file=file, mode="r", encoding="utf-8")
+        )
         try:
-            jsonschema.validate(yaml_document, schema)
+            jsonschema.validate(instance=yaml_document, schema=schema)
         except jsonschema.ValidationError as e:
             errors.append((file, e))
 
     if errors:
         LOG.error(
-            f"================= {len(errors)} in JSON Schema validation ================="
+            msg=f"================= {len(errors)} in JSON Schema validation ================="
         )
         for filename, error in errors:
-            LOG.error(f"File: {filename}")
-            LOG.error(f"Error: {error.message}")
-        exit(1)
+            LOG.error(msg=f"File: {filename}")
+            LOG.error(msg=f"Error: {error.message}")
+        exit(code=1)
     else:
-        LOG.info("No error found!")
+        LOG.info(msg="No error found!")
 
 
 if __name__ == "__main__":
