@@ -26,7 +26,7 @@ def find_ctf_root_directory() -> str:
 
     if path == "/":
         if "CTF_ROOT_DIR" not in os.environ:
-            LOG.fatal(
+            LOG.critical(
                 msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable.'
             )
             exit(1)
