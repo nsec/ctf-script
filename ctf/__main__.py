@@ -686,6 +686,12 @@ Which? """
             )
 
 
+def redeploy(args: argparse.Namespace):
+    args.production = False
+    destroy(args=args)
+    deploy(args=args)
+
+
 def check(args: argparse.Namespace) -> None:
     # Run generate first.
     generate(args=args)
@@ -948,6 +954,17 @@ def main():
         action="store_true",
         default=False,
         help="Do a production deployment. Only use this if you know what you're doing.",
+    )
+
+    parser_redeploy = subparsers.add_parser(
+        "redeploy", help="Destroy and deploy all the changes"
+    )
+    parser_redeploy.set_defaults(func=redeploy)
+    parser_redeploy.add_argument(
+        "--tracks",
+        "-t",
+        nargs="+",
+        help="Only redeploy the given tracks (use the folder name)",
     )
 
     parser_deploy = subparsers.add_parser("deploy", help="Deploy all the changes")
