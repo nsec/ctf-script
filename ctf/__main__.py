@@ -19,7 +19,6 @@ import yaml
 
 from ctf.utils import (
     find_ctf_root_directory,
-    get_ctf_script_root_directory,
     get_ctf_script_schemas_directory,
     get_ctf_script_templates_directory,
     parse_track_yaml,
