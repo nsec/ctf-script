@@ -685,7 +685,7 @@ Which? """
             )
 
 
-def redeploy(args: argparse.Namespace):
+def redeploy(args: argparse.Namespace) -> None:
     args.production = False
     destroy(args=args)
     deploy(args=args)
@@ -708,8 +708,12 @@ def stats(args: argparse.Namespace) -> None:
     LOG.debug(msg="Generating statistics...")
     stats = {}
     tracks = []
-    for entry in os.listdir(os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
-        if os.path.isdir(os.path.join(CTF_ROOT_DIRECTORY, "challenges", entry)):
+    for entry in os.listdir(
+        (challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
+    ):
+        if os.path.isdir(
+            (track_directory := os.path.join(challenges_directory, entry))
+        ) and os.path.isfile(os.path.join(track_directory, "track.yaml")):
             if not args.tracks:
                 tracks.append(entry)
             elif entry in args.tracks:
@@ -750,11 +754,9 @@ def stats(args: argparse.Namespace) -> None:
 
         stats["number_of_files"] = 0
         if os.path.exists(
-            path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "files")
+            path=(files_directory := os.path.join(challenges_directory, track, "files"))
         ):
-            for file in os.listdir(
-                path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "files")
-            ):
+            for file in os.listdir(path=files_directory):
                 stats["number_of_files"] += 1
     stats["number_of_challenge_designers"] = len(challenge_designers)
 
