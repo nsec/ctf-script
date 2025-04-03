@@ -52,13 +52,21 @@ def get_ctf_script_schemas_directory() -> str:
 
 
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
-    return yaml.safe_load(
+    r = yaml.safe_load(
         stream=open(
-            file=os.path.join(ROOT_DIRECTORY, "challenges", track_name, "track.yaml"),
+            file=(
+                p := os.path.join(
+                    ROOT_DIRECTORY, "challenges", track_name, "track.yaml"
+                )
+            ),
             mode="r",
             encoding="utf-8",
         )
     )
+
+    r["file_location"] = p
+
+    return r
 
 
 def parse_post_yamls(track_name: str) -> list[dict]:
@@ -72,6 +80,8 @@ def parse_post_yamls(track_name: str) -> list[dict]:
             with open(
                 file=os.path.join(posts_dir, post), mode="r", encoding="utf-8"
             ) as f:
-                post_data = yaml.safe_load(stream=f)
+                r = post_data = yaml.safe_load(stream=f)
+                r["file_location"] = posts_dir
                 posts.append(post_data)
+
     return posts

@@ -37,9 +37,9 @@
         path: "/var/www/html/index.html"
         state: absent
 
-# Run this only on the `main-site` host. Sets up apache2 and php.
-- name: Specific tasks for "main-site"
-  hosts: "main-site"
+# Run this only on the `change-me` host. Sets up apache2 and php.
+- name: Specific tasks for "change-me"
+  hosts: "change-me"
   tasks:
     - name: Copy the main site file (index.php)
       ansible.builtin.template:

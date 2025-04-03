@@ -63,9 +63,9 @@ resource "incus_profile" "this" {
 # !!!! Modify this section as needed to match what you need. !!!! #
 locals {
   instances = {
-    # `main-site` can be changed
-    main-site = {
-      "description" : "Main apache + PHP website",
+    # `change-me` should be changed to something more relevant
+    change-me = {
+      "description" : "CHANGE_MEMain apache + PHP website",
       # This second half of a MAC address was automatically generated. The first half is just below
       "hwaddr" : "{{ data.hardware_address }}",
       # This is the subdomain value for this machine. for example trackname.ctf

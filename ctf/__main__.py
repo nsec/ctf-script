@@ -304,7 +304,7 @@ def new(args: argparse.Namespace) -> None:
             mode="w",
             encoding="utf-8",
         ) as f:
-            f.write("FLAG-CHANGEME (1/2)\n")
+            f.write("FLAG-CHANGE_ME (1/2)\n")
 
         LOG.debug(msg=f"Wrote {p}.")
 
@@ -885,18 +885,20 @@ def validate(args: argparse.Namespace) -> None:
     else:
         LOG.error(msg=f"{len(errors)} errors found.")
         LOG.error(
-            msg="{:<30} {:<20} {:<40} {:<80}".format(
+            msg="{:<30} {:<20} {:<120} {:<40} {:<80}".format(
                 "============Error============",
                 "=======Track=======",
+                "=====================================================File Location=====================================================",
                 "=================Details================",
                 "==================================Description==================================",
             )
         )
         for error in errors:
             LOG.error(
-                msg="{:<30} {:<20} {:<40} {:<80}".format(
+                msg="{:<30} {:<20} {:<120} {:<40} {:<80}".format(
                     error.error_name,
                     error.track_name,
+                    error.file_location,
                     str(error.details),
                     error.error_description,
                 )
