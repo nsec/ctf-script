@@ -16,7 +16,6 @@ import argcomplete
 import coloredlogs
 import jinja2
 import yaml
-
 from ctf.utils import (
     find_ctf_root_directory,
     get_ctf_script_schemas_directory,
@@ -24,7 +23,11 @@ from ctf.utils import (
     parse_track_yaml,
 )
 from ctf.validate_json_schemas import validate_with_json_schemas
-from ctf.validators import ValidationError, validators_list
+from ctf.validators import (
+    ValidationError,
+    validators_list,
+)
+from tabulate import tabulate
 
 try:
     import pybadges
@@ -48,6 +51,7 @@ class Template(Enum):
     PYTHON_SERVICE = "python-service"
     FILES_ONLY = "files-only"
     TRACK_YAML_ONLY = "track-yaml-only"
+    RUST_WEBSERVICE = "rust-webservice"
 
     def __str__(self) -> str:
         return self.value
@@ -227,15 +231,19 @@ def new(args: argparse.Namespace) -> None:
 
     LOG.debug(msg=f"Wrote {p}.")
 
+    relpath = os.path.relpath(
+        os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common"), terraform_directory
+    )
+
     os.symlink(
-        src=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common", "variables.tf"),
+        src=os.path.join(relpath, "variables.tf"),
         dst=(p := os.path.join(terraform_directory, "variables.tf")),
     )
 
     LOG.debug(msg=f"Wrote {p}.")
 
     os.symlink(
-        src=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common", "versions.tf"),
+        src=os.path.join(relpath, "versions.tf"),
         dst=(p := os.path.join(terraform_directory, "versions.tf")),
     )
 
@@ -269,17 +277,17 @@ def new(args: argparse.Namespace) -> None:
 
     LOG.debug(msg=f"Wrote {p}.")
 
-    challenge_directory = os.path.join(ansible_directory, "challenge")
+    ansible_challenge_directory = os.path.join(ansible_directory, "challenge")
 
-    os.mkdir(path=challenge_directory)
+    os.mkdir(path=ansible_challenge_directory)
 
-    LOG.debug(msg=f"Directory {challenge_directory} created.")
+    LOG.debug(msg=f"Directory {ansible_challenge_directory} created.")
 
     if args.template == Template.APACHE_PHP:
         track_template = env.get_template(name="index.php.j2")
         render = track_template.render(data={"name": args.name})
         with open(
-            file=(p := os.path.join(challenge_directory, "index.php")),
+            file=(p := os.path.join(ansible_challenge_directory, "index.php")),
             mode="w",
             encoding="utf-8",
         ) as f:
@@ -291,7 +299,7 @@ def new(args: argparse.Namespace) -> None:
         track_template = env.get_template(name="app.py.j2")
         render = track_template.render(data={"name": args.name})
         with open(
-            file=(p := os.path.join(challenge_directory, "app.py")),
+            file=(p := os.path.join(ansible_challenge_directory, "app.py")),
             mode="w",
             encoding="utf-8",
         ) as f:
@@ -300,11 +308,31 @@ def new(args: argparse.Namespace) -> None:
         LOG.debug(msg=f"Wrote {p}.")
 
         with open(
-            file=(p := os.path.join(challenge_directory, "flag-1.txt")),
+            file=(p := os.path.join(ansible_challenge_directory, "flag-1.txt")),
             mode="w",
             encoding="utf-8",
         ) as f:
             f.write("FLAG-CHANGE_ME (1/2)\n")
+
+        LOG.debug(msg=f"Wrote {p}.")
+
+    if args.template == Template.RUST_WEBSERVICE:
+        # Copy the entire challenge template
+        shutil.copytree(
+            os.path.join(TEMPLATES_ROOT_DIRECTORY, "rust-webservice"),
+            ansible_challenge_directory,
+            dirs_exist_ok=True,
+        )
+        LOG.debug(msg=f"Wrote files to {ansible_challenge_directory}")
+
+        manifest_template = env.get_template(name="Cargo.toml.j2")
+        render = manifest_template.render(data={"name": args.name})
+        with open(
+            file=(p := os.path.join(ansible_challenge_directory, "Cargo.toml")),
+            mode="w",
+            encoding="utf-8",
+        ) as f:
+            f.write(render)
 
         LOG.debug(msg=f"Wrote {p}.")
 
@@ -855,9 +883,9 @@ def validate(args: argparse.Namespace) -> None:
         errors.append(
             ValidationError(
                 error_name="Tofu format",
-                error_description="Error when checking terraform files formatting. Please run `tofu fmt -recursive ./`",
+                error_description="Bad Terraform formatting. Please run `tofu fmt -recursive ./`",
                 details={
-                    "files": "\n".join(
+                    "Files": "\n".join(
                         [
                             *([out] if (out := r.stdout.decode().strip()) else []),
                             *re.findall(
@@ -884,25 +912,32 @@ def validate(args: argparse.Namespace) -> None:
         LOG.info(msg="No error found!")
     else:
         LOG.error(msg=f"{len(errors)} errors found.")
-        LOG.error(
-            msg="{:<30} {:<20} {:<120} {:<40} {:<80}".format(
-                "============Error============",
-                "=======Track=======",
-                "=====================================================File Location=====================================================",
-                "=================Details================",
-                "==================================Description==================================",
+
+        errors_list = list(
+            map(
+                lambda error: [
+                    error.track_name,
+                    error.error_name,
+                    "\n".join(textwrap.wrap(error.error_description, 50)),
+                    "\n".join(
+                        [
+                            str(key) + ": " + str(value)
+                            for key, value in error.details.items()
+                        ]
+                    ),
+                ],
+                errors,
             )
         )
-        for error in errors:
-            LOG.error(
-                msg="{:<30} {:<20} {:<120} {:<40} {:<80}".format(
-                    error.error_name,
-                    error.track_name,
-                    error.file_location,
-                    str(error.details),
-                    error.error_description,
-                )
+
+        LOG.error(
+            "\n"
+            + tabulate(
+                errors_list,
+                headers=["Track", "Error", "Description", "Details"],
+                tablefmt="fancy_grid",
             )
+        )
         exit(code=1)
 
 

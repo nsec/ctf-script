@@ -51,6 +51,10 @@ def get_ctf_script_schemas_directory() -> str:
     return os.path.join(get_ctf_script_root_directory(), "schemas")
 
 
+def remove_ctf_script_root_directory_from_path(path: str) -> str:
+    return os.path.relpath(path=path, start=ROOT_DIRECTORY)
+
+
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
     r = yaml.safe_load(
         stream=open(
@@ -64,7 +68,7 @@ def parse_track_yaml(track_name: str) -> dict[str, Any]:
         )
     )
 
-    r["file_location"] = p
+    r["file_location"] = remove_ctf_script_root_directory_from_path(path=p)
 
     return r
 
@@ -81,7 +85,9 @@ def parse_post_yamls(track_name: str) -> list[dict]:
                 file=os.path.join(posts_dir, post), mode="r", encoding="utf-8"
             ) as f:
                 r = post_data = yaml.safe_load(stream=f)
-                r["file_location"] = posts_dir
+                r["file_location"] = remove_ctf_script_root_directory_from_path(
+                    path=posts_dir
+                )
                 posts.append(post_data)
 
     return posts
