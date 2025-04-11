@@ -575,6 +575,48 @@ def generate(args: argparse.Namespace) -> set[str]:
             )
             fd.write(template.render(tracks=tracks, production=args.production))
 
+        for track in tracks:
+            relpath = os.path.relpath(
+                os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common"),
+                (
+                    terraform_directory := os.path.join(
+                        CTF_ROOT_DIRECTORY, "challenges", track, "terraform"
+                    )
+                ),
+            )
+
+            # If the file exists and is a symlink, refresh it by deleting it first.
+            if os.path.exists(
+                path=(p := os.path.join(terraform_directory, "variables.tf"))
+            ) and os.path.islink(path=p):
+                os.unlink(path=p)
+
+                LOG.debug(msg=f"Refreshing symlink {p}.")
+
+            if not os.path.exists(path=p):
+                os.symlink(
+                    src=os.path.join(relpath, "variables.tf"),
+                    dst=p,
+                )
+
+                LOG.debug(msg=f"Created symlink {p}.")
+
+            # If the file exists and is a symlink, refresh it by deleting it first.
+            if os.path.exists(
+                path=(p := os.path.join(terraform_directory, "versions.tf"))
+            ) and os.path.islink(path=p):
+                os.unlink(path=p)
+
+                LOG.debug(msg=f"Refreshing symlink {p}.")
+
+            if not os.path.exists(path=p):
+                os.symlink(
+                    src=os.path.join(relpath, "versions.tf"),
+                    dst=p,
+                )
+
+                LOG.debug(msg=f"Created symlink {p}.")
+
         subprocess.run(
             args=[terraform_binary(), "init", "-upgrade"],
             cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
@@ -616,6 +658,13 @@ def deploy(args):
             cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             check=True,
         )
+    except KeyboardInterrupt:
+        LOG.warning(
+            "CTRL+C was detected during Terraform deployment. Destroying everything..."
+        )
+        args.force = True
+        destroy(args=args)
+        exit(code=0)
 
     for track in tracks:
         LOG.debug(msg=f"Parsing track.yaml for track {track}")
