@@ -40,7 +40,7 @@ ROOT_DIRECTORY = find_ctf_root_directory()
 
 
 def get_ctf_script_root_directory() -> str:
-    return os.path.dirname(p=os.path.dirname(p=__file__))
+    return os.path.dirname(p=__file__)
 
 
 def get_ctf_script_templates_directory() -> str:
