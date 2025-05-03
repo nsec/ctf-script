@@ -1,18 +1,14 @@
-import logging
 import os
 import re
 import subprocess
 import textwrap
 from typing import Any, Generator
 
-import coloredlogs
 import jinja2
+import tomllib
 import yaml
 
-LOG = logging.getLogger()
-LOG.addHandler(hdlr=logging.StreamHandler())
-LOG.setLevel(level=logging.DEBUG)
-coloredlogs.install(level="DEBUG", logger=LOG)
+from ctf import CTF_ROOT_DIRECTORY
 
 
 def available_incus_remotes() -> list[str]:
@@ -29,35 +25,6 @@ def available_incus_remotes() -> list[str]:
 
 def check_git_lfs() -> bool:
     return not bool(subprocess.run(args=["git", "lfs"], capture_output=True).returncode)
-
-
-def find_ctf_root_directory() -> str:
-    path = os.path.join(os.getcwd(), ".")
-
-    while path != (path := os.path.dirname(p=path)):
-        dir = os.listdir(path=path)
-
-        if ".git" not in dir:
-            continue
-        if ".deploy" not in dir:
-            continue
-        if "challenges" not in dir:
-            continue
-        break
-
-    if path == "/":
-        if "CTF_ROOT_DIR" not in os.environ:
-            LOG.critical(
-                msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable.'
-            )
-            exit(1)
-        return os.environ.get("CTF_ROOT_DIR", default=".")
-
-    LOG.debug(msg=f"Found root directory: {path}")
-    return path
-
-
-CTF_ROOT_DIRECTORY = find_ctf_root_directory()
 
 
 def get_all_available_tracks() -> set[str]:

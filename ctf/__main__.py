@@ -3,7 +3,6 @@ import argparse
 import csv
 import io
 import json
-import logging
 import os
 import re
 import secrets
@@ -14,17 +13,16 @@ import textwrap
 from enum import Enum, unique
 
 import argcomplete
-import coloredlogs
 import jinja2
 import yaml
 from tabulate import tabulate
 
+from ctf import CTF_ROOT_DIRECTORY, ENV, LOG, VERSION
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     available_incus_remotes,
     check_git_lfs,
     create_terraform_modules_file,
-    find_ctf_root_directory,
     get_all_available_tracks,
     get_ctf_script_schemas_directory,
     get_ctf_script_templates_directory,
@@ -47,13 +45,6 @@ try:
 except ImportError:
     _has_pybadges = False
 
-LOG = logging.getLogger()
-LOG.setLevel(level=logging.DEBUG)
-coloredlogs.install(level="DEBUG", logger=LOG)
-
-ENV = {}
-
-CTF_ROOT_DIRECTORY = find_ctf_root_directory()
 TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
 SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
 AVAILABLE_INCUS_REMOTES = available_incus_remotes()
@@ -1145,6 +1136,11 @@ def write_badge(name: str, svg: str) -> None:
         f.write(svg)
 
 
+def version(args: argparse.Namespace) -> None:
+    print(VERSION)
+    exit(code=0)
+
+
 def main():
     # Command line parsing.
     parser = argparse.ArgumentParser(
@@ -1153,6 +1149,12 @@ def main():
     )
 
     subparsers = parser.add_subparsers(required=True)
+
+    parser_version = subparsers.add_parser(
+        "version",
+        help="Script version.",
+    )
+    parser_version.set_defaults(func=version)
 
     parser_flags = subparsers.add_parser(
         "flags",
@@ -1365,8 +1367,8 @@ def main():
 
     args = parser.parse_args()
 
-    for k, v in os.environ.items():
-        ENV[k] = v
+    if args.func.__name__ == "version":
+        args.func(args=args)
 
     if "remote" in args and args.remote:
         ENV["INCUS_REMOTE"] = args.remote

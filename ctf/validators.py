@@ -4,15 +4,13 @@ import os
 import re
 from dataclasses import dataclass
 
+from ctf import CTF_ROOT_DIRECTORY
 from ctf.utils import (
-    find_ctf_root_directory,
     get_all_file_paths_recursively,
     parse_post_yamls,
     parse_track_yaml,
     remove_ctf_script_root_directory_from_path,
 )
-
-CTF_ROOT_DIRECTORY = find_ctf_root_directory()
 
 
 @dataclass
