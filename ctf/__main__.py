@@ -17,7 +17,7 @@ import jinja2
 import yaml
 from tabulate import tabulate
 
-from ctf import CTF_ROOT_DIRECTORY, ENV, LOG, VERSION
+from ctf import CTF_ROOT_DIRECTORY, ENV, LOG
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     available_incus_remotes,
@@ -1136,11 +1136,6 @@ def write_badge(name: str, svg: str) -> None:
         f.write(svg)
 
 
-def version(args: argparse.Namespace) -> None:
-    print(VERSION)
-    exit(code=0)
-
-
 def main():
     # Command line parsing.
     parser = argparse.ArgumentParser(
@@ -1150,11 +1145,11 @@ def main():
 
     subparsers = parser.add_subparsers(required=True)
 
-    parser_version = subparsers.add_parser(
+    # Create a fake subparser as the version is printed before anything else in the __init__.py file.
+    subparsers.add_parser(
         "version",
         help="Script version.",
     )
-    parser_version.set_defaults(func=version)
 
     parser_flags = subparsers.add_parser(
         "flags",
@@ -1366,9 +1361,6 @@ def main():
     argcomplete.autocomplete(parser)
 
     args = parser.parse_args()
-
-    if args.func.__name__ == "version":
-        args.func(args=args)
 
     if "remote" in args and args.remote:
         ENV["INCUS_REMOTE"] = args.remote

@@ -5,7 +5,6 @@ import textwrap
 from typing import Any, Generator
 
 import jinja2
-import tomllib
 import yaml
 
 from ctf import CTF_ROOT_DIRECTORY
