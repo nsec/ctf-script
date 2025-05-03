@@ -1,0 +1,72 @@
+# This is the main ansible script to deploy the challenge.
+
+# Example on how to run stuff on all hosts of the track
+- name: "Install Apache2 and PHP on each host"
+  hosts: "*"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    # This is a helper task that loads the tracks' `track.yaml` file and loads the flags as
+    # ansible facts (like variables) to use in subsequent steps. The key is the `discourse` tag
+    # of the flag. See the index.php file for an example on how to use/print the flags.
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+        
+    - name: Initial System Upgrade
+      ansible.builtin.apt:
+        update_cache: true
+        install_recommends: false
+        upgrade: full
+
+    # apt install list
+    - name: Install PHP and Apache2
+      ansible.builtin.apt:
+        name:
+          - php
+          - apache2
+          - libapache2-mod-php
+        state: present
+
+    - name: Remove default file "/var/www/html/index.html"
+      ansible.builtin.file:
+        path: "/var/www/html/index.html"
+        state: absent
+
+# Run this only on the `{{ data.name }}` host. Sets up apache2 and php.
+- name: Specific tasks for "{{ data.name }}"
+  hosts: "{{ data.name }}"
+  tasks:
+    - name: Copy the main site file (index.php)
+      ansible.builtin.template:
+        src: challenge/index.php
+        dest: /var/www/html/
+        owner: root
+        group: root
+        mode: '0644'
+
+# If you have many servers in your track with different deployments, it's probably better to separate them in ansible playbooks and import them like this.
+# - import_playbook: main-website.yaml
+# - import_playbook: challenge-robots.yaml
+# - import_playbook: challenge-lfi.yaml
+# - import_playbook: challenge-xxe.yaml
+
+# Configure Apache to restart automatically on all hosts
+- name: "Configure Apache2 on each host and restart it"
+  hosts: "*"
+  tasks:
+    - name: Restart Apache2 on failure
+      ansible.builtin.replace:
+        path: "/lib/systemd/system/apache2.service"
+        regexp: 'Restart=.+$'
+        replace: 'Restart=on-failure'
+
+    - name: Restart Apache2
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+        

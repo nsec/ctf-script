@@ -1,0 +1,137 @@
+# This is the main ansible script to deploy the challenge.
+
+# Example on how to run stuff on all hosts of the track
+- name: "Install rust and npm"
+  hosts: "*"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    # This is a helper task that loads the tracks' `track.yaml` file and loads the flags as
+    # ansible facts (like variables) to use in subsequent steps. The key is the `discourse` tag
+    # of the flag. See the index.php file for an example on how to use/print the flags.
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+
+    - name: Initial System Upgrade
+      ansible.builtin.apt:
+        update_cache: true
+        install_recommends: false
+        upgrade: full
+
+    - name: Install build dependencies
+      ansible.builtin.apt:
+        name:
+          - npm
+          - curl
+        state: present
+
+    - name: Check if cargo is installed
+      ansible.builtin.stat:
+        path: /root/.cargo/bin/cargo
+      register: cargo_exists
+
+    - name: Download Cargo Installer
+      ansible.builtin.get_url:
+        url: https://sh.rustup.rs
+        dest: /tmp/sh.rustup.rs
+        mode: '0755'
+        force: true
+      when: not cargo_exists.stat.exists
+      tags:
+        - rust
+
+    - name: Install Cargo
+      when: not cargo_exists.stat.exists
+      ansible.builtin.command: /tmp/sh.rustup.rs -y
+      register: my_output
+      changed_when: my_output.rc != 0
+      tags:
+        - rust
+
+    - name: Copy the challenge sources
+      ansible.builtin.copy:
+        src: challenge/
+        dest: /tmp/{{ data.name }}
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: NPM install
+      community.general.npm:
+        path: /tmp/slot-machine/client/
+      environment:
+        NODE_OPTIONS: "--dns-result-order=ipv4first"
+
+    - name: Build
+      ansible.builtin.command:
+        cmd: /root/.cargo/bin/cargo build --release
+        chdir: /tmp/{{ data.name }}/
+      register: my_output
+      changed_when: my_output.rc != 0
+
+    - name: Copy server binary
+      ansible.builtin.copy:
+        src: /tmp/{{ data.name }}/target/release/{{ data.name }}
+        dest: /opt/{{ data.name }}/{{ data.name }}
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Copy client
+      ansible.builtin.copy:
+        src: /tmp/{{ data.name }}/dist
+        dest: /opt/{{ data.name }}/dist
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Remove Build
+      ansible.builtin.file:
+        path: /tmp/{{ data.name }}/
+        state: absent
+
+    - name: Create systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/{{ data.name }}.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description={{ data.name }} systemd service
+          After=network.target
+
+          [Service]
+          Type=simple
+          WorkingDirectory=/opt/{{ data.name }}
+          ExecStart=/opt/{{ data.name }}/{{ data.name }} -b [::]:80
+          Restart=on-failure
+          RestartSec=3s
+
+          [Install]
+          WantedBy=default.target
+
+    - name: Remove curl and npm
+      ansible.builtin.apt:
+        name:
+          - npm
+          - curl
+        state: absent
+
+    - name: Start service
+      ansible.builtin.service:
+        name: {{ data.name }}.service
+        state: restarted
+        enabled: true
+        daemon_reload: true
+
+# If you have many servers in your track with different deployments, it's probably better to separate them in ansible playbooks and import them like this.
+# - import_playbook: main-website.yaml
+# - import_playbook: challenge-robots.yaml
+# - import_playbook: challenge-lfi.yaml
+# - import_playbook: challenge-xxe.yaml
