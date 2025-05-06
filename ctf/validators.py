@@ -166,7 +166,7 @@ class FireworksAskGodTagValidator(Validator):
 
 
 class DiscoursePostsAskGodTagValidator(Validator):
-    """Validate that the triggers used in discourse posts are correctly defined in the discourse tag of each flag in track.yaml. Also validate that each discourse tag is unique."""
+    """Validate that the triggers used in discourse posts are correctly defined in the discourse tag of each flag in track.yaml. Also validate that each discourse tag is unique. Also validates that the topic matches an existing file name in the posts directory."""
 
     def __init__(self):
         self.discourse_tags_mapping = {}
@@ -186,6 +186,31 @@ class DiscoursePostsAskGodTagValidator(Validator):
         discourse_posts = parse_post_yamls(track_name=track_name)
         for discourse_post in discourse_posts:
             if discourse_post.get("trigger", {}).get("type", "") == "flag":
+                if not os.path.exists(
+                    os.path.join(
+                        CTF_ROOT_DIRECTORY,
+                        "challenges",
+                        track_name,
+                        "posts",
+                        discourse_post["topic"] + ".yaml",
+                    )
+                ):
+                    errors.append(
+                        ValidationError(
+                            error_name="Discourse post topic not found",
+                            error_description="The topic of the discourse post does not match any file in the posts directory.",
+                            track_name=track_name,
+                            details={
+                                "Topic": discourse_post["topic"],
+                                "Posts directory": os.path.join(
+                                    CTF_ROOT_DIRECTORY,
+                                    "challenges",
+                                    track_name,
+                                    "posts",
+                                ),
+                            },
+                        )
+                    )
                 if discourse_post["trigger"]["tag"] not in discourse_triggers:
                     errors.append(
                         ValidationError(
@@ -303,10 +328,127 @@ class PlaceholderValuesValidator(Validator):
         return errors
 
 
+class DiscourseFileNamesValidator(Validator):
+    """Validate that the discourse posts have unique file names."""
+
+    def __init__(self):
+        self.discourse_posts_mapping = {}
+
+    def validate(self, track_name: str) -> list[ValidationError]:
+        files = []
+
+        # Checking placeholders in posts/*.yaml
+        if os.path.exists(
+            path=(
+                path := os.path.join(
+                    CTF_ROOT_DIRECTORY, "challenges", track_name, "posts"
+                )
+            )
+        ):
+            files += list(glob.glob(pathname=os.path.join(path, "*.yaml")))
+
+        for file in files:
+            file_name = os.path.basename(file)
+            if file_name not in self.discourse_posts_mapping:
+                self.discourse_posts_mapping[file_name] = []
+            self.discourse_posts_mapping[file_name].append(track_name)
+
+        return []
+
+    def finalize(self) -> list[ValidationError]:
+        errors: list[ValidationError] = []
+        for file_name, tracks in self.discourse_posts_mapping.items():
+            if len(tracks) > 1:
+                errors.append(
+                    ValidationError(
+                        error_name="Discourse post file name collision",
+                        error_description="Two discourse posts from two different tracks share the same name, creating a collision. One of them must be changed.",
+                        track_name="\n".join(tracks),
+                        details={"File name": file_name},
+                    )
+                )
+        return errors
+
+
+class ServicesValidator(Validator):
+    """Validate that each service in a given track has a unique name within its instance and that it only contains letters, numbers and dashes."""
+
+    def validate(self, track_name: str) -> list[ValidationError]:
+        track_yaml = parse_track_yaml(track_name=track_name)
+        errors: list[ValidationError] = []
+        services = set()
+        for service in track_yaml["services"]:
+            service_name = service["name"]
+            instance_name = service["instance"]
+            service = f"{instance_name}/{service_name}"
+
+            if service in services:
+                errors.append(
+                    ValidationError(
+                        error_name="Service name collision",
+                        error_description="Two services from the same track and instance share the same name, creating a collision. One of them must be changed.",
+                        track_name=track_name,
+                        details={"Service name": service_name},
+                    )
+                )
+            else:
+                services.add(service)
+
+            # Validate that the service name only contains lowercase letters, numbers and dashes
+            if not re.match(r"^[a-zA-Z0-9\-]+$", service_name):
+                errors.append(
+                    ValidationError(
+                        error_name="Invalid service name",
+                        error_description="The service name must only contain letters, numbers and dashes.",
+                        track_name=track_name,
+                        details={"Service name": service_name},
+                    )
+                )
+
+        return errors
+
+
+class OrphanServicesValidator(Validator):
+    """Validate that if there is a service in the track.yaml, there is a terraform directory."""
+
+    def validate(self, track_name: str) -> list[ValidationError]:
+        track_yaml = parse_track_yaml(track_name=track_name)
+        errors: list[ValidationError] = []
+        if track_yaml.get("services"):
+            if not os.path.exists(
+                path=os.path.join(
+                    CTF_ROOT_DIRECTORY,
+                    "challenges",
+                    track_name,
+                    "terraform",
+                )
+            ):
+                errors.append(
+                    ValidationError(
+                        error_name="Orphan service",
+                        error_description="A service is defined in track.yaml, but a terraform directory was not found. This indicates that the service might not be needed.",
+                        track_name=track_name,
+                        details={
+                            "Service Name": "\n".join(
+                                [
+                                    service.get("name")
+                                    for service in track_yaml["services"]
+                                ]
+                            ),
+                        },
+                    )
+                )
+
+        return errors
+
+
 validators_list = [
     FilesValidator,
     FlagsValidator,
     FireworksAskGodTagValidator,
     DiscoursePostsAskGodTagValidator,
     PlaceholderValuesValidator,
+    DiscourseFileNamesValidator,
+    ServicesValidator,
+    OrphanServicesValidator,
 ]

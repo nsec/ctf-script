@@ -1,0 +1,18 @@
+name: mock-track-files-only
+description: "The hackiest hackers hacking hackily ever after"
+integrated_with_scenario: false
+contacts:
+  dev:
+    - user_dev
+  qa:
+    - user_qa
+  support:
+    - user_support
+flags:
+  - flag: FLAG-32c335e18b6c0eb6ddbd6366ade11069
+    value: 5
+    description: Free flag in downloadable content
+    return_string: '[mock-track-files-only] 1/1 Good job! Track completed.'
+    tags:
+      discourse: mock_track_files_only_flag_1
+services: []

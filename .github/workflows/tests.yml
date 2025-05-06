@@ -1,0 +1,163 @@
+name: Full deployment test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Full deployment test
+    if: github.repository == 'nsec/ctf-script'
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Git LFS Pull for deployment
+        run: |
+          echo "Pulling all Git LFS"
+          git lfs pull -I **/challenges/**/ansible/**/*
+
+          echo "Pulled files:"
+          { git lfs ls-files | grep -E '[a-f0-9]{10}\s\*'; } || true
+
+      - name: Remove docker
+        run: |
+          sudo apt-get autopurge -y moby-containerd docker uidmap
+          sudo ip link delete docker0
+          sudo nft flush ruleset
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install --no-install-recommends --yes zfsutils-linux
+
+      - name: Setup squid
+        run: |
+          sudo apt-get install --no-install-recommends --yes squid
+
+          (
+          cat << EOF
+          # No logging
+          cache_access_log /dev/null
+          cache_store_log none
+          cache_log /dev/null
+
+          # Caching
+          maximum_object_size 200 MB
+          cache_mem 1024 MB
+
+          # Port and mode configuration
+          acl local_subnet src 9000::/16
+          http_access allow local_subnet
+          http_access deny all
+          http_port [2602:fc62:ef:11::2]:3128
+
+          # Hide our traces
+          forwarded_for transparent
+          via off
+          reply_header_access X-Cache deny all
+          reply_header_access X-Cache-Lookup deny all
+
+          EOF
+          ) | sudo tee /etc/squid/conf.d/nsec.conf
+
+          echo "2602:fc62:ef:11::2 proxy.ctf-int.internal.nsec.io" | sudo tee /etc/hosts
+          sudo systemctl restart squid --no-block
+          sudo ip -6 a add dev lo 2602:fc62:ef:11::2/128
+
+      - name: Setup Incus
+        run: |
+          curl https://pkgs.zabbly.com/get/incus-stable | sudo sh
+          sudo chmod 666 /var/lib/incus/unix.socket
+
+          incus network create incusbr0
+          incus profile device add default eth0 nic network=incusbr0 name=eth0
+
+          incus storage create default zfs size=100GiB
+          incus profile device add default root disk pool=default path=/
+
+          sudo zfs set sync=disabled default
+
+          sudo ip6tables -I FORWARD -j REJECT
+
+      - name: Setup Ansible
+        run: |
+          pipx install --force --include-deps ansible
+          pipx inject ansible passlib
+
+      - name: Setup OpenTofu
+        run: |
+          curl -sL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+          chmod +x install-opentofu.sh
+          ./install-opentofu.sh --install-method deb
+          rm -f install-opentofu.sh
+
+      - name: Install python dependencies
+        run: |
+          pip install -e .
+
+      - name: Validate CTF structure
+        run: |
+          ctf validate
+
+      - name: Deployment check
+        run: |
+          ctf check
+
+      - name: File generation
+        run: |
+          ctf generate
+
+      - name: Test deployment looping through tracks
+        run: |
+          IFS=" " read -r -a tracks <<< "$(python3 -c 'from ctf.utils import get_all_available_tracks,validate_track_can_be_deployed;print(str([t for t in get_all_available_tracks() if validate_track_can_be_deployed(t)]).strip("[]\x27").replace("\x27, \x27"," "))')"
+
+          [ "${#tracks[@]}" -eq 0 ] && exit 1
+
+          for track in "${tracks[@]}"
+          do
+              ctf deploy --production --tracks "$track"
+              incus --project="$track" info "$track"
+          done
+
+          ctf destroy --force
+
+      - name: Test full deployment
+        run: |
+          ctf deploy --production
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          ctf destroy --force
+
+      - name: Test redeployment of Mock Track Apache PHP
+        run: |
+          ctf deploy --production
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          ctf redeploy --production --tracks mock-track-apache-php
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          ctf destroy --force
+
+      - name: Test deployment of a track not deployed without destroying the rest
+        run: |
+          ctf deploy --production --production --tracks mock-track-apache-php
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 1 ] || exit 1
+          ctf redeploy --production --tracks mock-track-python-service
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          ctf destroy --force
+
+      - name: Check deployment results
+        run: |
+          incus project list
+          incus network zone record list ctf
+          incus network list --all-projects
+          incus list --all-projects

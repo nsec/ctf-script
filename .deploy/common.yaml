@@ -1,0 +1,14 @@
+- name: Pre-deployment Common
+  hosts: all
+  order: shuffle
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Distro update and Python3 install
+      ansible.builtin.raw: |
+        apt update && apt upgrade -y && apt install -y python3
+      changed_when: true
+
+- name: Importing cleanup.yaml Playbook
+  ansible.builtin.import_playbook: cleanup.yaml

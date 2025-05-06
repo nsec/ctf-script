@@ -1,0 +1,29 @@
+name: mock-track-python-service
+description: "The hackiest hackers hacking hackily ever after"
+integrated_with_scenario: false
+contacts:
+  dev:
+    - user_dev
+  qa:
+    - user_qa
+  support:
+    - user_support
+flags:
+  - flag: FLAG-d2093796194fdf44a39c8b21b00caef9
+    value: 2
+    description: Free flag in source of web application
+    return_string: '[mock-track-python-service] 1/2 Great!'
+    tags:
+      discourse: mock_track_python_service_flag_1
+  - flag: FLAG-20f645f09e6989741a39759209aa047d
+    value: 10
+    description: RCE!!
+    return_string: '[mock-track-python-service] 2/2 Good job! Track completed.'
+    tags:
+      discourse: mock_track_python_service_flag_2
+services:
+  - name: HTTP-5000
+    instance: mock-track-python-service
+    address: '9000:d37e:c40b:b29a:216:3eff:fe09:23ea'
+    port: 5000
+    check: http

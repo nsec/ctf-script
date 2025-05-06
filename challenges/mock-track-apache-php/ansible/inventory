@@ -1,0 +1,9 @@
+all:
+  hosts:
+    mock-track-apache-php:
+      ansible_incus_host: mock-track-apache-php
+  vars:
+    ansible_connection: community.general.incus
+    ansible_user: root
+    ansible_incus_remote: local
+    ansible_incus_project: mock-track-apache-php

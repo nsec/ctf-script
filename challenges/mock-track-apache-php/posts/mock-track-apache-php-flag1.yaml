@@ -1,0 +1,10 @@
+type: post
+topic: mock-track-apache-php
+trigger:
+  type: flag
+  tag: mock_track_apache_php_flag_1
+api:
+  user: nsec
+title: "Mock Track Apache PHP"
+body: |-
+  Mock Track Apache PHP body.
