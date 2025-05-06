@@ -1,0 +1,23 @@
+name: mock-track-apache-php
+description: "The hackiest hackers hacking hackily ever after"
+integrated_with_scenario: false
+contacts:
+  dev:
+    - user_dev
+  qa:
+    - user_qa
+  support:
+    - user_support
+flags:
+  - flag: FLAG-e759cb55ec2383b86e1358905f179e8e
+    value: 5
+    description: Free flag in source of index.php
+    return_string: '[mock-track-apache-php] 1/1 Good job! Track completed.'
+    tags:
+      discourse: mock_track_apache_php_flag_1
+services:
+  - name: HTTP-80
+    instance: mock-track-apache-php
+    address: '9000:d37e:c40b:c5e8:216:3eff:fed5:1ca1'
+    port: 80
+    check: http

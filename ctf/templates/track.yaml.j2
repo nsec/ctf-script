@@ -1,6 +1,6 @@
 name: {{ data.name }}
 description: "CHANGE_ME The hackiest hackers hacking hackily ever after"
-# Set to true when the theme designer has fully integrated the track with the scenario, which implies he wrote the discourse posts.
+# Set to true when Eric Boivin has fully integrated the track with the scenario, which implies he wrote the discourse posts.
 integrated_with_scenario: false
 
 contacts:
@@ -22,7 +22,7 @@ flags:
   - flag: FLAG-CHANGE_ME
     # How many points for the flag
     value: 5
-    # INTERNAL description of the flag.
+    # Description of the flag. This text will be displayed to the participants AFTER they submit the flag if they run the `askgod history` command.
     description: Free flag in source of index.php CHANGE_ME
     # The text the participants see AFTER they submit the flag.
     return_string: '[{{ data.name }}] 1/1 Good job! Track completed. CHANGE_ME'
@@ -36,7 +36,10 @@ services: []
 {% else %}
 services:
   # List of network services running for the track.
-  - name: HTTP
+  # Each service name must be unique for a given instance (container/VM).
+  - name: {% if data.template == "python-service" %}HTTP-5000{% else %}HTTP{% endif %}
+    # Name of the container or VM
+    instance: main-site
     # The IPv6 address was randomly generated from the MAC Address (hwaddr) and the subnets defined in main.tf.
     # If you need other machines, you can choose another MAC Address and get the IPv6 from the MAC AND the IPv6 subnet ({{ data.ipv6_subnet }}) at https://eui64-calc.princelle.org/
     address: '{{ data.full_ipv6_address }}'

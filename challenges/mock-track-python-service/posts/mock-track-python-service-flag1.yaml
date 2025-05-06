@@ -1,0 +1,10 @@
+type: post
+topic: mock-track-python-service
+trigger:
+  type: flag
+  tag: mock_track_python_service_flag_1
+api:
+  user: nsec
+title: "Mock Track Python Service"
+body: |-
+  Mock Track Python Service body

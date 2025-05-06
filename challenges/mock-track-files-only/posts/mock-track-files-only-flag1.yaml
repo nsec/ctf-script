@@ -1,0 +1,10 @@
+type: post
+topic: mock-track-files-only
+trigger:
+  type: flag
+  tag: mock_track_files_only_flag_1
+api:
+  user: nsec
+title: "Mock Track Files Only"
+body: |-
+  Mock Track Files Only body

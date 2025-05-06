@@ -19,7 +19,7 @@ def index():
         with open("flag-1.txt", "r") as f:
             return f"""<html>
     <head>
-        <title>{{data.name}}</title>
+        <title>mock-track-python-service</title>
     </head>
     <body>
         <!-- {f.read()} -->

@@ -2,9 +2,9 @@
 all:
   hosts:
     # The following line defines how this machine will be refered to in ansible scripts.
-    change-me:
-      # This one tells ansible that this host is reached using incus, and the name of the machine in incus is `change-me`.
-      ansible_incus_host: change-me
+    {{ data.name }}:
+      # This one tells ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
+      ansible_incus_host: {{ data.name }}
   # You can set variables here to use in your ansible playbooks. For example, you can set the flags here to set them dynamically when setting up the challenge.
   vars:
     # Do not change these.

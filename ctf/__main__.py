@@ -3,6 +3,7 @@ import argparse
 import csv
 import io
 import json
+import logging
 import os
 import re
 import secrets
@@ -10,6 +11,7 @@ import shutil
 import statistics
 import subprocess
 import textwrap
+from datetime import datetime
 from enum import Enum, unique
 
 import argcomplete
@@ -45,6 +47,13 @@ try:
 except ImportError:
     _has_pybadges = False
 
+try:
+    import matplotlib.pyplot as plt
+
+    _has_matplotlib = True
+except ImportError:
+    _has_matplotlib = False
+
 TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
 SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
 AVAILABLE_INCUS_REMOTES = available_incus_remotes()
@@ -70,17 +79,6 @@ class OutputFormat(Enum):
 
     def __str__(self) -> str:
         return self.value
-
-
-def requires_pybadges(f):
-    def wrapper(*args, **kwargs):
-        if not _has_pybadges:
-            LOG.critical(msg="Module pybadges was not found.")
-            exit(code=1)
-
-        f(*args, **kwargs)
-
-    return wrapper
 
 
 def terraform_binary() -> str:
@@ -190,7 +188,7 @@ def new(args: argparse.Namespace) -> None:
     track_template = env.get_template(name="post.yaml.j2")
     render = track_template.render(data={"name": args.name})
     with open(
-        file=(p := os.path.join(posts_directory, "flag1.yaml")),
+        file=(p := os.path.join(posts_directory, f"{args.name}_flag1.yaml")),
         mode="w",
         encoding="utf-8",
     ) as f:
@@ -317,7 +315,7 @@ def new(args: argparse.Namespace) -> None:
             mode="w",
             encoding="utf-8",
         ) as f:
-            f.write("FLAG-CHANGE_ME (1/2)\n")
+            f.write(f"{{{{ track_flags.{args.name}_flag_1 }}}} (1/2)\n")
 
         LOG.debug(msg=f"Wrote {p}.")
 
@@ -536,6 +534,38 @@ def flags(args: argparse.Namespace) -> None:
         print(output.getvalue())
     elif args.format == OutputFormat.YAML:
         print(yaml.safe_dump(data=flags))
+
+
+def services(args: argparse.Namespace) -> None:
+    tracks = set()
+    for entry in os.listdir(
+        path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
+    ):
+        if os.path.isdir(
+            s=(track_directory := os.path.join(challenges_directory, entry))
+        ) and os.path.exists(path=os.path.join(track_directory, "track.yaml")):
+            if not args.tracks:
+                tracks.add(entry)
+            elif entry in args.tracks:
+                tracks.add(entry)
+
+    for track in tracks:
+        LOG.debug(msg=f"Parsing track.yaml for track {track}")
+        track_yaml = parse_track_yaml(track_name=track)
+
+        if len(track_yaml["services"]) == 0:
+            LOG.debug(msg=f"No service in track {track}. Skipping...")
+            continue
+
+        for service in track_yaml["services"]:
+            contact = ",".join(track_yaml["contacts"]["support"])
+            name = service["name"]
+            instance = service["instance"]
+            address = service["address"]
+            check = service["check"]
+            port = service["port"]
+
+            print(f"{track}/{instance}/{name} {contact} {address} {check} {port}")
 
 
 def generate(args: argparse.Namespace) -> set[str]:
@@ -785,10 +815,10 @@ def run_ansible_playbook(args: argparse.Namespace, track: str, path: str) -> Non
     if args.production:
         extra_args += ["-e", "nsec_production=true"]
 
-    LOG.info(msg=f"Running common cleanup.yaml with ansible for track {track}...")
+    LOG.info(msg=f"Running common yaml with ansible for track {track}...")
     ansible_args = [
         "ansible-playbook",
-        "../../../.deploy/cleanup.yaml",
+        "../../../.deploy/common.yaml",
         "-i",
         "inventory",
     ] + extra_args
@@ -840,7 +870,6 @@ def check(args: argparse.Namespace) -> None:
         )
 
 
-@requires_pybadges
 def stats(args: argparse.Namespace) -> None:
     LOG.debug(msg="Generating statistics...")
     stats = {}
@@ -871,6 +900,7 @@ def stats(args: argparse.Namespace) -> None:
     stats["number_of_challenge_designers"] = 0
     stats["number_of_flags_per_track"] = {}
     stats["number_of_points_per_track"] = {}
+    stats["not_integrated_with_scenario"] = []
     challenge_designers = set()
     flags = []
     for track in tracks:
@@ -879,6 +909,8 @@ def stats(args: argparse.Namespace) -> None:
         stats["number_of_flags_per_track"][track] = number_of_flags
         if track_yaml["integrated_with_scenario"]:
             stats["number_of_tracks_integrated_with_scenario"] += 1
+        else:
+            stats["not_integrated_with_scenario"].append(track)
         if number_of_flags > stats["most_flags_in_a_track"]:
             stats["most_flags_in_a_track"] = number_of_flags
         stats["number_of_flags"] += number_of_flags
@@ -929,6 +961,9 @@ def stats(args: argparse.Namespace) -> None:
 
     print(json.dumps(stats, indent=2, ensure_ascii=False))
     if args.generate_badges:
+        if not _has_pybadges:
+            LOG.critical(msg="Module pybadges was not found.")
+            exit(code=1)
         LOG.info(msg="Generating badges...")
         os.makedirs(name=".badges", exist_ok=True)
         write_badge(
@@ -976,6 +1011,131 @@ def stats(args: argparse.Namespace) -> None:
                 + str(stats["number_of_tracks"]),
             ),
         )
+
+    if args.charts:
+        if not _has_matplotlib:
+            LOG.critical(msg="Module matplotlib was not found.")
+            exit(code=1)
+        LOG.info(msg="Generating charts...")
+        mpl_logger = logging.getLogger("matplotlib")
+        mpl_logger.setLevel(logging.INFO)
+        os.makedirs(name=".charts", exist_ok=True)
+        # Flag count per value barchart
+        plt.bar(
+            stats["flag_count_per_value"].keys(), stats["flag_count_per_value"].values()
+        )
+        plt.xticks(
+            ticks=range(0, max(stats["flag_count_per_value"].keys()) + 1), rotation=45
+        )
+        plt.grid(True, linestyle="--", alpha=0.3)
+        plt.xlabel("Flag Value")
+        plt.ylabel("Number of Flags")
+        plt.title("Number of Flags per Value")
+        plt.savefig(os.path.join(".charts", "flags_per_value.png"))
+        plt.clf()
+
+        # Number of flag per track barchart
+        plt.bar(
+            list(stats["number_of_flags_per_track"].keys()),
+            stats["number_of_flags_per_track"].values(),
+        )
+        plt.xticks(ticks=list(stats["number_of_flags_per_track"].keys()), rotation=90)
+        plt.grid(True, linestyle="--", alpha=0.3)
+        plt.subplots_adjust(bottom=0.5)
+        plt.xlabel("Track")
+        plt.ylabel("Number of flags")
+        plt.title("Number of flags per track")
+        plt.savefig(os.path.join(".charts", "flags_per_track.png"))
+        plt.clf()
+
+        # Number of points per track barchart
+        plt.bar(
+            list(stats["number_of_points_per_track"].keys()),
+            stats["number_of_points_per_track"].values(),
+        )
+        plt.xticks(ticks=list(stats["number_of_points_per_track"].keys()), rotation=90)
+        plt.grid(True, linestyle="--", alpha=0.3)
+        plt.subplots_adjust(bottom=0.5)
+        plt.xlabel("Track")
+        plt.ylabel("Number of points")
+        plt.title("Number of points per track")
+        plt.savefig(os.path.join(".charts", "points_per_track.png"))
+        plt.clf()
+
+        if args.historical:
+            # Number of points and flags over time
+            historical_data = {}
+            commit_list = (
+                subprocess.check_output(
+                    ["git", "log", "--pretty=format:%H %ad", "--date=iso"]
+                )
+                .decode()
+                .splitlines()[::-1]
+            )
+            commit_list_with_date = []
+            for commit in commit_list:
+                hash, date = commit.split(" ", 1)
+                parsed_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
+                commit_list_with_date.append((parsed_datetime, hash))
+            commit_list_with_date = sorted(commit_list_with_date, key=lambda x: x[0])
+            subprocess.run(["git", "stash"], check=True)
+            for i, commit in list(enumerate(commit_list_with_date))[0:]:
+                parsed_datetime, hash = commit
+                # Check if the commit message has "Merge pull request" in it
+                commit_message = subprocess.run(
+                    ["git", "show", "-s", "--pretty=%B", hash],
+                    check=True,
+                    capture_output=True,
+                )
+                if "Merge pull request" in commit_message.stdout.decode():
+                    LOG.debug(
+                        f"{i + 1}/{len(commit_list_with_date)} Checking out commit: {commit}"
+                    )
+                    parsed_date = parsed_datetime.date()
+                    subprocess.run(
+                        ["git", "checkout", hash], check=True, capture_output=True
+                    )
+
+                    # Execute your command here (replace with what you need)
+                    result = (
+                        subprocess.run(
+                            ["python", "scripts/ctf.py", "stats"],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                        ),
+                    )
+                    if result[0].returncode == 0:
+                        stats = json.loads(result[0].stdout)
+                        total_points = stats["total_flags_value"]
+                        total_flags = stats["number_of_flags"]
+                        print(total_flags)
+                        historical_data[parsed_date] = {
+                            "total_points": total_points,
+                            "total_flags": total_flags,
+                        }
+            subprocess.run(["git", "checkout", "main"], check=True, capture_output=True)
+            subprocess.run(["git", "stash", "pop"], check=True)
+
+            plt.plot(
+                historical_data.keys(),
+                [data["total_points"] for data in historical_data.values()],
+                label="Total Points",
+            )
+            # plt.plot(historical_data.keys(), [data["total_flags"] for data in historical_data.values()], label="Total Flags")
+            # plt.xticks(ticks=list(stats["number_of_points_per_track"].keys()), rotation=90)
+            plt.grid(True, linestyle="--", alpha=0.3)
+            plt.subplots_adjust(bottom=0.1)
+            plt.xlabel("Time")
+            plt.ylabel("Total points")
+            plt.title("Total points over time")
+            plt.xticks(rotation=90)
+            plt.subplots_adjust(bottom=0.2)
+            plt.subplot().set_ylim(
+                0, max([data["total_points"] for data in historical_data.values()]) + 10
+            )
+            plt.savefig(os.path.join(".charts", "points_over_time.png"))
+            plt.clf()
 
     LOG.debug(msg="Done...")
 
@@ -1171,6 +1331,19 @@ def main():
         type=OutputFormat,
     )
 
+    parser_services = subparsers.add_parser(
+        "services",
+        help="Get services from tracks",
+    )
+    parser_services.set_defaults(func=services)
+    parser_services.add_argument(
+        "--tracks",
+        "-t",
+        nargs="+",
+        default=[],
+        help="Only services from the given tracks (use the folder name)",
+    )
+
     parser_generate = subparsers.add_parser(
         "generate",
         help="Generate the deployment files using `terraform init` and `terraform validate`",
@@ -1330,6 +1503,18 @@ def main():
         action="store_true",
         default=False,
         help="Generate SVG files of some statistics in the .badges directory.",
+    )
+    parser_stats.add_argument(
+        "--charts",
+        action="store_true",
+        default=False,
+        help="Generate PNG charts of some statistics in the .charts directory.",
+    )
+    parser_stats.add_argument(
+        "--historical",
+        action="store_true",
+        default=False,
+        help="Use in conjunction with --charts to generate historical data. ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING. THIS IS BAD CODE THAT WILL FUCK YOUR REPO IN UNEXPECTED WAYS.",
     )
 
     parser_validate = subparsers.add_parser(

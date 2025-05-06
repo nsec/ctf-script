@@ -1,176 +1,168 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "description": "",
-  "type": "object",
-  "additionalProperties": false,
-  "properties": {
-    "name": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Name of the track."
-    },
-    "description": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Description of the track."
-    },
-    "integrated_with_scenario": {
-      "type": "boolean",
-      "description": "Set to true only if the track has been integrated with the CTF scenario. This means that Eric Boivin wrote/modified the posts."
-    },
-    "contacts": {
-      "description": "Handles or real names. Ex: John Smith or jsmith",
-      "type": "object",
-      "properties": {
-        "additionalProperties": false,
-        "dev": {
-          "description": "Who helped develop the track.",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Name of the track."
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Description of the track."
+      },
+      "integrated_with_scenario": {
+        "type": "boolean",
+        "description": "Set to true only if the track has been integrated with the CTF scenario. This means that Eric Boivin wrote/modified the posts."
+      },
+      "contacts": {
+        "description": "Handles or real names. Ex: Émilio Gonzalez or Res260",
+        "type": "object",
+        "properties": {
+          "additionalProperties": false,
+          "dev": {
+            "description": "Who helped develop the track.",
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "qa": {
+            "description": "Who helped do quality assurance for the track.",
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "support": {
+            "description": "Who can provide support during the CTF for the track.",
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
           }
         },
-        "qa": {
-          "description": "Who helped do quality assurance for the track.",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
-          }
-        },
-        "support": {
-          "description": "Who can provide support during the CTF for the track.",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
+        "required": [
+          "dev",
+          "qa",
+          "support"
+        ]
+      },
+      "services": {
+        "description": "List of network services used by the track.",
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "required": [
+            "name",
+            "address",
+            "port",
+            "check"
+          ],
+          "properties": {
+            "additionalProperties": false,
+            "name": {
+              "description": "Name of the network service. Example: Tomcat Web Server. Must be unique in the track. Only use lowercase letters, numbers and dashes.",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[a-zA-Z0-9-]+$"
+            },
+            "address": {
+              "description": "IPv6 address of the network service.",
+              "type": "string",
+              "minLength": 36,
+              "maxLength": 39
+            },
+            "port": {
+              "description": "Port number where the network service listens on.",
+              "type": "number"
+            },
+            "check": {
+              "description": "Type of check to do to make sure this service is up and alert us during the CTF if it's down.",
+              "type": "string",
+              "enum": ["http", "https", "ssh", "tcp"]
+            },
+            "dev_port_mapping": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "During development, this service will be accessible from localhost:<value>. This allows to access the services outside the host (for example from the Windows Host if using WSL or from your host machine if using GitHub Codespaces)."
+            }
           }
         }
       },
-      "required": [
-        "dev",
-        "qa",
-        "support"
-      ]
-    },
-    "services": {
-      "description": "List of network services used by the track.",
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "required": [
-          "name",
-          "address",
-          "port",
-          "check"
-        ],
-        "properties": {
+      "flags": {
+        "description": "The list of flags in the track.",
+        "type": "array",
+        "minItems": 0,
+        "maxItems": 20,
+        "uniqueItems": true,
+        "items": {
+          "description": "A flag definition.",
+          "type": "object",
+          "required": ["flag", "value", "return_string"],
           "additionalProperties": false,
-          "name": {
-            "description": "Name of the network servic. Example: Tomcat Web Server",
-            "type": "string",
-            "minLength": 1
-          },
-          "address": {
-            "description": "IPv6 address of the network service.",
-            "type": "string",
-            "minLength": 36,
-            "maxLength": 39
-          },
-          "port": {
-            "description": "Port number where the network service listens on.",
-            "type": "number"
-          },
-          "check": {
-            "description": "Type of check to do to make sure this service is up and alert us during the CTF if it's down.",
-            "type": "string",
-            "enum": [
-              "http",
-              "https",
-              "ssh",
-              "tcp"
-            ]
-          },
-          "dev_port_mapping": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 65535,
-            "description": "During development, this service will be accessible from localhost:<value>. This allows to access the services outside the host (for example from the Windows Host if using WSL or from your host machine if using GitHub Codespaces)."
-          }
-        }
-      }
-    },
-    "flags": {
-      "description": "The list of flags in the track.",
-      "type": "array",
-      "minItems": 0,
-      "maxItems": 20,
-      "uniqueItems": true,
-      "items": {
-        "description": "A flag definition.",
-        "type": "object",
-        "required": [
-          "flag",
-          "value",
-          "return_string"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "flag": {
-            "type": "string",
-            "description": "The flag string. Ex: FLAG-SalutLaGang.",
-            "minLength": 5,
-            "maxLength": 200
-          },
-          "value": {
-            "type": "integer",
-            "description": "The value of the flag. Minimum: 0.",
-            "minimum": 0,
-            "maximum": 20
-          },
-          "description": {
-            "type": "string",
-            "description": "INTERNAL description of the flag. Example: Free flag in source of index.php.",
-            "minLength": 1
-          },
-          "return_string": {
-            "type": "string",
-            "description": "The text the participants see AFTER they submit the flag. Example: [mytrackname] 1/1 Good job! Track completed.",
-            "minLength": 1
-          },
-          "tags": {
-            "type": "object",
-            "description": "Askgod tags for this flag. Use tag `discourse: sometriggername` to define triggers for posts in the posts/ directory.",
-            "additionalProperties": true,
-            "properties": {
-              "discourse": {
-                "type": "string",
-                "description": "Discourse trigger for this flag. This value can be used in a discourse post defined in the posts/ directory to post a message when this flag is submitted.",
-                "pattern": "^[a-z][a-z0-9_]{0,61}[a-z0-9]$"
-              },
-              "ui_sound": {
-                "type": "string",
-                "description": "Fireworks sound trigger for this flag. This value can be used to trigger a specific sound in the timeline when this flag is submitted. The chosen file can be any of the default ones which can be found at https://github.com/nsec/askgod-webui/blob/master/components/Fireworks.vue#L72-L88 or new ones added in \"challenges/your-track/files/askgod/sounds/*.mp3\".",
-                "pattern": "^[a-zA-Z0-9_-]{1,251}\\.[a-zA-Z0-9]{2,5}$"
-              },
-              "ui_gif": {
-                "type": "string",
-                "description": "Fireworks gif trigger for this flag. This value can be used to trigger a specific gif in the timeline when this flag is submitted. The chosen file can be any of the default ones which can be found at https://github.com/nsec/askgod-webui/blob/master/components/Fireworks.vue#L39-L70 or new ones added in \"challenges/your-track/files/askgod/gifs/*.gif\".",
-                "pattern": "^[a-zA-Z0-9_-]{1,251}\\.[a-zA-Z0-9]{2,5}$"
+          "properties": {
+            "flag": {
+              "type": "string",
+              "description": "The flag string. Ex: FLAG-SalutLaGang.",
+              "minLength": 5,
+              "maxLength": 200
+            },
+            "value": {
+              "type": "integer",
+              "description": "The value of the flag. Minimum: 0.",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "description": {
+              "type": "string",
+              "description": "INTERNAL description of the flag. Example: Free flag in source of index.php.",
+              "minLength": 1
+            },
+            "return_string": {
+              "type": "string",
+              "description": "The text the participants see AFTER they submit the flag. Example: [mytrackname] 1/1 Good job! Track completed.",
+              "minLength": 1
+            },
+            "tags": {
+              "type": "object",
+              "description": "Askgod tags for this flag. Use tag `discourse: sometriggername` to define triggers for posts in the posts/ directory.",
+              "additionalProperties": true,
+              "properties": {
+                "discourse": {
+                  "type": "string",
+                  "description": "Discourse trigger for this flag. This value can be used in a discourse post defined in the posts/ directory to post a message when this flag is submitted.",
+                  "pattern": "^[a-z][a-z0-9_]{0,61}[a-z0-9]$"
+                },
+                "ui_sound": {
+                  "type": "string",
+                  "description": "Fireworks sound trigger for this flag. This value can be used to trigger a specific sound in the timeline when this flag is submitted. The chosen file can be any of the default ones which can be found at https://github.com/nsec/askgod-webui/blob/master/components/Fireworks.vue#L72-L88 or new ones added in \"challenges/your-track/files/askgod/sounds/*.mp3\".",
+                  "pattern": "^[a-zA-Z0-9_-]{1,251}\\.[a-zA-Z0-9]{2,5}$"
+                },
+                "ui_gif": {
+                  "type": "string",
+                  "description": "Fireworks gif trigger for this flag. This value can be used to trigger a specific gif in the timeline when this flag is submitted. The chosen file can be any of the default ones which can be found at https://github.com/nsec/askgod-webui/blob/master/components/Fireworks.vue#L39-L70 or new ones added in \"challenges/your-track/files/askgod/gifs/*.gif\".",
+                  "pattern": "^[a-zA-Z0-9_-]{1,251}\\.[a-zA-Z0-9]{2,5}$"
+                }
               }
             }
           }
         }
       }
-    }
-  },
-  "required": [
-    "name",
-    "description",
-    "integrated_with_scenario",
-    "contacts",
-    "services",
-    "flags"
-  ]
-}
+    },
+    "required": [
+      "name",
+      "description",
+      "integrated_with_scenario",
+      "contacts",
+      "services",
+      "flags"
+    ]
+  }

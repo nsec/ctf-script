@@ -53,10 +53,11 @@ def check_tool_version():
             case 0 | 1:
                 LOG.debug("Script is up to date.")
             case -1:
-                LOG.critical(
+                LOG.warning(
                     "Script is outdated. Please update to the latest release before continuing."
                 )
-                exit(code=1)
+                if (input("Do you want to continue? [y/N] ").lower() or "n") == "n":
+                    exit(code=0)
 
 
 check_tool_version()
