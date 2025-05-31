@@ -142,7 +142,7 @@ def remove_tracks_from_terraform_modules(
     )
 
 
-def get_all_file_paths_recursively(path: str) -> Generator[None, None, str]:
+def get_all_file_paths_recursively(path: str) -> Generator[str, None, None]:
     if os.path.isfile(path=path):
         yield remove_ctf_script_root_directory_from_path(path=path)
     else:

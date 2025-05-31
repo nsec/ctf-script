@@ -166,18 +166,23 @@ class FireworksAskGodTagValidator(Validator):
 
 
 class DiscoursePostsAskGodTagValidator(Validator):
-    """Validate that the triggers used in discourse posts are correctly defined in the discourse tag of each flag in track.yaml. Also validate that each discourse tag is unique. Also validates that the topic matches an existing file name in the posts directory."""
+    """
+    Validate that the triggers used in discourse posts are correctly defined in the discourse tag of each flag in track.yaml. It checks for triggers in ALL tracks to allow a flow like: "When a flag from track A is triggered, show a post in track B".
+    Also validate that each discourse tag is unique.
+    Also validates that the topic matches an existing file name in the posts directory.
+    """
 
     def __init__(self):
         self.discourse_tags_mapping = {}
+        self.discourse_triggers = []
+        self.discourse_posts = []
 
     def validate(self, track_name: str) -> list[ValidationError]:
         track_yaml = parse_track_yaml(track_name=track_name)
-        discourse_triggers = []
         for flag in track_yaml["flags"]:
             discourse_trigger = flag.get("tags", {}).get("discourse")
             if discourse_trigger:
-                discourse_triggers.append(discourse_trigger)
+                self.discourse_triggers.append(discourse_trigger)
                 if discourse_trigger not in self.discourse_tags_mapping:
                     self.discourse_tags_mapping[discourse_trigger] = []
                 self.discourse_tags_mapping[discourse_trigger].append(track_yaml)
@@ -186,6 +191,7 @@ class DiscoursePostsAskGodTagValidator(Validator):
         discourse_posts = parse_post_yamls(track_name=track_name)
         for discourse_post in discourse_posts:
             if discourse_post.get("trigger", {}).get("type", "") == "flag":
+                self.discourse_posts.append((track_name, discourse_post))
                 if not os.path.exists(
                     os.path.join(
                         CTF_ROOT_DIRECTORY,
@@ -211,18 +217,6 @@ class DiscoursePostsAskGodTagValidator(Validator):
                             },
                         )
                     )
-                if discourse_post["trigger"]["tag"] not in discourse_triggers:
-                    errors.append(
-                        ValidationError(
-                            error_name="Invalid trigger in discourse post",
-                            error_description="A discourse post has a flag trigger that references a discourse tag not defined in track.yaml.",
-                            track_name=track_name,
-                            details={
-                                "Invalid tag": discourse_post["trigger"]["tag"],
-                                "Discourse tags in track.yaml": str(discourse_triggers),
-                            },
-                        )
-                    )
 
         return errors
 
@@ -236,6 +230,19 @@ class DiscoursePostsAskGodTagValidator(Validator):
                         error_description="Two discourse tags from two different tracks share the same name, creating a collision. One of them must be changed.",
                         track_name=" + ".join(map(lambda track: track["name"], tracks)),
                         details={'"discourse" tag': discourse_tag},
+                    )
+                )
+
+        for track_name, discourse_post in self.discourse_posts:
+            if discourse_post["trigger"]["tag"] not in self.discourse_triggers:
+                errors.append(
+                    ValidationError(
+                        error_name="Invalid trigger in discourse post",
+                        error_description="A discourse post has a flag trigger that references a discourse tag not defined in track.yaml.",
+                        track_name=track_name,
+                        details={
+                            "Invalid tag": discourse_post["trigger"]["tag"],
+                        },
                     )
                 )
         return errors
@@ -378,8 +385,8 @@ class ServicesValidator(Validator):
         errors: list[ValidationError] = []
         services = set()
         for service in track_yaml["services"]:
-            service_name = service["name"]
-            instance_name = service["instance"]
+            service_name = service.get("name")
+            instance_name = service.get("instance")
             service = f"{instance_name}/{service_name}"
 
             if service in services:
