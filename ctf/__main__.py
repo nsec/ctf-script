@@ -847,7 +847,6 @@ def run_ansible_playbook(args: argparse.Namespace, track: str, path: str) -> Non
 
 
 def redeploy(args: argparse.Namespace) -> None:
-    args.production = False
     destroy(args=args)
     deploy(args=args)
 
@@ -1380,6 +1379,12 @@ def main():
         nargs="+",
         default=[],
         help="Only redeploy the given tracks (use the folder name)",
+    )
+    parser_redeploy.add_argument(
+        "--production",
+        action="store_true",
+        default=False,
+        help="Do a production deployment. Only use this if you know what you're doing.",
     )
     parser_redeploy.add_argument(
         "--remote",

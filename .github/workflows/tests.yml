@@ -149,7 +149,7 @@ jobs:
 
       - name: Test deployment of a track not deployed without destroying the rest
         run: |
-          ctf deploy --production --production --tracks mock-track-apache-php
+          ctf deploy --production --tracks mock-track-apache-php
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 1 ] || exit 1
           ctf redeploy --production --tracks mock-track-python-service
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
