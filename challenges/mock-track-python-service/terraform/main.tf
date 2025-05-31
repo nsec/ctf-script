@@ -74,7 +74,7 @@ resource "incus_instance" "this" {
 
   name = each.key
 
-  image    = "images:debian/13"
+  image    = "images:ubuntu/24.04"
   profiles = ["default", incus_profile.this.name]
 
   device {
