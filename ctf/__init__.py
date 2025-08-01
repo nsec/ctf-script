@@ -71,8 +71,6 @@ def find_ctf_root_directory() -> str:
     while path != (path := os.path.dirname(p=path)):
         dir = os.listdir(path=path)
 
-        if ".git" not in dir:
-            continue
         if ".deploy" not in dir:
             continue
         if "challenges" not in dir:
@@ -82,7 +80,7 @@ def find_ctf_root_directory() -> str:
     if path == "/":
         if "CTF_ROOT_DIR" not in os.environ:
             LOG.critical(
-                msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable.'
+                msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
             )
             exit(1)
         return os.environ.get("CTF_ROOT_DIR", default=".")
@@ -91,4 +89,7 @@ def find_ctf_root_directory() -> str:
     return path
 
 
-CTF_ROOT_DIRECTORY = find_ctf_root_directory()
+if len(sys.argv) > 1 and sys.argv[1] == "init":
+    CTF_ROOT_DIRECTORY = os.path.join(os.getcwd(), ".")
+else:
+    CTF_ROOT_DIRECTORY = find_ctf_root_directory()
