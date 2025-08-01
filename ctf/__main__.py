@@ -92,6 +92,31 @@ def terraform_binary() -> str:
     return path
 
 
+def init(args: argparse.Namespace) -> None:
+    if os.path.isdir(os.path.join(args.path, "challenges")) or os.path.isdir(
+        os.path.join(args.path, ".deploy")
+    ):
+        LOG.error(f"Directory {args.path} is already initialized.")
+        exit(code=1)
+
+    challenge_dir = os.path.join(args.path, "challenges")
+    deploy_dir = os.path.join(args.path, ".deploy")
+
+    try:
+        os.mkdir(challenge_dir)
+        LOG.info(f"Created {challenge_dir}")
+        shutil.copytree(os.path.join(TEMPLATES_ROOT_DIRECTORY, ".deploy"), deploy_dir)
+        LOG.info(f"Created {deploy_dir}")
+    except Exception:
+        import traceback
+
+        if os.path.isdir(challenge_dir):
+            os.rmdir(challenge_dir)
+        if os.path.isdir(deploy_dir):
+            shutil.rmtree(deploy_dir)
+        LOG.critical(traceback.format_exc())
+
+
 def new(args: argparse.Namespace) -> None:
     LOG.info(msg=f"Creating a new track: {args.name}")
     if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=args.name):
@@ -1310,6 +1335,18 @@ def main():
         help="Script version.",
     )
 
+    parser_init = subparsers.add_parser(
+        "init",
+        help="Initialize a folder with the default CTF structure.",
+    )
+    parser_init.set_defaults(func=init)
+    parser_init.add_argument(
+        "path",
+        nargs="?",
+        default=CTF_ROOT_DIRECTORY,
+        help="Initialize the folder at the given path.",
+    )
+
     parser_flags = subparsers.add_parser(
         "flags",
         help="Get flags from tracks",
@@ -1556,10 +1593,11 @@ def main():
         ENV["INCUS_REMOTE"] = args.remote
 
     if not os.path.isdir(s=(p := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))):
-        LOG.error(
-            msg=f"Directory `{p}` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
-        )
-        exit(code=1)
+        if args.func.__name__ != "init":
+            LOG.error(
+                msg=f"Directory `{p}` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
+            )
+            exit(code=1)
 
     args.func(args=args)
 
