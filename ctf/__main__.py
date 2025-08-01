@@ -99,21 +99,31 @@ def init(args: argparse.Namespace) -> None:
         LOG.error(f"Directory {args.path} is already initialized.")
         exit(code=1)
 
-    challenge_dir = os.path.join(args.path, "challenges")
-    deploy_dir = os.path.join(args.path, ".deploy")
+    created_assets: list[str] = []
 
     try:
-        os.mkdir(challenge_dir)
-        LOG.info(f"Created {challenge_dir}")
-        shutil.copytree(os.path.join(TEMPLATES_ROOT_DIRECTORY, ".deploy"), deploy_dir)
-        LOG.info(f"Created {deploy_dir}")
+        for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):
+            dst_asset = os.path.join(args.path, asset)
+            if os.path.isdir(src_asset := os.path.join(p, asset)):
+                shutil.copytree(src_asset, dst_asset)
+                LOG.info(f"Created {dst_asset} folder")
+            else:
+                shutil.copy(src_asset, dst_asset)
+                LOG.info(f"Created {dst_asset} file")
+
+            created_assets.append(dst_asset)
+
     except Exception:
         import traceback
 
-        if os.path.isdir(challenge_dir):
-            os.rmdir(challenge_dir)
-        if os.path.isdir(deploy_dir):
-            shutil.rmtree(deploy_dir)
+        for asset in created_assets:
+            if os.path.isdir(asset):
+                shutil.rmtree(asset)
+                LOG.info(f"Removed created {asset} folder")
+            else:
+                os.unlink(asset)
+                LOG.info(f"Removed created {asset} file")
+
         LOG.critical(traceback.format_exc())
 
 

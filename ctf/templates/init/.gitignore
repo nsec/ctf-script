@@ -1,0 +1,21 @@
+*.swp
+
+.deploy/modules.tf
+.deploy/.terraform
+.deploy/.terraform.*
+.deploy/terraform.tfstate*
+
+challenges/*/terraform/.terraform
+challenges/*/terraform/.terraform.*
+challenges/*/terraform/terraform.tfstate*
+challenges/*/terraform/variables.tf
+challenges/*/terraform/versions.tf
+
+# For Python and Virtual Environment. Create your virtual environ in a folder named "venv".
+**/__pycache__/
+**/venv/**
+
+*.egg-info
+
+.vscode/
+
