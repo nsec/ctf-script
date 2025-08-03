@@ -1,0 +1,18 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/robbert229/devcontainer-features/opentofu:1": {
+      "version": "1.9.0"
+    },
+    "ghcr.io/devcontainers-extra/features/ansible:2": {}
+  },
+  "runArgs": [
+    "--privileged",
+    "--cap-add=SYS_PTRACE",
+    "--security-opt", "seccomp=unconfined",
+    "--cgroupns=host",
+    "--pid=host",
+    "--volume", "/dev:/dev",
+    "--volume", "/lib/modules:/lib/modules:ro"
+  ]
+}
