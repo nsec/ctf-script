@@ -18,4 +18,6 @@ challenges/*/terraform/versions.tf
 *.egg-info
 
 .vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
 

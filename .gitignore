@@ -18,4 +18,4 @@ challenges/*/terraform/versions.tf
 *.egg-info
 
 .vscode/
-
+.idea

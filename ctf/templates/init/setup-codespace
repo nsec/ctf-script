@@ -1,0 +1,44 @@
+#!/bin/sh
+set -eu
+
+if [ "${CODESPACES}" != "true" ]; then
+    echo "This script is meant to setup a working development environment in Github Codespaces"
+    echo "It's generally unsafe to run on a system you care about."
+    exit 1
+fi
+
+echo "==> Installing dependencies"
+sudo apt-get update
+sudo apt-get install --no-install-recommends --yes \
+  kmod \
+  iptables \
+  nftables \
+  zfsutils-linux
+
+echo "==> Clearing Docker firewalling"
+sudo iptables-legacy -P INPUT ACCEPT
+sudo iptables-legacy -P OUTPUT ACCEPT
+sudo iptables-legacy -P FORWARD ACCEPT
+sudo nft flush ruleset
+
+echo "==> Installing Incus"
+curl https://pkgs.zabbly.com/get/incus-base-stable | sudo sh
+
+echo "==> Starting Incus"
+sudo start-stop-daemon --start --name incusd --background --exec /opt/incus/lib/systemd/incusd -- --group=vscode
+sleep 3s
+
+echo "==> Configuring Incus"
+incus network create incusbr0
+incus profile device add default eth0 nic network=incusbr0 name=eth0
+
+truncate -s 20G /tmp/zfs.img
+LOOP=$(sudo losetup -f --show /tmp/zfs.img)
+incus storage create default zfs source=${LOOP}
+incus profile device add default root disk pool=default path=/
+sudo zfs set sync=disabled default
+
+echo "==> Installing ctf tool"
+pip install -e .
+
+echo "==> You're all done, you can now run \"ctf deploy\""
