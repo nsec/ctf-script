@@ -13,31 +13,32 @@ where 700+ participants compete in a 48-hour long CTF competition.
 
 ## Features and Usage
 
-- `ctf init` to initialize a new ctf
+- `ctf init` to initialize a new ctf repository
 - `ctf new` to create a new challenge. Supports templates for common challenge types.
-- `ctf deploy` deploys the challenges to a local Incus instance
+- `ctf deploy` deploys the challenges to a local (or remote) Incus server
 - `ctf validate` runs lots of static checks (including JSON Schemas) on the challenges to ensure quality
 - `ctf stats` provide lots of helpful statistics about the CTF
 - and many more. See `ctf --help` for the full list of commands.
 
 To run `ctf` from any directory, set up the `CTF_ROOT_DIR` environment variable to make the script
-execute in the right directory or execute the script from that directory.
+execute in the right directory or execute the script from that directory. If not set, `ctf` will go up the directory
+tree until it finds `challenges/` and `.deploy` directories, which is the root of the CTF repository.
 
 ## Structure of a CTF repository
 
 ```
 my-ctf/
-├── challenges/                   # Directory containing all the challenges
+├── challenges/                   # Directory containing all the tracks
 │   ├── track1/                   # Directory for a specific track that contains N flags. 
 │   │   ├── track.yaml            # Main file that describes the track
 │   │   ├── files/                # Directory that contains all the files available for download in the track
 │   │   │   ├── somefile.zip
-│   │   ├── ansible/              # Directory containing Ansible playbooks to configure the challenge
-│   │   │   ├── deploy.yaml       # Main playbook to deploy the challenge
+│   │   ├── ansible/              # Directory containing Ansible playbooks to configure the track
+│   │   │   ├── deploy.yaml       # Main playbook to deploy the track
 │   │   │   └── inventory         # Inventory file for Ansible
 │   │   ├── terraform/            # Directory containing OpenTofu (terraform fork) files to describe the infrastructure
-│   │   │   └── main.tf           # Main OpenTofu file to deploy the challenge
-│   │   ├── posts/                # Directory containing forum posts related to the challenge
+│   │   │   └── main.tf           # Main OpenTofu file to deploy the track
+│   │   ├── posts/                # Directory containing forum posts related to the track
 │   │   │   ├── track1.yaml       # Initial post for the track
 │   │   │   └── track1_flag1.yaml # Inventory file for Ansible
 

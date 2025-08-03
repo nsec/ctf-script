@@ -239,7 +239,7 @@ b. Follow the instructions in the browser to connect to GitHub and authorize the
 
 a. `CTRL` + `Shift` + `P` ==> "Codespaces: Connect to codespace...". You should get a message saying there are no codespace. Click the "create" button.
 
-b. Choose your private fork (Ex. `Res260/ctf-2025`). Choose your work branch (`my_awesome_challenge` in this case). Choose either the 2 core or the 4 cores machine. GitHub offers 120 core hours per month, so 60 hours of work for the 2 core machine and 30 hours for the 4 cores machine.
+b. Choose your private fork (Ex. `<your_username>/ctf`). Choose your work branch (`my_awesome_challenge` in this case). Choose either the 2 core or the 4 cores machine. GitHub offers 120 core hours per month, so 60 hours of work for the 2 core machine and 30 hours for the 4 cores machine.
 
 c. The first connection might fail with a "not found" error. If this happens, just do a. again.
 
