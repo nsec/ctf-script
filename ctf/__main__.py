@@ -93,10 +93,14 @@ def terraform_binary() -> str:
 
 
 def init(args: argparse.Namespace) -> None:
-    if os.path.isdir(os.path.join(args.path, "challenges")) or os.path.isdir(
-        os.path.join(args.path, ".deploy")
-    ):
-        LOG.error(f"Directory {args.path} is already initialized.")
+    if (
+        os.path.isdir(os.path.join(args.path, "challenges"))
+        or os.path.isdir(os.path.join(args.path, ".deploy"))
+    ) and not args.force:
+        LOG.error(
+            f"Directory {args.path} is already initialized. Use --force to overwrite."
+        )
+        LOG.error(args.force)
         exit(code=1)
 
     created_assets: list[str] = []
@@ -105,7 +109,7 @@ def init(args: argparse.Namespace) -> None:
         for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):
             dst_asset = os.path.join(args.path, asset)
             if os.path.isdir(src_asset := os.path.join(p, asset)):
-                shutil.copytree(src_asset, dst_asset)
+                shutil.copytree(src_asset, dst_asset, dirs_exist_ok=True)
                 LOG.info(f"Created {dst_asset} folder")
             else:
                 shutil.copy(src_asset, dst_asset)
@@ -1355,6 +1359,13 @@ def main():
         nargs="?",
         default=CTF_ROOT_DIRECTORY,
         help="Initialize the folder at the given path.",
+    )
+    parser_init.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        default=False,
+        help="Overwrite the directory if it's already initialized.",
     )
 
     parser_flags = subparsers.add_parser(
