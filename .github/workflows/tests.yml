@@ -115,7 +115,7 @@ jobs:
       - name: Copy CTF files
         run: |
             mkdir -p test-ctf/challenges
-            cp -r ./challenges test-ctf/challenges
+            cp -r ./challenges test-ctf/
 
       - name: Validate CTF structure
         # Run this in the test-ctf directory
