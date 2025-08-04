@@ -116,6 +116,8 @@ jobs:
         run: |
             mkdir -p test-ctf/challenges
             cp -r ./challenges test-ctf/
+            ls -al test-ctf/
+            ls -al test-ctf/challenges
 
       - name: Validate CTF structure
         # Run this in the test-ctf directory
