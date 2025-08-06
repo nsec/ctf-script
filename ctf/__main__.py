@@ -975,9 +975,9 @@ def stats(
         if os.path.isdir(
             (track_directory := os.path.join(challenges_directory, entry))
         ) and os.path.isfile(os.path.join(track_directory, "track.yaml")):
-            if not args.tracks:
+            if not tracks:
                 distinct_tracks.append(entry)
-            elif entry in args.tracks:
+            elif entry in tracks:
                 distinct_tracks.append(entry)
 
     stats["number_of_tracks"] = len(distinct_tracks)
@@ -1055,7 +1055,7 @@ def stats(
     )
 
     print(json.dumps(stats, indent=2, ensure_ascii=False))
-    if args.generate_badges:
+    if generate_badges:
         if not _has_pybadges:
             LOG.critical(msg="Module pybadges was not found.")
             exit(code=1)
@@ -1107,7 +1107,7 @@ def stats(
             ),
         )
 
-    if args.charts:
+    if charts:
         if not _has_matplotlib:
             LOG.critical(msg="Module matplotlib was not found.")
             exit(code=1)
@@ -1157,7 +1157,7 @@ def stats(
         plt.savefig(os.path.join(".charts", "points_per_track.png"))
         plt.clf()
 
-        if args.historical:
+        if historical:
             # Number of points and flags over time
             historical_data = {}
             commit_list = (
