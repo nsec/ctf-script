@@ -59,7 +59,9 @@ TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
 SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
 AVAILABLE_INCUS_REMOTES = available_incus_remotes()
 
-app = Typer(help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.")
+app = Typer(
+    help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool."
+)
 
 
 @unique
@@ -78,6 +80,10 @@ class OutputFormat(StrEnum):
     YAML = "yaml"
 
 
+class ListOutputFormat(StrEnum):
+    PRETTY = "pretty"
+
+
 def terraform_binary() -> str:
     path = shutil.which(cmd="tofu")
     if not path:
@@ -89,9 +95,20 @@ def terraform_binary() -> str:
     return path
 
 
-@app.command(help="Initialize a directory with the default CTF structure. If the directory does not exist, it will be created.")
-def init(path: Annotated[str, typer.Argument(help="Directory in which to initialize a CTF")] = CTF_ROOT_DIRECTORY,
-         force: Annotated[bool, typer.Option("--force", help="Overwrite the directory if it's already initialized")] = False) -> None:
+@app.command(
+    help="Initialize a directory with the default CTF structure. If the directory does not exist, it will be created."
+)
+def init(
+    path: Annotated[
+        str, typer.Argument(help="Directory in which to initialize a CTF")
+    ] = CTF_ROOT_DIRECTORY,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force", help="Overwrite the directory if it's already initialized"
+        ),
+    ] = False,
+) -> None:
     created_directory = False
     created_assets: list[str] = []
     try:
@@ -108,7 +125,6 @@ def init(path: Annotated[str, typer.Argument(help="Directory in which to initial
             )
             LOG.error(force)
             exit(code=1)
-
 
         for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):
             dst_asset = os.path.join(path, asset)
@@ -140,9 +156,26 @@ def init(path: Annotated[str, typer.Argument(help="Directory in which to initial
 
 
 @app.command(help="Create a new CTF track with a given name")
-def new(name: Annotated[str, typer.Option(help="Track name. No space, use underscores if needed.", prompt="Track name. No space, use underscores if needed.")],
-        template: Annotated[Template, typer.Option("--template", "-t", help="Template to use for the track.")] = Template.APACHE_PHP,
-        force: Annotated[bool, typer.Option("--force", help="If directory already exists, delete it and create it again.")] = False) -> None:
+def new(
+    name: Annotated[
+        str,
+        typer.Option(
+            help="Track name. No space, use underscores if needed.",
+            prompt="Track name. No space, use underscores if needed.",
+        ),
+    ],
+    template: Annotated[
+        Template,
+        typer.Option("--template", "-t", help="Template to use for the track."),
+    ] = Template.APACHE_PHP,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="If directory already exists, delete it and create it again.",
+        ),
+    ] = False,
+) -> None:
     LOG.info(msg=f"Creating a new track: {name}")
     if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=name):
         LOG.critical(
@@ -390,13 +423,36 @@ def new(name: Annotated[str, typer.Option(help="Track name. No space, use unders
         LOG.debug(msg=f"Wrote {p}.")
 
 
-@app.command(help="Destroy everything deployed by Terraform. This is a destructive operation.")
+@app.command(
+    help="Destroy everything deployed by Terraform. This is a destructive operation."
+)
 def destroy(
-        tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only destroy the given tracks (use the directory name)")] = [],
-        production: Annotated[bool, typer.Option("--production", help="Do a production deployment. Only use this if you know what you're doing.")] = False,
-        remote: Annotated[str, typer.Option("--remote", help="Incus remote to deploy to")] = "local",
-        force: Annotated[bool, typer.Option("--force", help="If there are artefacts remaining, delete them without asking.")] = False
-    ) -> None:
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only destroy the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="If there are artefacts remaining, delete them without asking.",
+        ),
+    ] = False,
+) -> None:
     ENV["INCUS_REMOTE"] = remote
     LOG.info(msg="tofu destroy...")
 
@@ -419,9 +475,9 @@ def destroy(
         .strip()
     )
 
-    tracks = set(tracks)
-    if tracks and tracks != terraform_tracks:
-        terraform_tracks &= tracks
+    tmp_tracks = set(tracks)
+    if tmp_tracks and tmp_tracks != terraform_tracks:
+        terraform_tracks &= tmp_tracks
         if not terraform_tracks:
             LOG.warning("No track to destroy.")
             return
@@ -554,10 +610,22 @@ def destroy(
 
 
 @app.command(help="Get flags from tracks")
-def flags(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only flags from the given tracks (use the directory name)")] = [],
-          format: Annotated[OutputFormat, typer.Option("--format", help="Output format", prompt="Output format")] = OutputFormat.JSON) -> None:
-    distinct_tracks = set()
-    print(tracks)
+def flags(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only flags from the given tracks (use the directory name)",
+        ),
+    ] = [],
+    format: Annotated[
+        OutputFormat,
+        typer.Option("--format", help="Output format", prompt="Output format"),
+    ] = OutputFormat.JSON,
+) -> None:
+    distinct_tracks: set[str] = set()
+
     for entry in os.listdir(
         path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
     ):
@@ -597,8 +665,17 @@ def flags(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only
 
 
 @app.command(help="Get services from tracks")
-def services(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only services from the given tracks (use the directory name)")] = []) -> None:
-    distinct_tracks = set()
+def services(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only services from the given tracks (use the directory name)",
+        ),
+    ] = [],
+) -> None:
+    distinct_tracks: set[str] = set()
     for entry in os.listdir(
         path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
     ):
@@ -629,10 +706,29 @@ def services(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="O
             print(f"{track}/{instance}/{name} {contact} {address} {check} {port}")
 
 
-@app.command(help="Generate the deployment files using `terraform init` and `terraform validate`")
-def generate(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only generate the given tracks (use the directory name)")] = [],
-             production: Annotated[bool, typer.Option("--production", help="Do a production deployment. Only use this if you know what you're doing.")] = False,
-             remote: Annotated[str, typer.Option("--remote", help="Incus remote to deploy to")] = "local") -> set[str]:
+@app.command(
+    help="Generate the deployment files using `terraform init` and `terraform validate`"
+)
+def generate(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only generate the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+) -> set[str]:
     ENV["INCUS_REMOTE"] = remote
     # Get the list of tracks.
     distinct_tracks = set(
@@ -642,9 +738,8 @@ def generate(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="O
         and (not tracks or track in tracks)
     )
 
-    LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
-
     if distinct_tracks:
+        LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
         # Generate the Terraform modules file.
         create_terraform_modules_file(remote=remote, production=production)
         add_tracks_to_terraform_modules(
@@ -706,18 +801,41 @@ def generate(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="O
             cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             check=True,
         )
+    else:
+        LOG.critical("No track was found")
+        exit(code=1)
 
     return distinct_tracks
 
 
 @app.command(help="Deploy and provision the tracks")
 def deploy(
-        tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only deploy the given tracks (use the directory name)")] = [],
-        production: Annotated[bool, typer.Option("--production", help="Do a production deployment. Only use this if you know what you're doing.")] = False,
-        remote: Annotated[str, typer.Option("--remote", help="Incus remote to deploy to")] = "local",
-        redeploy: Annotated[bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")] = False,
-        force: Annotated[bool, typer.Option("--force", help="Force the deployment even if there are errors.")] = False
-    ):
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only deploy the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+    redeploy: Annotated[
+        bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Force the deployment even if there are errors."),
+    ] = False,
+):
     ENV["INCUS_REMOTE"] = remote
     if redeploy:
         distinct_tracks = set(
@@ -792,7 +910,9 @@ def deploy(
         ):
             continue
 
-        run_ansible_playbook(remote=remote, production=production, track=track, path=path)
+        run_ansible_playbook(
+            remote=remote, production=production, track=track, path=path
+        )
 
         if not production:
             incus_list = json.loads(
@@ -852,25 +972,28 @@ def deploy(
                 args=["incus", f"--project={track}", "list"], check=True, env=ENV
             )
 
-    if not production and tracks:
-        tracks = list(tracks)
+    if not production and distinct_tracks:
+        tracks_list = list(distinct_tracks)
         track_index = input(
-            f"""Do you want to `incus project switch` to any of the tracks mentioned in argument?
-{chr(10).join([f"{list(tracks).index(t) + 1}) {t}" for t in tracks])}
+            textwrap.dedent(
+                f"""\
+                Do you want to `incus project switch` to any of the tracks mentioned in argument?
+                {chr(10).join([f"{list(tracks_list).index(t) + 1}) {t}" for t in tracks_list])}
 
-Which? """
+                Which? """
+            )
         )
 
         if (
             track_index.isnumeric()
             and (track_index := int(track_index))
-            and 0 < track_index <= len(tracks)
+            and 0 < track_index <= len(tracks_list)
         ):
             LOG.info(
-                msg=f"Running `incus project switch {tracks[track_index - 1]}`"
+                msg=f"Running `incus project switch {tracks_list[track_index - 1]}`"
             )
             subprocess.run(
-                args=["incus", "project", "switch", tracks[track_index - 1]],
+                args=["incus", "project", "switch", tracks_list[track_index - 1]],
                 check=True,
                 env=ENV,
             )
@@ -920,21 +1043,59 @@ def run_ansible_playbook(remote: str, production: bool, track: str, path: str) -
 
 
 @app.command(help="Destroy and then deploy the given tracks")
-def redeploy(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only redeploy the given tracks (use the directory name)")] = [],
-             production: Annotated[bool, typer.Option("--production", help="Do a production deployment. Only use this if you know what you're doing.")] = False,
-             remote: Annotated[str, typer.Option("--remote", help="Incus remote to deploy to")] = "local",
-             force: Annotated[bool, typer.Option("--force", help="If there are artefacts remaining, delete them without asking.")] = False
-             ) -> None:
+def redeploy(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only redeploy the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="If there are artefacts remaining, delete them without asking.",
+        ),
+    ] = False,
+) -> None:
     ENV["INCUS_REMOTE"] = remote
     destroy(tracks=tracks, production=production, remote=remote, force=force)
-    deploy(distinct_tracks=tracks, production=production, remote=remote, force=force)
+    deploy(tracks=tracks, production=production, remote=remote, force=force)
 
 
 @app.command(help="Preview the changes")
-def check(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only check the given tracks (use the directory name)")] = [],
-          production: Annotated[bool, typer.Option("--production", help="Do a production deployment. Only use this if you know what you're doing.")] = False,
-          remote: Annotated[str, typer.Option("--remote", help="Incus remote to deploy to")] = "local",
-    ) -> None:
+def check(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only check the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+) -> None:
     ENV["INCUS_REMOTE"] = remote
     # Run generate first.
     generate(tracks=tracks, production=production, remote=remote)
@@ -953,16 +1114,43 @@ def check(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Only
         )
 
 
-@app.command(help="Generate statistics (such as number of tracks, number of flags, total flag value, etc.) from all the `track.yaml files. Outputs as JSON.")
+@app.command(
+    help="Generate statistics (such as number of tracks, number of flags, total flag value, etc.) from all the `track.yaml files. Outputs as JSON."
+)
 def stats(
-    tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="Name of the tracks to count in statistics (if not specified, all tracks are counted).")] = [],
-    generate_badges: Annotated[bool, typer.Option("--generate-badges", help="Generate SVG files of some statistics in the .badges directory.")] = False,
-    charts: Annotated[bool, typer.Option("--charts", help="Generate PNG charts of some statistics in the .charts directory.")] = False,
-    historical: Annotated[bool, typer.Option("--historical", help="Use in conjunction with --charts to generate historical data. ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING. THIS IS BAD CODE THAT WILL FUCK YOUR REPO IN UNEXPECTED WAYS.")] = False,
-    ) -> None:
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Name of the tracks to count in statistics (if not specified, all tracks are counted).",
+        ),
+    ] = [],
+    generate_badges: Annotated[
+        bool,
+        typer.Option(
+            "--generate-badges",
+            help="Generate SVG files of some statistics in the .badges directory.",
+        ),
+    ] = False,
+    charts: Annotated[
+        bool,
+        typer.Option(
+            "--charts",
+            help="Generate PNG charts of some statistics in the .charts directory.",
+        ),
+    ] = False,
+    historical: Annotated[
+        bool,
+        typer.Option(
+            "--historical",
+            help="Use in conjunction with --charts to generate historical data. ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING. THIS IS BAD CODE THAT WILL FUCK YOUR REPO IN UNEXPECTED WAYS.",
+        ),
+    ] = False,
+) -> None:
     LOG.debug(msg="Generating statistics...")
     stats = {}
-    distinct_tracks = []
+    distinct_tracks: set[str] = set()
     for entry in os.listdir(
         (challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
     ):
@@ -970,9 +1158,9 @@ def stats(
             (track_directory := os.path.join(challenges_directory, entry))
         ) and os.path.isfile(os.path.join(track_directory, "track.yaml")):
             if not tracks:
-                distinct_tracks.append(entry)
+                distinct_tracks.add(entry)
             elif entry in tracks:
-                distinct_tracks.append(entry)
+                distinct_tracks.add(entry)
 
     stats["number_of_tracks"] = len(distinct_tracks)
     stats["number_of_tracks_integrated_with_scenario"] = 0
@@ -1228,20 +1416,21 @@ def stats(
 
     LOG.debug(msg="Done...")
 
-class ListOutputFormat(StrEnum):
-    PRETTY = "pretty"
-
 
 @app.command("list", help="List tracks and their author(s).")
-def list_tracks(format: Annotated[ListOutputFormat, typer.Option("--format", "-f", help="Output format")] = ListOutputFormat.PRETTY) -> None:
-    tracks = []
+def list_tracks(
+    format: Annotated[
+        ListOutputFormat, typer.Option("--format", "-f", help="Output format")
+    ] = ListOutputFormat.PRETTY,
+) -> None:
+    tracks: set[str] = set()
     for track in os.listdir(path=os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
         if os.path.isdir(
             s=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track)
         ) and os.path.exists(
             path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "track.yaml")
         ):
-            tracks.append(track)
+            tracks.add(track)
 
     parsed_tracks = []
     for track in tracks:
@@ -1282,7 +1471,9 @@ def list_tracks(format: Annotated[ListOutputFormat, typer.Option("--format", "-f
         raise ValueError(f"Invalid format: {format.value}")
 
 
-@app.command(help="Run many static validations to ensure coherence and quality in the tracks and repo as a whole.")
+@app.command(
+    help="Run many static validations to ensure coherence and quality in the tracks and repo as a whole."
+)
 def validate() -> None:
     LOG.info(msg="Starting ctf validate...")
 
@@ -1399,10 +1590,12 @@ def version():
 def main():
     app()
 
+
 if __name__ == "__main__":
     if not os.path.isdir(s=(p := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))):
         import sys
-        if not "init" in sys.argv:
+
+        if "init" not in sys.argv:
             LOG.error(
                 msg=f"Directory `{p}` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
             )
