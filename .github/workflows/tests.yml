@@ -47,12 +47,6 @@ jobs:
             ls -al test-ctf/
             ls -al test-ctf/challenges
 
-      - name: Validate CTF structure
-        # Run this in the test-ctf directory
-        working-directory: test-ctf
-        run: |
-          ctf validate
-
       - name: ctf version
         working-directory: test-ctf
         run: |
@@ -141,6 +135,12 @@ jobs:
           chmod +x install-opentofu.sh
           ./install-opentofu.sh --install-method deb
           rm -f install-opentofu.sh
+
+      - name: Validate CTF structure
+        # Run this in the test-ctf directory
+        working-directory: test-ctf
+        run: |
+          ctf validate
 
       - name: Deployment check
         working-directory: test-ctf
