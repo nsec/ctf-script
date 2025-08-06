@@ -22,19 +22,19 @@ try:
 except ImportError:
     _has_matplotlib = False
 
-from validate import app as validate_app
-from init import app as init_app
-from new import app as new_app
-from destroy import app as destroy_app
-from flags import app as flags_app
-from services import app as services_app
-from generate import app as generate_app
-from deploy import app as deploy_app
-from redeploy import app as redeploy_app
-from check import app as check_app
-from stats import app as stats_app
-from list import app as list_app
-from version import app as version_app
+from .validate import app as validate_app
+from .init import app as init_app
+from .new import app as new_app
+from .destroy import app as destroy_app
+from .flags import app as flags_app
+from .services import app as services_app
+from .generate import app as generate_app
+from .deploy import app as deploy_app
+from .redeploy import app as redeploy_app
+from .check import app as check_app
+from .stats import app as stats_app
+from .list import app as list_app
+from .version import app as version_app
 
 app = Typer(
     help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool."
