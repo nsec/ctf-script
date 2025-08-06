@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 import csv
 import io
 import json
@@ -12,12 +11,14 @@ import statistics
 import subprocess
 import textwrap
 from datetime import datetime
-from enum import Enum, unique
+from enum import StrEnum, unique
 
-import argcomplete
 import jinja2
+import typer
 import yaml
 from tabulate import tabulate
+from typer import Typer
+from typing_extensions import Annotated
 
 from ctf import CTF_ROOT_DIRECTORY, ENV, LOG
 from ctf.utils import (
@@ -58,27 +59,29 @@ TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
 SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
 AVAILABLE_INCUS_REMOTES = available_incus_remotes()
 
+app = Typer(
+    help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool."
+)
+
 
 @unique
-class Template(Enum):
+class Template(StrEnum):
     APACHE_PHP = "apache-php"
     PYTHON_SERVICE = "python-service"
     FILES_ONLY = "files-only"
     TRACK_YAML_ONLY = "track-yaml-only"
     RUST_WEBSERVICE = "rust-webservice"
 
-    def __str__(self) -> str:
-        return self.value
-
 
 @unique
-class OutputFormat(Enum):
+class OutputFormat(StrEnum):
     JSON = "json"
     CSV = "csv"
     YAML = "yaml"
 
-    def __str__(self) -> str:
-        return self.value
+
+class ListOutputFormat(StrEnum):
+    PRETTY = "pretty"
 
 
 def terraform_binary() -> str:
@@ -92,27 +95,39 @@ def terraform_binary() -> str:
     return path
 
 
-def init(args: argparse.Namespace) -> None:
+@app.command(
+    help="Initialize a directory with the default CTF structure. If the directory does not exist, it will be created."
+)
+def init(
+    path: Annotated[
+        str, typer.Argument(help="Directory in which to initialize a CTF")
+    ] = CTF_ROOT_DIRECTORY,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force", help="Overwrite the directory if it's already initialized"
+        ),
+    ] = False,
+) -> None:
     created_directory = False
+    created_assets: list[str] = []
     try:
-        if not os.path.isdir(args.path):
-            os.mkdir(args.path)
-            LOG.info(f'Creating directory "{args.path}"')
+        if not os.path.isdir(path):
+            os.mkdir(path)
+            LOG.info(f'Creating directory "{path}"')
             created_directory = True
         elif (
-            os.path.isdir(os.path.join(args.path, "challenges"))
-            or os.path.isdir(os.path.join(args.path, ".deploy"))
-        ) and not args.force:
+            os.path.isdir(os.path.join(path, "challenges"))
+            or os.path.isdir(os.path.join(path, ".deploy"))
+        ) and not force:
             LOG.error(
-                f'Directory "{args.path}" is already initialized. Use --force to overwrite.'
+                f'Directory "{path}" is already initialized. Use --force to overwrite.'
             )
-            LOG.error(args.force)
+            LOG.error(force)
             exit(code=1)
 
-        created_assets: list[str] = []
-
         for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):
-            dst_asset = os.path.join(args.path, asset)
+            dst_asset = os.path.join(path, asset)
             if os.path.isdir(src_asset := os.path.join(p, asset)):
                 shutil.copytree(src_asset, dst_asset, dirs_exist_ok=True)
                 LOG.info(f'Created "{dst_asset}" folder')
@@ -126,8 +141,8 @@ def init(args: argparse.Namespace) -> None:
         import traceback
 
         if created_directory:
-            shutil.rmtree(args.path)
-            LOG.info(f'Removed created "{args.path}" folder')
+            shutil.rmtree(path)
+            LOG.info(f'Removed created "{path}" folder')
         else:
             for asset in created_assets:
                 if os.path.isdir(asset):
@@ -140,9 +155,29 @@ def init(args: argparse.Namespace) -> None:
         LOG.critical(traceback.format_exc())
 
 
-def new(args: argparse.Namespace) -> None:
-    LOG.info(msg=f"Creating a new track: {args.name}")
-    if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=args.name):
+@app.command(help="Create a new CTF track with a given name")
+def new(
+    name: Annotated[
+        str,
+        typer.Option(
+            help="Track name. No space, use underscores if needed.",
+            prompt="Track name. No space, use underscores if needed.",
+        ),
+    ],
+    template: Annotated[
+        Template,
+        typer.Option("--template", "-t", help="Template to use for the track."),
+    ] = Template.APACHE_PHP,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="If directory already exists, delete it and create it again.",
+        ),
+    ] = False,
+) -> None:
+    LOG.info(msg=f"Creating a new track: {name}")
+    if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=name):
         LOG.critical(
             msg="""The track name Valid instance names must fulfill the following requirements:
 * The name must be between 1 and 63 characters long;
@@ -155,11 +190,11 @@ def new(args: argparse.Namespace) -> None:
     if os.path.exists(
         path=(
             new_challenge_directory := os.path.join(
-                CTF_ROOT_DIRECTORY, "challenges", args.name
+                CTF_ROOT_DIRECTORY, "challenges", name
             )
         )
     ):
-        if args.force:
+        if force:
             LOG.debug(msg=f"Deleting {new_challenge_directory}")
             shutil.rmtree(new_challenge_directory)
         else:
@@ -201,10 +236,10 @@ def new(args: argparse.Namespace) -> None:
     track_template = env.get_template(name="track.yaml.j2")
     render = track_template.render(
         data={
-            "name": args.name,
+            "name": name,
             "full_ipv6_address": full_ipv6_address,
             "ipv6_subnet": ipv6_subnet,
-            "template": args.template.value,
+            "template": template.value,
         }
     )
     with open(
@@ -223,9 +258,9 @@ def new(args: argparse.Namespace) -> None:
     LOG.debug(msg=f"Directory {posts_directory} created.")
 
     track_template = env.get_template(name="topic.yaml.j2")
-    render = track_template.render(data={"name": args.name})
+    render = track_template.render(data={"name": name})
     with open(
-        file=(p := os.path.join(posts_directory, f"{args.name}.yaml")),
+        file=(p := os.path.join(posts_directory, f"{name}.yaml")),
         mode="w",
         encoding="utf-8",
     ) as f:
@@ -234,9 +269,9 @@ def new(args: argparse.Namespace) -> None:
     LOG.debug(msg=f"Wrote {p}.")
 
     track_template = env.get_template(name="post.yaml.j2")
-    render = track_template.render(data={"name": args.name})
+    render = track_template.render(data={"name": name})
     with open(
-        file=(p := os.path.join(posts_directory, f"{args.name}_flag1.yaml")),
+        file=(p := os.path.join(posts_directory, f"{name}_flag1.yaml")),
         mode="w",
         encoding="utf-8",
     ) as f:
@@ -244,7 +279,7 @@ def new(args: argparse.Namespace) -> None:
 
     LOG.debug(msg=f"Wrote {p}.")
 
-    if args.template == Template.TRACK_YAML_ONLY:
+    if template == Template.TRACK_YAML_ONLY:
         return
 
     files_directory = os.path.join(new_challenge_directory, "files")
@@ -253,7 +288,7 @@ def new(args: argparse.Namespace) -> None:
 
     LOG.debug(msg=f"Directory {files_directory} created.")
 
-    if args.template == Template.FILES_ONLY:
+    if template == Template.FILES_ONLY:
         return
 
     terraform_directory = os.path.join(new_challenge_directory, "terraform")
@@ -266,7 +301,7 @@ def new(args: argparse.Namespace) -> None:
 
     render = track_template.render(
         data={
-            "name": args.name,
+            "name": name,
             "hardware_address": hardware_address,
             "ipv6": ipv6_address,
             "ipv6_subnet": ipv6_subnet,
@@ -306,8 +341,8 @@ def new(args: argparse.Namespace) -> None:
 
     LOG.debug(msg=f"Directory {ansible_directory} created.")
 
-    track_template = env.get_template(name=f"deploy-{args.template}.yaml.j2")
-    render = track_template.render(data={"name": args.name})
+    track_template = env.get_template(name=f"deploy-{template}.yaml.j2")
+    render = track_template.render(data={"name": name})
     with open(
         file=(p := os.path.join(ansible_directory, "deploy.yaml")),
         mode="w",
@@ -318,7 +353,7 @@ def new(args: argparse.Namespace) -> None:
     LOG.debug(msg=f"Wrote {p}.")
 
     track_template = env.get_template(name="inventory.j2")
-    render = track_template.render(data={"name": args.name})
+    render = track_template.render(data={"name": name})
     with open(
         file=(p := os.path.join(ansible_directory, "inventory")),
         mode="w",
@@ -334,9 +369,9 @@ def new(args: argparse.Namespace) -> None:
 
     LOG.debug(msg=f"Directory {ansible_challenge_directory} created.")
 
-    if args.template == Template.APACHE_PHP:
+    if template == Template.APACHE_PHP:
         track_template = env.get_template(name="index.php.j2")
-        render = track_template.render(data={"name": args.name})
+        render = track_template.render(data={"name": name})
         with open(
             file=(p := os.path.join(ansible_challenge_directory, "index.php")),
             mode="w",
@@ -346,9 +381,9 @@ def new(args: argparse.Namespace) -> None:
 
         LOG.debug(msg=f"Wrote {p}.")
 
-    if args.template == Template.PYTHON_SERVICE:
+    if template == Template.PYTHON_SERVICE:
         track_template = env.get_template(name="app.py.j2")
-        render = track_template.render(data={"name": args.name})
+        render = track_template.render(data={"name": name})
         with open(
             file=(p := os.path.join(ansible_challenge_directory, "app.py")),
             mode="w",
@@ -363,11 +398,11 @@ def new(args: argparse.Namespace) -> None:
             mode="w",
             encoding="utf-8",
         ) as f:
-            f.write(f"{{{{ track_flags.{args.name}_flag_1 }}}} (1/2)\n")
+            f.write(f"{{{{ track_flags.{name}_flag_1 }}}} (1/2)\n")
 
         LOG.debug(msg=f"Wrote {p}.")
 
-    if args.template == Template.RUST_WEBSERVICE:
+    if template == Template.RUST_WEBSERVICE:
         # Copy the entire challenge template
         shutil.copytree(
             os.path.join(TEMPLATES_ROOT_DIRECTORY, "rust-webservice"),
@@ -377,7 +412,7 @@ def new(args: argparse.Namespace) -> None:
         LOG.debug(msg=f"Wrote files to {ansible_challenge_directory}")
 
         manifest_template = env.get_template(name="Cargo.toml.j2")
-        render = manifest_template.render(data={"name": args.name})
+        render = manifest_template.render(data={"name": name})
         with open(
             file=(p := os.path.join(ansible_challenge_directory, "Cargo.toml")),
             mode="w",
@@ -388,7 +423,37 @@ def new(args: argparse.Namespace) -> None:
         LOG.debug(msg=f"Wrote {p}.")
 
 
-def destroy(args: argparse.Namespace) -> None:
+@app.command(
+    help="Destroy everything deployed by Terraform. This is a destructive operation."
+)
+def destroy(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only destroy the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="If there are artefacts remaining, delete them without asking.",
+        ),
+    ] = False,
+) -> None:
+    ENV["INCUS_REMOTE"] = remote
     LOG.info(msg="tofu destroy...")
 
     if not os.path.exists(
@@ -397,7 +462,7 @@ def destroy(args: argparse.Namespace) -> None:
         LOG.critical(msg="Nothing to destroy.")
         exit(code=1)
 
-    tracks = get_terraform_tracks_from_modules()
+    terraform_tracks = get_terraform_tracks_from_modules()
 
     r = (
         subprocess.run(
@@ -410,14 +475,14 @@ def destroy(args: argparse.Namespace) -> None:
         .strip()
     )
 
-    args.tracks = set(args.tracks)
-    if args.tracks and args.tracks != tracks:
-        tracks &= args.tracks
-        if not tracks:
+    tmp_tracks = set(tracks)
+    if tmp_tracks and tmp_tracks != terraform_tracks:
+        terraform_tracks &= tmp_tracks
+        if not terraform_tracks:
             LOG.warning("No track to destroy.")
             return
 
-    if r in tracks:
+    if r in terraform_tracks:
         projects = {
             project["name"]
             for project in json.loads(
@@ -430,7 +495,7 @@ def destroy(args: argparse.Namespace) -> None:
             )
         }
 
-        projects = list((projects - tracks))
+        projects = list((projects - terraform_tracks))
         if len(projects) == 0:
             LOG.critical(
                 msg="No project to switch to. This should never happen as the default should always exists."
@@ -452,7 +517,7 @@ def destroy(args: argparse.Namespace) -> None:
             terraform_binary(),
             "destroy",
             "-auto-approve",
-            *[f"-target=module.track-{track}" for track in tracks],
+            *[f"-target=module.track-{track}" for track in terraform_tracks],
         ],
         cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
         check=False,
@@ -494,11 +559,11 @@ def destroy(args: argparse.Namespace) -> None:
         )
     ]
 
-    for module in tracks:
+    for module in terraform_tracks:
         if module in projects:
             LOG.warning(msg=f"The project {module} was not destroyed properly.")
             if (
-                args.force
+                force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
@@ -512,7 +577,7 @@ def destroy(args: argparse.Namespace) -> None:
         if (tmp_module := module[0:15]) in networks:
             LOG.warning(msg=f"The network {tmp_module} was not destroyed properly.")
             if (
-                args.force
+                force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
@@ -527,7 +592,7 @@ def destroy(args: argparse.Namespace) -> None:
         ) in network_acls:
             LOG.warning(msg=f"The network ACL {tmp_module} was not destroyed properly.")
             if (
-                args.force
+                force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
@@ -537,28 +602,43 @@ def destroy(args: argparse.Namespace) -> None:
                     env=ENV,
                 )
     remove_tracks_from_terraform_modules(
-        tracks=tracks,
-        remote=args.remote,
-        production="production" not in args or args.production,
+        tracks=terraform_tracks,
+        remote=remote,
+        production=production,
     )
     LOG.info(msg="Successfully destroyed every track")
 
 
-def flags(args: argparse.Namespace) -> None:
-    tracks = set()
+@app.command(help="Get flags from tracks")
+def flags(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only flags from the given tracks (use the directory name)",
+        ),
+    ] = [],
+    format: Annotated[
+        OutputFormat,
+        typer.Option("--format", help="Output format", prompt="Output format"),
+    ] = OutputFormat.JSON,
+) -> None:
+    distinct_tracks: set[str] = set()
+
     for entry in os.listdir(
         path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
     ):
         if os.path.isdir(
             s=(track_directory := os.path.join(challenges_directory, entry))
         ) and os.path.exists(path=os.path.join(track_directory, "track.yaml")):
-            if not args.tracks:
-                tracks.add(entry)
-            elif entry in args.tracks:
-                tracks.add(entry)
+            if not tracks:
+                distinct_tracks.add(entry)
+            elif entry in tracks:
+                distinct_tracks.add(entry)
 
     flags = []
-    for track in tracks:
+    for track in distinct_tracks:
         LOG.debug(msg=f"Parsing track.yaml for track {track}")
         track_yaml = parse_track_yaml(track_name=track)
 
@@ -572,32 +652,42 @@ def flags(args: argparse.Namespace) -> None:
         LOG.warning(msg="No flag found...")
         return
 
-    if args.format == OutputFormat.JSON:
+    if format == OutputFormat.JSON:
         print(json.dumps(obj=flags, indent=2))
-    elif args.format == OutputFormat.CSV:
+    elif format == OutputFormat.CSV:
         output = io.StringIO()
         writer = csv.DictWriter(f=output, fieldnames=flags[0].keys())
         writer.writeheader()
         writer.writerows(rowdicts=flags)
         print(output.getvalue())
-    elif args.format == OutputFormat.YAML:
+    elif format == OutputFormat.YAML:
         print(yaml.safe_dump(data=flags))
 
 
-def services(args: argparse.Namespace) -> None:
-    tracks = set()
+@app.command(help="Get services from tracks")
+def services(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only services from the given tracks (use the directory name)",
+        ),
+    ] = [],
+) -> None:
+    distinct_tracks: set[str] = set()
     for entry in os.listdir(
         path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
     ):
         if os.path.isdir(
             s=(track_directory := os.path.join(challenges_directory, entry))
         ) and os.path.exists(path=os.path.join(track_directory, "track.yaml")):
-            if not args.tracks:
-                tracks.add(entry)
-            elif entry in args.tracks:
-                tracks.add(entry)
+            if not tracks:
+                distinct_tracks.add(entry)
+            elif entry in tracks:
+                distinct_tracks.add(entry)
 
-    for track in tracks:
+    for track in distinct_tracks:
         LOG.debug(msg=f"Parsing track.yaml for track {track}")
         track_yaml = parse_track_yaml(track_name=track)
 
@@ -616,27 +706,49 @@ def services(args: argparse.Namespace) -> None:
             print(f"{track}/{instance}/{name} {contact} {address} {check} {port}")
 
 
-def generate(args: argparse.Namespace) -> set[str]:
+@app.command(
+    help="Generate the deployment files using `terraform init` and `terraform validate`"
+)
+def generate(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only generate the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+) -> set[str]:
+    ENV["INCUS_REMOTE"] = remote
     # Get the list of tracks.
-    tracks = set(
+    distinct_tracks = set(
         track
         for track in get_all_available_tracks()
         if validate_track_can_be_deployed(track=track)
-        and (not args.tracks or track in args.tracks)
+        and (not tracks or track in tracks)
     )
 
-    LOG.debug(msg=f"Found {len(tracks)} tracks")
-
-    if tracks:
+    if distinct_tracks:
+        LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
         # Generate the Terraform modules file.
-        create_terraform_modules_file(remote=args.remote, production=args.production)
+        create_terraform_modules_file(remote=remote, production=production)
         add_tracks_to_terraform_modules(
-            tracks=tracks,
-            remote=args.remote,
-            production=args.production,
+            tracks=distinct_tracks,
+            remote=remote,
+            production=production,
         )
 
-        for track in tracks:
+        for track in distinct_tracks:
             relpath = os.path.relpath(
                 os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common"),
                 (
@@ -689,26 +801,57 @@ def generate(args: argparse.Namespace) -> set[str]:
             cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
             check=True,
         )
+    else:
+        LOG.critical("No track was found")
+        exit(code=1)
 
-    return tracks
+    return distinct_tracks
 
 
-def deploy(args):
-    if args.func.__name__ == "redeploy":
-        tracks = set(
+@app.command(help="Deploy and provision the tracks")
+def deploy(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only deploy the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+    redeploy: Annotated[
+        bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
+    ] = False,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Force the deployment even if there are errors."),
+    ] = False,
+):
+    ENV["INCUS_REMOTE"] = remote
+    if redeploy:
+        distinct_tracks = set(
             track
             for track in get_all_available_tracks()
-            if validate_track_can_be_deployed(track=track) and track in args.tracks
+            if validate_track_can_be_deployed(track=track) and track in tracks
         )
 
         add_tracks_to_terraform_modules(
-            tracks=tracks - get_terraform_tracks_from_modules(),
-            remote=args.remote,
-            production=args.production,
+            tracks=distinct_tracks - get_terraform_tracks_from_modules(),
+            remote=remote,
+            production=production,
         )
     else:
         # Run generate first.
-        tracks = generate(args=args)
+        distinct_tracks = generate(tracks=tracks, production=production, remote=remote)
 
     # Check if Git LFS is installed on the system as it is required for deployment.
     if not check_git_lfs():
@@ -724,7 +867,7 @@ def deploy(args):
             "git",
             "lfs",
             "pull",
-            f"--include={','.join([os.path.join('challenges', track, 'ansible', '*') for track in tracks])}",
+            f"--include={','.join([os.path.join('challenges', track, 'ansible', '*') for track in distinct_tracks])}",
         ],
         check=True,
     )
@@ -743,8 +886,8 @@ def deploy(args):
         if (input("Do you want to clean and start over? [Y/n] ").lower() or "y") != "y":
             exit(code=1)
 
-        args.force = True
-        destroy(args=args)
+        force = True
+        destroy(tracks=tracks, production=production, remote=remote, force=force)
 
         subprocess.run(
             args=[terraform_binary(), "apply", "-auto-approve"],
@@ -755,11 +898,11 @@ def deploy(args):
         LOG.warning(
             "CTRL+C was detected during Terraform deployment. Destroying everything..."
         )
-        args.force = True
-        destroy(args=args)
+        force = True
+        destroy(tracks=tracks, production=production, remote=remote, force=force)
         exit(code=0)
 
-    for track in tracks:
+    for track in distinct_tracks:
         if not os.path.exists(
             path=(
                 path := os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "ansible")
@@ -767,9 +910,11 @@ def deploy(args):
         ):
             continue
 
-        run_ansible_playbook(args=args, track=track, path=path)
+        run_ansible_playbook(
+            remote=remote, production=production, track=track, path=path
+        )
 
-        if not args.production:
+        if not production:
             incus_list = json.loads(
                 s=subprocess.run(
                     args=["incus", "list", f"--project={track}", "--format", "json"],
@@ -788,7 +933,7 @@ def deploy(args):
 
             LOG.debug(msg=f"Mapping: {ipv6_to_container_name}")
 
-            if args.remote == "local":
+            if remote == "local":
                 LOG.debug(msg=f"Parsing track.yaml for track {track}")
                 track_yaml = parse_track_yaml(track_name=track)
 
@@ -827,25 +972,28 @@ def deploy(args):
                 args=["incus", f"--project={track}", "list"], check=True, env=ENV
             )
 
-    if not args.production and args.tracks:
-        args.tracks = list(args.tracks)
+    if not production and distinct_tracks:
+        tracks_list = list(distinct_tracks)
         track_index = input(
-            f"""Do you want to `incus project switch` to any of the tracks mentioned in argument?
-{chr(10).join([f"{list(args.tracks).index(t) + 1}) {t}" for t in args.tracks])}
+            textwrap.dedent(
+                f"""\
+                Do you want to `incus project switch` to any of the tracks mentioned in argument?
+                {chr(10).join([f"{list(tracks_list).index(t) + 1}) {t}" for t in tracks_list])}
 
-Which? """
+                Which? """
+            )
         )
 
         if (
             track_index.isnumeric()
             and (track_index := int(track_index))
-            and 0 < track_index <= len(args.tracks)
+            and 0 < track_index <= len(tracks_list)
         ):
             LOG.info(
-                msg=f"Running `incus project switch {args.tracks[track_index - 1]}`"
+                msg=f"Running `incus project switch {tracks_list[track_index - 1]}`"
             )
             subprocess.run(
-                args=["incus", "project", "switch", args.tracks[track_index - 1]],
+                args=["incus", "project", "switch", tracks_list[track_index - 1]],
                 check=True,
                 env=ENV,
             )
@@ -855,12 +1003,12 @@ Which? """
             )
 
 
-def run_ansible_playbook(args: argparse.Namespace, track: str, path: str) -> None:
+def run_ansible_playbook(remote: str, production: bool, track: str, path: str) -> None:
     extra_args = []
-    if "remote" in args and args.remote:
-        extra_args += ["-e", f"ansible_incus_remote={args.remote}"]
+    if remote:
+        extra_args += ["-e", f"ansible_incus_remote={remote}"]
 
-    if args.production:
+    if production:
         extra_args += ["-e", "nsec_production=true"]
 
     LOG.info(msg=f"Running common yaml with ansible for track {track}...")
@@ -894,14 +1042,65 @@ def run_ansible_playbook(args: argparse.Namespace, track: str, path: str) -> Non
         shutil.rmtree(artifacts_path)
 
 
-def redeploy(args: argparse.Namespace) -> None:
-    destroy(args=args)
-    deploy(args=args)
+@app.command(help="Destroy and then deploy the given tracks")
+def redeploy(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only redeploy the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="If there are artefacts remaining, delete them without asking.",
+        ),
+    ] = False,
+) -> None:
+    ENV["INCUS_REMOTE"] = remote
+    destroy(tracks=tracks, production=production, remote=remote, force=force)
+    deploy(
+        tracks=tracks, production=production, remote=remote, force=force, redeploy=True
+    )
 
 
-def check(args: argparse.Namespace) -> None:
+@app.command(help="Preview the changes")
+def check(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Only check the given tracks (use the directory name)",
+        ),
+    ] = [],
+    production: Annotated[
+        bool,
+        typer.Option(
+            "--production",
+            help="Do a production deployment. Only use this if you know what you're doing.",
+        ),
+    ] = False,
+    remote: Annotated[
+        str, typer.Option("--remote", help="Incus remote to deploy to")
+    ] = "local",
+) -> None:
+    ENV["INCUS_REMOTE"] = remote
     # Run generate first.
-    generate(args=args)
+    generate(tracks=tracks, production=production, remote=remote)
 
     # Then run terraform plan.
     subprocess.run(
@@ -911,28 +1110,61 @@ def check(args: argparse.Namespace) -> None:
     )
 
     # Check if Git LFS is installed on the system as it will be required for deployment.
-    if args.func.__name__ == "check" and not check_git_lfs():
+    if not check_git_lfs():
         LOG.warning(
             msg="Git LFS is missing from  your system. Install it before deploying."
         )
 
 
-def stats(args: argparse.Namespace) -> None:
+@app.command(
+    help="Generate statistics (such as number of tracks, number of flags, total flag value, etc.) from all the `track.yaml files. Outputs as JSON."
+)
+def stats(
+    tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--tracks",
+            "-t",
+            help="Name of the tracks to count in statistics (if not specified, all tracks are counted).",
+        ),
+    ] = [],
+    generate_badges: Annotated[
+        bool,
+        typer.Option(
+            "--generate-badges",
+            help="Generate SVG files of some statistics in the .badges directory.",
+        ),
+    ] = False,
+    charts: Annotated[
+        bool,
+        typer.Option(
+            "--charts",
+            help="Generate PNG charts of some statistics in the .charts directory.",
+        ),
+    ] = False,
+    historical: Annotated[
+        bool,
+        typer.Option(
+            "--historical",
+            help="Use in conjunction with --charts to generate historical data. ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING. THIS IS BAD CODE THAT WILL FUCK YOUR REPO IN UNEXPECTED WAYS.",
+        ),
+    ] = False,
+) -> None:
     LOG.debug(msg="Generating statistics...")
     stats = {}
-    tracks = []
+    distinct_tracks: set[str] = set()
     for entry in os.listdir(
         (challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
     ):
         if os.path.isdir(
             (track_directory := os.path.join(challenges_directory, entry))
         ) and os.path.isfile(os.path.join(track_directory, "track.yaml")):
-            if not args.tracks:
-                tracks.append(entry)
-            elif entry in args.tracks:
-                tracks.append(entry)
+            if not tracks:
+                distinct_tracks.add(entry)
+            elif entry in tracks:
+                distinct_tracks.add(entry)
 
-    stats["number_of_tracks"] = len(tracks)
+    stats["number_of_tracks"] = len(distinct_tracks)
     stats["number_of_tracks_integrated_with_scenario"] = 0
     stats["number_of_flags"] = 0
     stats["highest_value_flag"] = 0
@@ -950,7 +1182,7 @@ def stats(args: argparse.Namespace) -> None:
     stats["not_integrated_with_scenario"] = []
     challenge_designers = set()
     flags = []
-    for track in tracks:
+    for track in distinct_tracks:
         track_yaml = parse_track_yaml(track_name=track)
         number_of_flags = len(track_yaml["flags"])
         stats["number_of_flags_per_track"][track] = number_of_flags
@@ -1007,7 +1239,7 @@ def stats(args: argparse.Namespace) -> None:
     )
 
     print(json.dumps(stats, indent=2, ensure_ascii=False))
-    if args.generate_badges:
+    if generate_badges:
         if not _has_pybadges:
             LOG.critical(msg="Module pybadges was not found.")
             exit(code=1)
@@ -1059,7 +1291,7 @@ def stats(args: argparse.Namespace) -> None:
             ),
         )
 
-    if args.charts:
+    if charts:
         if not _has_matplotlib:
             LOG.critical(msg="Module matplotlib was not found.")
             exit(code=1)
@@ -1109,7 +1341,7 @@ def stats(args: argparse.Namespace) -> None:
         plt.savefig(os.path.join(".charts", "points_per_track.png"))
         plt.clf()
 
-        if args.historical:
+        if historical:
             # Number of points and flags over time
             historical_data = {}
             commit_list = (
@@ -1187,15 +1419,20 @@ def stats(args: argparse.Namespace) -> None:
     LOG.debug(msg="Done...")
 
 
-def list_tracks(args: argparse.Namespace) -> None:
-    tracks = []
+@app.command("list", help="List tracks and their author(s).")
+def list_tracks(
+    format: Annotated[
+        ListOutputFormat, typer.Option("--format", "-f", help="Output format")
+    ] = ListOutputFormat.PRETTY,
+) -> None:
+    tracks: set[str] = set()
     for track in os.listdir(path=os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
         if os.path.isdir(
             s=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track)
         ) and os.path.exists(
             path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "track.yaml")
         ):
-            tracks.append(track)
+            tracks.add(track)
 
     parsed_tracks = []
     for track in tracks:
@@ -1217,7 +1454,7 @@ def list_tracks(args: argparse.Namespace) -> None:
             ]
         )
 
-    if args.format == "pretty":
+    if format.value == "pretty":
         LOG.info(
             "\n"
             + tabulate(
@@ -1233,10 +1470,13 @@ def list_tracks(args: argparse.Namespace) -> None:
             )
         )
     else:
-        raise ValueError(f"Invalid format: {args.format}")
+        raise ValueError(f"Invalid format: {format.value}")
 
 
-def validate(args: argparse.Namespace) -> None:
+@app.command(
+    help="Run many static validations to ensure coherence and quality in the tracks and repo as a whole."
+)
+def validate() -> None:
     LOG.info(msg="Starting ctf validate...")
 
     LOG.info(msg=f"Found {len(validators_list)} Validators")
@@ -1343,294 +1583,23 @@ def write_badge(name: str, svg: str) -> None:
         f.write(svg)
 
 
+@app.command(help="Print the tool's version.")
+def version():
+    # Create an empty command as the version is printed before anything else in the __init__.py file.
+    pass
+
+
 def main():
-    # Command line parsing.
-    parser = argparse.ArgumentParser(
-        prog="ctf",
-        description="CTF preparation tool. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.",
-    )
+    app()
 
-    subparsers = parser.add_subparsers(required=True)
 
-    # Create a fake subparser as the version is printed before anything else in the __init__.py file.
-    subparsers.add_parser(
-        "version",
-        help="Script version.",
-    )
-
-    parser_init = subparsers.add_parser(
-        "init",
-        help="Initialize a folder with the default CTF structure.",
-    )
-    parser_init.set_defaults(func=init)
-    parser_init.add_argument(
-        "path",
-        nargs="?",
-        default=CTF_ROOT_DIRECTORY,
-        help="Initialize the folder at the given path.",
-    )
-    parser_init.add_argument(
-        "--force",
-        "-f",
-        action="store_true",
-        default=False,
-        help="Overwrite the directory if it's already initialized.",
-    )
-
-    parser_flags = subparsers.add_parser(
-        "flags",
-        help="Get flags from tracks",
-    )
-    parser_flags.set_defaults(func=flags)
-    parser_flags.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only flags from the given tracks (use the folder name)",
-    )
-    parser_flags.add_argument(
-        "--format",
-        help="Output format.",
-        choices=list(OutputFormat),
-        default=OutputFormat.JSON,
-        type=OutputFormat,
-    )
-
-    parser_services = subparsers.add_parser(
-        "services",
-        help="Get services from tracks",
-    )
-    parser_services.set_defaults(func=services)
-    parser_services.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only services from the given tracks (use the folder name)",
-    )
-
-    parser_generate = subparsers.add_parser(
-        "generate",
-        help="Generate the deployment files using `terraform init` and `terraform validate`",
-    )
-    parser_generate.set_defaults(func=generate)
-    parser_generate.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only generate the given tracks (use the folder name)",
-    )
-    parser_generate.add_argument(
-        "--production",
-        action="store_true",
-        default=False,
-        help="Do a production deployment. Only use this if you know what you're doing.",
-    )
-    parser_generate.add_argument(
-        "--remote",
-        default="local",
-        help="Incus remote to deploy to.",
-        type=str,
-        choices=AVAILABLE_INCUS_REMOTES,
-    )
-
-    parser_redeploy = subparsers.add_parser(
-        "redeploy", help="Destroy and deploy all the changes"
-    )
-    parser_redeploy.set_defaults(func=redeploy)
-    parser_redeploy.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only redeploy the given tracks (use the folder name)",
-    )
-    parser_redeploy.add_argument(
-        "--production",
-        action="store_true",
-        default=False,
-        help="Do a production deployment. Only use this if you know what you're doing.",
-    )
-    parser_redeploy.add_argument(
-        "--remote",
-        default="local",
-        help="Incus remote to redeploy to.",
-        type=str,
-        choices=AVAILABLE_INCUS_REMOTES,
-    )
-    parser_redeploy.add_argument(
-        "--force",
-        help="If there are artefacts remaining, delete them without asking.",
-        action="store_true",
-        default=False,
-    )
-
-    parser_deploy = subparsers.add_parser("deploy", help="Deploy all the changes")
-    parser_deploy.set_defaults(func=deploy)
-    parser_deploy.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only deploy the given tracks (use the folder name)",
-    )
-    parser_deploy.add_argument(
-        "--production",
-        action="store_true",
-        default=False,
-        help="Do a production deployment. Only use this if you know what you're doing.",
-    )
-    parser_deploy.add_argument(
-        "--remote",
-        default="local",
-        help="Incus remote to deploy to.",
-        type=str,
-        choices=AVAILABLE_INCUS_REMOTES,
-    )
-
-    parser_check = subparsers.add_parser("check", help="Preview the changes")
-    parser_check.set_defaults(func=check)
-    parser_check.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only check the given tracks (use the folder name)",
-    )
-    parser_check.add_argument(
-        "--production",
-        action="store_true",
-        default=False,
-        help="Do a production deployment. Only use this if you know what you're doing.",
-    )
-    parser_check.add_argument(
-        "--remote",
-        default="local",
-        help="Incus remote to deploy to.",
-        type=str,
-        choices=AVAILABLE_INCUS_REMOTES,
-    )
-
-    parser_new = subparsers.add_parser("new", help="Create a new track.")
-    parser_new.set_defaults(func=new)
-    parser_new.add_argument(
-        "--name", help="Track name. No space, use underscores if needed.", required=True
-    )
-    parser_new.add_argument(
-        "--template",
-        help="Template name.",
-        choices=list(Template),
-        default=Template.APACHE_PHP,
-        type=Template,
-    )
-    parser_new.add_argument(
-        "--force",
-        help="If directory already exists, delete it and create it again.",
-        action="store_true",
-        default=False,
-    )
-
-    parser_destroy = subparsers.add_parser(
-        "destroy",
-        help="Destroy everything deployed by Terraform. This is a destructive operation.",
-    )
-    parser_destroy.set_defaults(func=destroy)
-    parser_destroy.add_argument(
-        "--force",
-        help="If there are artefacts remaining, delete them without asking.",
-        action="store_true",
-        default=False,
-    )
-    parser_destroy.add_argument(
-        "--remote",
-        default="local",
-        help="Incus remote to destroy from.",
-        type=str,
-        choices=AVAILABLE_INCUS_REMOTES,
-    )
-    parser_destroy.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Only destroy the given tracks (use the folder name)",
-    )
-
-    parser_stats = subparsers.add_parser(
-        "stats",
-        help="Generate statistics (such as number of tracks, number of flags, total flag value, etc.) from all the `track.yaml files. Outputs as JSON.",
-    )
-    parser_stats.set_defaults(func=stats)
-    parser_stats.add_argument(
-        "--tracks",
-        "-t",
-        nargs="+",
-        default=[],
-        help="Name of the tracks to count in statistics (if not specified, all tracks are counted).",
-    )
-    parser_stats.add_argument(
-        "--generate-badges",
-        action="store_true",
-        default=False,
-        help="Generate SVG files of some statistics in the .badges directory.",
-    )
-    parser_stats.add_argument(
-        "--charts",
-        action="store_true",
-        default=False,
-        help="Generate PNG charts of some statistics in the .charts directory.",
-    )
-    parser_stats.add_argument(
-        "--historical",
-        action="store_true",
-        default=False,
-        help="Use in conjunction with --charts to generate historical data. ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING. THIS IS BAD CODE THAT WILL FUCK YOUR REPO IN UNEXPECTED WAYS.",
-    )
-
-    parser_validate = subparsers.add_parser(
-        "validate",
-        help="Run many static validations to ensure coherence and quality in the tracks and repo as a whole.",
-    )
-    parser_validate.set_defaults(func=validate)
-    parser_validate.add_argument(
-        "--list",
-        "-l",
-        action="store_true",
-        default=False,
-        help="List validators.",
-    )
-
-    parser_list = subparsers.add_parser(
-        "list",
-        help="List tracks and their author(s).",
-    )
-    parser_list.set_defaults(func=list_tracks)
-    parser_list.add_argument(
-        "--format",
-        "-f",
-        choices=["pretty"],
-        default="pretty",
-        help="Output format.",
-    )
-
-    argcomplete.autocomplete(parser)
-
-    args = parser.parse_args()
-
-    if "remote" in args and args.remote:
-        ENV["INCUS_REMOTE"] = args.remote
-
+if __name__ == "__main__":
     if not os.path.isdir(s=(p := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))):
-        if args.func.__name__ != "init":
+        import sys
+
+        if "init" not in sys.argv:
             LOG.error(
                 msg=f"Directory `{p}` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
             )
             exit(code=1)
-
-    args.func(args=args)
-
-
-if __name__ == "__main__":
     main()
