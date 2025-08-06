@@ -108,19 +108,35 @@ jobs:
         run: |
           pip install -e .
 
+      - name: ctf init
+        run: |
+          ctf init test-ctf
+
+      - name: Copy CTF files
+        run: |
+            mkdir -p test-ctf/challenges
+            cp -r ./challenges test-ctf/
+            ls -al test-ctf/
+            ls -al test-ctf/challenges
+
       - name: Validate CTF structure
+        # Run this in the test-ctf directory
+        working-directory: test-ctf
         run: |
           ctf validate
 
       - name: Deployment check
+        working-directory: test-ctf
         run: |
           ctf check
 
       - name: File generation
+        working-directory: test-ctf
         run: |
           ctf generate
 
       - name: Test deployment looping through tracks
+        working-directory: test-ctf
         run: |
           IFS=" " read -r -a tracks <<< "$(python3 -c 'from ctf.utils import get_all_available_tracks,validate_track_can_be_deployed;print(str([t for t in get_all_available_tracks() if validate_track_can_be_deployed(t)]).strip("[]\x27").replace("\x27, \x27"," "))')"
 
@@ -135,12 +151,14 @@ jobs:
           ctf destroy --force
 
       - name: Test full deployment
+        working-directory: test-ctf
         run: |
           ctf deploy --production
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
           ctf destroy --force
 
       - name: Test redeployment of Mock Track Apache PHP
+        working-directory: test-ctf
         run: |
           ctf deploy --production
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
@@ -149,6 +167,7 @@ jobs:
           ctf destroy --force
 
       - name: Test deployment of a track not deployed without destroying the rest
+        working-directory: test-ctf
         run: |
           ctf deploy --production --tracks mock-track-apache-php
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 1 ] || exit 1
