@@ -11,7 +11,7 @@ import statistics
 import subprocess
 import textwrap
 from datetime import datetime
-from enum import Enum, unique
+from enum import StrEnum, unique
 
 import jinja2
 import typer
@@ -63,25 +63,19 @@ app = Typer(help="CLI tool to manage CTF challenges as code. Run from the root C
 
 
 @unique
-class Template(Enum):
+class Template(StrEnum):
     APACHE_PHP = "apache-php"
     PYTHON_SERVICE = "python-service"
     FILES_ONLY = "files-only"
     TRACK_YAML_ONLY = "track-yaml-only"
     RUST_WEBSERVICE = "rust-webservice"
 
-    def __str__(self) -> str:
-        return self.value
-
 
 @unique
-class OutputFormat(Enum):
+class OutputFormat(StrEnum):
     JSON = "json"
     CSV = "csv"
     YAML = "yaml"
-
-    def __str__(self) -> str:
-        return self.value
 
 
 def terraform_binary() -> str:
@@ -1234,7 +1228,7 @@ def stats(
 
     LOG.debug(msg="Done...")
 
-class ListOutputFormat(Enum):
+class ListOutputFormat(StrEnum):
     PRETTY = "pretty"
 
 
