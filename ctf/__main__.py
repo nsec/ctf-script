@@ -93,40 +93,49 @@ def terraform_binary() -> str:
 
 
 def init(args: argparse.Namespace) -> None:
-    if (
-        os.path.isdir(os.path.join(args.path, "challenges"))
-        or os.path.isdir(os.path.join(args.path, ".deploy"))
-    ) and not args.force:
-        LOG.error(
-            f"Directory {args.path} is already initialized. Use --force to overwrite."
-        )
-        LOG.error(args.force)
-        exit(code=1)
-
-    created_assets: list[str] = []
-
+    created_directory = False
     try:
+        if not os.path.isdir(args.path):
+            os.mkdir(args.path)
+            LOG.info(f'Creating directory "{args.path}"')
+            created_directory = True
+        elif (
+            os.path.isdir(os.path.join(args.path, "challenges"))
+            or os.path.isdir(os.path.join(args.path, ".deploy"))
+        ) and not args.force:
+            LOG.error(
+                f'Directory "{args.path}" is already initialized. Use --force to overwrite.'
+            )
+            LOG.error(args.force)
+            exit(code=1)
+
+        created_assets: list[str] = []
+
         for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):
             dst_asset = os.path.join(args.path, asset)
             if os.path.isdir(src_asset := os.path.join(p, asset)):
                 shutil.copytree(src_asset, dst_asset, dirs_exist_ok=True)
-                LOG.info(f"Created {dst_asset} folder")
+                LOG.info(f'Created "{dst_asset}" folder')
             else:
                 shutil.copy(src_asset, dst_asset)
-                LOG.info(f"Created {dst_asset} file")
+                LOG.info(f'Created "{dst_asset}" file')
 
             created_assets.append(dst_asset)
 
     except Exception:
         import traceback
 
-        for asset in created_assets:
-            if os.path.isdir(asset):
-                shutil.rmtree(asset)
-                LOG.info(f"Removed created {asset} folder")
-            else:
-                os.unlink(asset)
-                LOG.info(f"Removed created {asset} file")
+        if created_directory:
+            shutil.rmtree(args.path)
+            LOG.info(f'Removed created "{args.path}" folder')
+        else:
+            for asset in created_assets:
+                if os.path.isdir(asset):
+                    shutil.rmtree(asset)
+                    LOG.info(f'Removed created "{asset}" folder')
+                else:
+                    os.unlink(asset)
+                    LOG.info(f'Removed created "{asset}" file')
 
         LOG.critical(traceback.format_exc())
 
