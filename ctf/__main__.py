@@ -926,7 +926,7 @@ def redeploy(tracks: Annotated[list[str], typer.Option("--tracks", "-t", help="O
              force: Annotated[bool, typer.Option("--force", help="If there are artefacts remaining, delete them without asking.")] = False
              ) -> None:
     ENV["INCUS_REMOTE"] = remote
-    destroy(terraform_tracks=tracks, production=production, remote=remote, force=force)
+    destroy(tracks=tracks, production=production, remote=remote, force=force)
     deploy(distinct_tracks=tracks, production=production, remote=remote, force=force)
 
 
