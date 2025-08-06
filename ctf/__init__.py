@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 import importlib.metadata
 import json
-import logging
 import os
 import sys
 import urllib.request
 
-import coloredlogs
+from ctf.utils import (
+    get_ctf_script_templates_directory,
+    get_ctf_script_schemas_directory,
+    LOG,
+)
 
 VERSION = importlib.metadata.version("ctf-script")
 
@@ -17,10 +20,6 @@ if len(sys.argv) > 1 and sys.argv[1] == "version":
 ENV = {}
 for k, v in os.environ.items():
     ENV[k] = v
-
-LOG = logging.getLogger()
-LOG.setLevel(level=logging.DEBUG)
-coloredlogs.install(level="DEBUG", logger=LOG)
 
 
 def check_tool_version() -> None:
@@ -63,33 +62,3 @@ def check_tool_version() -> None:
 
 
 check_tool_version()
-
-
-def find_ctf_root_directory() -> str:
-    path = os.path.join(os.getcwd(), ".")
-
-    while path != (path := os.path.dirname(p=path)):
-        dir = os.listdir(path=path)
-
-        if ".deploy" not in dir:
-            continue
-        if "challenges" not in dir:
-            continue
-        break
-
-    if path == "/":
-        if "CTF_ROOT_DIR" not in os.environ:
-            LOG.critical(
-                msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
-            )
-            exit(1)
-        return os.environ.get("CTF_ROOT_DIR", default=".")
-
-    LOG.debug(msg=f"Found root directory: {path}")
-    return path
-
-
-if len(sys.argv) > 1 and sys.argv[1] == "init":
-    CTF_ROOT_DIRECTORY = os.path.join(os.getcwd(), ".")
-else:
-    CTF_ROOT_DIRECTORY = find_ctf_root_directory()

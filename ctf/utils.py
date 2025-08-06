@@ -1,13 +1,19 @@
+import logging
 import os
 import re
+import shutil
 import subprocess
+import sys
 import textwrap
 from typing import Any, Generator
 
+import coloredlogs
 import jinja2
 import yaml
 
-from ctf import CTF_ROOT_DIRECTORY
+LOG = logging.getLogger()
+LOG.setLevel(level=logging.DEBUG)
+coloredlogs.install(level="DEBUG", logger=LOG)
 
 
 def available_incus_remotes() -> list[str]:
@@ -205,3 +211,48 @@ def parse_post_yamls(track_name: str) -> list[dict]:
                 posts.append(post_data)
 
     return posts
+
+
+TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
+SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
+
+
+def find_ctf_root_directory() -> str:
+    path = os.path.join(os.getcwd(), ".")
+
+    while path != (path := os.path.dirname(p=path)):
+        dir = os.listdir(path=path)
+
+        if ".deploy" not in dir:
+            continue
+        if "challenges" not in dir:
+            continue
+        break
+
+    if path == "/":
+        if "CTF_ROOT_DIR" not in os.environ:
+            LOG.critical(
+                msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
+            )
+            exit(1)
+        return os.environ.get("CTF_ROOT_DIR", default=".")
+
+    LOG.debug(msg=f"Found root directory: {path}")
+    return path
+
+
+if len(sys.argv) > 1 and sys.argv[1] == "init":
+    CTF_ROOT_DIRECTORY = os.path.join(os.getcwd(), ".")
+else:
+    CTF_ROOT_DIRECTORY = find_ctf_root_directory()
+
+
+def terraform_binary() -> str:
+    path = shutil.which(cmd="tofu")
+    if not path:
+        path = shutil.which(cmd="terraform")
+
+    if not path:
+        raise Exception("Couldn't find Terraform or OpenTofu")
+
+    return path
