@@ -112,6 +112,10 @@ jobs:
         run: |
           ctf init test-ctf
 
+      - name: ctf version
+        run: |
+          ctf version
+
       - name: Copy CTF files
         run: |
             mkdir -p test-ctf/challenges
