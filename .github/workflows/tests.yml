@@ -124,6 +124,18 @@ jobs:
         working-directory: test-ctf
         run: |
           ctf validate
+        
+      - name: CTF stats
+        # Run this in the test-ctf directory
+        working-directory: test-ctf
+        run: |
+          ctf stats
+
+      - name: CTF list
+        # Run this in the test-ctf directory
+        working-directory: test-ctf
+        run: |
+          ctf list
 
       - name: Deployment check
         working-directory: test-ctf
