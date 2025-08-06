@@ -1072,7 +1072,9 @@ def redeploy(
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
     destroy(tracks=tracks, production=production, remote=remote, force=force)
-    deploy(tracks=tracks, production=production, remote=remote, force=force)
+    deploy(
+        tracks=tracks, production=production, remote=remote, force=force, redeploy=True
+    )
 
 
 @app.command(help="Preview the changes")
