@@ -40,10 +40,6 @@ jobs:
         run: |
           ctf init test-ctf
 
-      - name: ctf version
-        run: |
-          ctf version
-
       - name: Copy CTF files
         run: |
             mkdir -p test-ctf/challenges
@@ -56,6 +52,11 @@ jobs:
         working-directory: test-ctf
         run: |
           ctf validate
+
+      - name: ctf version
+        working-directory: test-ctf
+        run: |
+          ctf version
 
       - name: CTF stats
         # Run this in the test-ctf directory
