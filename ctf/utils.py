@@ -1,20 +1,16 @@
-import logging
 import os
 import re
 import shutil
 import subprocess
-import sys
 import textwrap
 from typing import Any, Generator
 
-import coloredlogs
 import jinja2
 import yaml
 
-LOG = logging.getLogger()
-LOG.setLevel(level=logging.DEBUG)
-coloredlogs.install(level="DEBUG", logger=LOG)
+from ctf.logger import LOG
 
+__CTF_ROOT_DIRECTORY = ""
 
 def available_incus_remotes() -> list[str]:
     try:
@@ -36,7 +32,7 @@ def get_all_available_tracks() -> set[str]:
     tracks = set()
 
     for entry in os.listdir(
-        path=(challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
+        path=(challenges_directory := os.path.join(find_ctf_root_directory(), "challenges"))
     ):
         if not os.path.isdir(s=os.path.join(challenges_directory, entry)):
             continue
@@ -50,17 +46,17 @@ def validate_track_can_be_deployed(track: str) -> bool:
     return (
         os.path.exists(
             path=os.path.join(
-                CTF_ROOT_DIRECTORY, "challenges", track, "terraform", "main.tf"
+                find_ctf_root_directory(), "challenges", track, "terraform", "main.tf"
             )
         )
         and os.path.exists(
             path=os.path.join(
-                CTF_ROOT_DIRECTORY, "challenges", track, "ansible", "deploy.yaml"
+                find_ctf_root_directory(), "challenges", track, "ansible", "deploy.yaml"
             )
         )
         and os.path.exists(
             path=os.path.join(
-                CTF_ROOT_DIRECTORY, "challenges", track, "ansible", "inventory"
+                find_ctf_root_directory(), "challenges", track, "ansible", "inventory"
             )
         )
     )
@@ -70,7 +66,7 @@ def add_tracks_to_terraform_modules(
     tracks: set[str], remote: str, production: bool = False
 ):
     with open(
-        file=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "modules.tf"), mode="a"
+        file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="a"
     ) as fd:
         template = jinja2.Environment().from_string(
             source=textwrap.dedent(
@@ -102,7 +98,7 @@ def add_tracks_to_terraform_modules(
 
 def create_terraform_modules_file(remote: str, production: bool = False):
     with open(
-        file=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "modules.tf"), mode="w+"
+        file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="w+"
     ) as fd:
         template = jinja2.Environment().from_string(
             source=textwrap.dedent(
@@ -124,7 +120,7 @@ def create_terraform_modules_file(remote: str, production: bool = False):
 
 def get_terraform_tracks_from_modules() -> set[str]:
     with open(
-        file=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "modules.tf"), mode="r"
+        file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="r"
     ) as f:
         modules_tf = f.read()
 
@@ -170,7 +166,7 @@ def get_ctf_script_schemas_directory() -> str:
 
 
 def remove_ctf_script_root_directory_from_path(path: str) -> str:
-    return os.path.relpath(path=path, start=CTF_ROOT_DIRECTORY)
+    return os.path.relpath(path=path, start=find_ctf_root_directory())
 
 
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
@@ -178,7 +174,7 @@ def parse_track_yaml(track_name: str) -> dict[str, Any]:
         stream=open(
             file=(
                 p := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "track.yaml"
+                    find_ctf_root_directory(), "challenges", track_name, "track.yaml"
                 )
             ),
             mode="r",
@@ -196,7 +192,7 @@ def parse_post_yamls(track_name: str) -> list[dict]:
     for post in os.listdir(
         path=(
             posts_dir := os.path.join(
-                CTF_ROOT_DIRECTORY, "challenges", track_name, "posts"
+                find_ctf_root_directory(), "challenges", track_name, "posts"
             )
         )
     ):
@@ -213,11 +209,11 @@ def parse_post_yamls(track_name: str) -> list[dict]:
     return posts
 
 
-TEMPLATES_ROOT_DIRECTORY = get_ctf_script_templates_directory()
-SCHEMAS_ROOT_DIRECTORY = get_ctf_script_schemas_directory()
-
-
 def find_ctf_root_directory() -> str:
+    global __CTF_ROOT_DIRECTORY
+    if __CTF_ROOT_DIRECTORY:
+        return __CTF_ROOT_DIRECTORY
+    
     path = os.path.join(os.getcwd(), ".")
 
     while path != (path := os.path.dirname(p=path)):
@@ -235,16 +231,10 @@ def find_ctf_root_directory() -> str:
                 msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
             )
             exit(1)
-        return os.environ.get("CTF_ROOT_DIR", default=".")
+        return (__CTF_ROOT_DIRECTORY := os.environ.get("CTF_ROOT_DIR", default="."))
 
     LOG.debug(msg=f"Found root directory: {path}")
-    return path
-
-
-if len(sys.argv) > 1 and sys.argv[1] == "init":
-    CTF_ROOT_DIRECTORY = os.path.join(os.getcwd(), ".")
-else:
-    CTF_ROOT_DIRECTORY = find_ctf_root_directory()
+    return (__CTF_ROOT_DIRECTORY := path)
 
 
 def terraform_binary() -> str:

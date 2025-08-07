@@ -2,14 +2,14 @@ import os
 import re
 import secrets
 import shutil
-from enum import unique, StrEnum
+from enum import StrEnum, unique
 
 import jinja2
 import typer
 from typing_extensions import Annotated
 
-from ctf import LOG
-from ctf.utils import CTF_ROOT_DIRECTORY, TEMPLATES_ROOT_DIRECTORY
+from ctf import CTF_ROOT_DIRECTORY, TEMPLATES_ROOT_DIRECTORY
+from ctf.logger import LOG
 
 app = typer.Typer()
 

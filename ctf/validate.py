@@ -6,9 +6,10 @@ import textwrap
 import typer
 from tabulate import tabulate
 
-from ctf.utils import SCHEMAS_ROOT_DIRECTORY, CTF_ROOT_DIRECTORY, LOG
+from ctf import CTF_ROOT_DIRECTORY, SCHEMAS_ROOT_DIRECTORY
+from ctf.logger import LOG
 from ctf.validate_json_schemas import validate_with_json_schemas
-from ctf.validators import validators_list, ValidationError
+from ctf.validators import ValidationError, validators_list
 
 app = typer.Typer()
 

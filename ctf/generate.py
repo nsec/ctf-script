@@ -4,14 +4,14 @@ import subprocess
 import typer
 from typing_extensions import Annotated
 
-from ctf import ENV, LOG
+from ctf import CTF_ROOT_DIRECTORY, ENV
+from ctf.logger import LOG
 from ctf.utils import (
-    get_all_available_tracks,
-    validate_track_can_be_deployed,
-    create_terraform_modules_file,
     add_tracks_to_terraform_modules,
-    CTF_ROOT_DIRECTORY,
+    create_terraform_modules_file,
+    get_all_available_tracks,
     terraform_binary,
+    validate_track_can_be_deployed,
 )
 
 app = typer.Typer()

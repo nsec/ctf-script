@@ -4,8 +4,8 @@ import shutil
 import typer
 from typing_extensions import Annotated
 
-from ctf import LOG
-from ctf.utils import CTF_ROOT_DIRECTORY, TEMPLATES_ROOT_DIRECTORY
+from ctf import CTF_ROOT_DIRECTORY, TEMPLATES_ROOT_DIRECTORY
+from ctf.logger import LOG
 
 app = typer.Typer()
 
@@ -38,7 +38,6 @@ def init(
             LOG.error(
                 f'Directory "{path}" is already initialized. Use --force to overwrite.'
             )
-            LOG.error(force)
             exit(code=1)
 
         for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):

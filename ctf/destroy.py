@@ -5,9 +5,9 @@ import subprocess
 import typer
 from typing_extensions import Annotated
 
-from ctf import ENV, LOG
+from ctf import CTF_ROOT_DIRECTORY, ENV
+from ctf.logger import LOG
 from ctf.utils import (
-    CTF_ROOT_DIRECTORY,
     get_terraform_tracks_from_modules,
     remove_tracks_from_terraform_modules,
     terraform_binary,

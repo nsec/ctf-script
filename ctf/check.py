@@ -4,9 +4,10 @@ import subprocess
 import typer
 from typing_extensions import Annotated
 
-from ctf import ENV, LOG
+from ctf import CTF_ROOT_DIRECTORY, ENV
 from ctf.generate import generate
-from ctf.utils import CTF_ROOT_DIRECTORY, check_git_lfs, terraform_binary
+from ctf.logger import LOG
+from ctf.utils import check_git_lfs, terraform_binary
 
 app = typer.Typer()
 

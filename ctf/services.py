@@ -3,8 +3,9 @@ import os
 import typer
 from typing_extensions import Annotated
 
-from ctf import LOG
-from ctf.utils import CTF_ROOT_DIRECTORY, parse_track_yaml
+from ctf import CTF_ROOT_DIRECTORY
+from ctf.logger import LOG
+from ctf.utils import parse_track_yaml
 
 app = typer.Typer()
 

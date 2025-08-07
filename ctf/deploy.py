@@ -7,18 +7,18 @@ import textwrap
 import typer
 from typing_extensions import Annotated
 
-from ctf import ENV, LOG
+from ctf import CTF_ROOT_DIRECTORY, ENV
 from ctf.destroy import destroy
 from ctf.generate import generate
+from ctf.logger import LOG
 from ctf.utils import (
-    get_all_available_tracks,
-    validate_track_can_be_deployed,
     add_tracks_to_terraform_modules,
-    get_terraform_tracks_from_modules,
     check_git_lfs,
-    CTF_ROOT_DIRECTORY,
+    get_all_available_tracks,
+    get_terraform_tracks_from_modules,
     parse_track_yaml,
     terraform_binary,
+    validate_track_can_be_deployed,
 )
 
 app = typer.Typer()

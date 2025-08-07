@@ -8,9 +8,23 @@ from datetime import datetime
 import typer
 from typing_extensions import Annotated
 
-from ctf import LOG
-from ctf.__main__ import _has_pybadges, _has_matplotlib
-from ctf.utils import CTF_ROOT_DIRECTORY, parse_track_yaml
+from ctf import CTF_ROOT_DIRECTORY
+from ctf.logger import LOG
+from ctf.utils import parse_track_yaml
+
+try:
+    import pybadges
+
+    _has_pybadges = True
+except ImportError:
+    _has_pybadges = False
+
+try:
+    import matplotlib.pyplot as plt
+
+    _has_matplotlib = True
+except ImportError:
+    _has_matplotlib = False
 
 app = typer.Typer()
 
