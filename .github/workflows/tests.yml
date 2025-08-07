@@ -32,6 +32,38 @@ jobs:
           echo "Pulled files:"
           { git lfs ls-files | grep -E '[a-f0-9]{10}\s\*'; } || true
 
+      - name: Install python dependencies
+        run: |
+          pip install -e .
+
+      - name: ctf init
+        run: |
+          ctf init test-ctf
+
+      - name: Copy CTF files
+        run: |
+            mkdir -p test-ctf/challenges
+            cp -r ./challenges test-ctf/
+            ls -al test-ctf/
+            ls -al test-ctf/challenges
+
+      - name: ctf version
+        working-directory: test-ctf
+        run: |
+          ctf version
+
+      - name: CTF stats
+        # Run this in the test-ctf directory
+        working-directory: test-ctf
+        run: |
+          ctf stats
+
+      - name: CTF list
+        # Run this in the test-ctf directory
+        working-directory: test-ctf
+        run: |
+          ctf list
+
       - name: Remove docker
         run: |
           sudo apt-get autopurge -y moby-containerd docker uidmap
@@ -104,38 +136,11 @@ jobs:
           ./install-opentofu.sh --install-method deb
           rm -f install-opentofu.sh
 
-      - name: Install python dependencies
-        run: |
-          pip install -e .
-
-      - name: ctf init
-        run: |
-          ctf init test-ctf
-
-      - name: Copy CTF files
-        run: |
-            mkdir -p test-ctf/challenges
-            cp -r ./challenges test-ctf/
-            ls -al test-ctf/
-            ls -al test-ctf/challenges
-
       - name: Validate CTF structure
         # Run this in the test-ctf directory
         working-directory: test-ctf
         run: |
           ctf validate
-        
-      - name: CTF stats
-        # Run this in the test-ctf directory
-        working-directory: test-ctf
-        run: |
-          ctf stats
-
-      - name: CTF list
-        # Run this in the test-ctf directory
-        working-directory: test-ctf
-        run: |
-          ctf list
 
       - name: Deployment check
         working-directory: test-ctf

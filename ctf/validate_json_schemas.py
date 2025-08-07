@@ -1,10 +1,11 @@
 import argparse
-import logging
 import glob
 import json
-import yaml
-import jsonschema
+import logging
+
 import coloredlogs
+import jsonschema
+import yaml
 
 LOG = logging.getLogger()
 
