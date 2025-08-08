@@ -34,7 +34,7 @@ def new(
     ],
     template: Annotated[
         Template,
-        typer.Option("--template", "-t", help="Template to use for the track."),
+        typer.Option("--template", "-t", help="Template to use for the track.", prompt="Template to use for the track."),
     ] = Template.APACHE_PHP,
     force: Annotated[
         bool,
