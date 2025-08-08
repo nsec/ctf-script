@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+import logging
 import os
 
+import typer
 from typer import Typer
+from typing_extensions import Annotated
 
 from ctf import (
     CTF_ROOT_DIRECTORY,
@@ -38,6 +41,14 @@ app.add_typer(stats_app)
 app.add_typer(list_app)
 app.add_typer(version_app)
 
+
+@app.callback()
+def global_options(
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable DEBUG logging.")] = False,
+):
+    if verbose:
+        LOG.setLevel(logging.DEBUG)
+        LOG.handlers[0].setLevel(logging.DEBUG)
 
 def main():
     app()
