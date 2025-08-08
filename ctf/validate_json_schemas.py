@@ -1,23 +1,19 @@
 import argparse
 import glob
 import json
-import logging
 
-import coloredlogs
 import jsonschema
+import rich
 import yaml
+from rich.progress import Progress, BarColumn, MofNCompleteColumn, TimeRemainingColumn, TextColumn
+from rich.table import Table
 
-LOG = logging.getLogger()
-
-if __name__ == "__main__":
-    LOG.addHandler(hdlr=logging.StreamHandler())
-    LOG.setLevel(level=logging.DEBUG)
-    coloredlogs.install(level="DEBUG", logger=LOG)
+from ctf import LOG
 
 
 def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
-    LOG.info(msg="Starting JSON Schema validator")
-    LOG.info(msg=f"Schema: {schema}")
+    LOG.debug(msg="Starting JSON Schema validator")
+    LOG.debug(msg=f"Schema: {schema}")
 
     schema = json.load(open(file=schema, mode="r", encoding="utf-8"))
 
@@ -26,26 +22,33 @@ def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
         exit(code=1)
 
     errors = []
-    for file in glob.glob(pathname=files_pattern):
-        LOG.info(msg=f"Validating {file}")
-        yaml_document = yaml.safe_load(
-            stream=open(file=file, mode="r", encoding="utf-8")
-        )
-        try:
-            jsonschema.validate(instance=yaml_document, schema=schema)
-        except jsonschema.ValidationError as e:
-            errors.append((file, e))
+    with Progress(BarColumn(), MofNCompleteColumn(), TimeRemainingColumn(), TextColumn("{task.description}")) as progress:
+        files = list(glob.glob(pathname=files_pattern))
+        task = progress.add_task(f"Validating JSON ({files_pattern})", total=len(files))
+        for file in files:
+            LOG.debug(msg=f"Validating {file}")
+            yaml_document = yaml.safe_load(
+                stream=open(file=file, mode="r", encoding="utf-8")
+            )
+            try:
+                jsonschema.validate(instance=yaml_document, schema=schema)
+            except jsonschema.ValidationError as e:
+                errors.append((file, e))
+            progress.update(task, advance=1)
 
     if errors:
         LOG.error(
-            msg=f"================= {len(errors)} in JSON Schema validation ================="
+            msg=f"{len(errors)} error(s) in JSON Schema validation found"
         )
+        table = Table(title="Errors")
+        table.add_column("File", style="cyan", no_wrap=True)
+        table.add_column("Error", style="magenta", no_wrap=False)
         for filename, error in errors:
-            LOG.error(msg=f"File: {filename}")
-            LOG.error(msg=f"Error: {error.message}")
+            table.add_row(filename, error.message)
+        rich.print(table)
         exit(code=1)
     else:
-        LOG.info(msg="No error found!")
+        LOG.debug(msg="No error found!")
 
 
 if __name__ == "__main__":

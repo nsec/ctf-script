@@ -3,8 +3,9 @@ import re
 import subprocess
 import textwrap
 
+import rich.table
 import typer
-from tabulate import tabulate
+from rich.progress import Progress, BarColumn, MofNCompleteColumn, TimeRemainingColumn, TextColumn
 
 from ctf import CTF_ROOT_DIRECTORY, SCHEMAS_ROOT_DIRECTORY
 from ctf.logger import LOG
@@ -37,12 +38,12 @@ def validate() -> None:
 
     errors: list[ValidationError] = []
 
-    LOG.info(msg="Validating track.yaml files against JSON Schema...")
+    LOG.debug(msg="Validating track.yaml files against JSON Schema...")
     validate_with_json_schemas(
         schema=os.path.join(SCHEMAS_ROOT_DIRECTORY, "track.yaml.json"),
         files_pattern=os.path.join(CTF_ROOT_DIRECTORY, "challenges", "*", "track.yaml"),
     )
-    LOG.info(msg="Validating discourse post YAML files against JSON Schema...")
+    LOG.debug(msg="Validating discourse post YAML files against JSON Schema...")
     validate_with_json_schemas(
         schema=os.path.join(SCHEMAS_ROOT_DIRECTORY, "post.json"),
         files_pattern=os.path.join(
@@ -75,14 +76,19 @@ def validate() -> None:
             )
         )
 
-    for validator in validators:
-        LOG.info(msg=f"Running {type(validator).__name__}")
-        for track in tracks:
-            errors += validator.validate(track_name=track)
+    with Progress(BarColumn(), MofNCompleteColumn(), TimeRemainingColumn(), TextColumn("{task.description}")) as progress:
+        task = progress.add_task("Running Validators...", total=(len(validators) * len(tracks)))
 
-    # Get the errors from finalize()
-    for validator in validators:
-        errors += validator.finalize()
+        for validator in validators:
+            LOG.debug(msg=f"Running {type(validator).__name__}")
+            for track in tracks:
+                errors += validator.validate(track_name=track)
+                progress.update(task, advance=1)
+        task = progress.add_task("Finalizing Validators...", total=len(validators))
+        # Get the errors from finalize()
+        for validator in validators:
+            errors += validator.finalize()
+            progress.update(task, advance=1)
 
     if not errors:
         LOG.info(msg="No error found!")
@@ -106,12 +112,14 @@ def validate() -> None:
             )
         )
 
-        LOG.error(
-            "\n"
-            + tabulate(
-                errors_list,
-                headers=["Track", "Error", "Description", "Details"],
-                tablefmt="fancy_grid",
-            )
-        )
+        table = rich.table.Table(title=f"❌ Found {len(errors_list)} validation error(s)", expand=True)
+        table.add_column("Track", style="cyan", no_wrap=True)
+        table.add_column("Error", style="red")
+        table.add_column("Description")
+        table.add_column("Details", style="magenta")
+        for error in errors_list:
+            table.add_row(*error)
+
+        rich.print(table)
+
         exit(code=1)

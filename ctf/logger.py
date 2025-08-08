@@ -1,7 +1,10 @@
 import logging
 
-import coloredlogs
+from rich.logging import RichHandler
 
 LOG = logging.getLogger()
-LOG.setLevel(level=logging.DEBUG)
-coloredlogs.install(level="DEBUG", logger=LOG)
+LOG.setLevel(level=logging.INFO)
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level=logging.DEBUG, format=FORMAT, datefmt="[%X]", handlers=[RichHandler(level=logging.INFO)]
+)

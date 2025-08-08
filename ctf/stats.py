@@ -5,6 +5,7 @@ import statistics
 import subprocess
 from datetime import datetime
 
+import rich
 import typer
 from typing_extensions import Annotated
 
@@ -151,7 +152,7 @@ def stats(
         sorted(stats["number_of_points_per_track"].items(), key=lambda item: item[1])
     )
 
-    print(json.dumps(stats, indent=2, ensure_ascii=False))
+    rich.print(json.dumps(stats, indent=2, ensure_ascii=False))
     if generate_badges:
         if not _has_pybadges:
             LOG.critical(msg="Module pybadges was not found.")

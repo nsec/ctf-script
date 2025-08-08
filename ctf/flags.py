@@ -4,6 +4,7 @@ import json
 import os
 from enum import StrEnum, unique
 
+import rich
 import typer
 import yaml
 from typing_extensions import Annotated
@@ -66,12 +67,12 @@ def flags(
         return
 
     if format == OutputFormat.JSON:
-        print(json.dumps(obj=flags, indent=2))
+        rich.print(json.dumps(obj=flags, indent=2))
     elif format == OutputFormat.CSV:
         output = io.StringIO()
         writer = csv.DictWriter(f=output, fieldnames=flags[0].keys())
         writer.writeheader()
         writer.writerows(rowdicts=flags)
-        print(output.getvalue())
+        rich.print(output.getvalue())
     elif format == OutputFormat.YAML:
-        print(yaml.safe_dump(data=flags))
+        rich.print(yaml.safe_dump(data=flags))
