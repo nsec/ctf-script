@@ -17,7 +17,7 @@ dependencies = [
     "setuptools",
     "typer==0.16.0",
 ]
-version = "2.0.1"
+version = "2.1.0"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
