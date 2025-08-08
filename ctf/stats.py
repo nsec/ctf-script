@@ -292,7 +292,7 @@ def stats(
                     # Execute your command here (replace with what you need)
                     result = (
                         subprocess.run(
-                            ["python", "scripts/ctf.py", "stats"],
+                            ["ctf", "stats"],
                             check=False,
                             capture_output=True,
                             text=True,
