@@ -21,3 +21,4 @@ challenges/*/terraform/versions.tf
 !.vscode/settings.json
 !.vscode/extensions.json
 
+.idea
