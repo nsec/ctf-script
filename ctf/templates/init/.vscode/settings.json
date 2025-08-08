@@ -3,7 +3,7 @@
         "editor.tabSize": 2
     },
     "yaml.schemas": {
-        "scripts/schemas/track.yaml.json": "challenges/**/track.yaml",
-        "scripts/schemas/post.json": "challenges/*/posts/*.yaml"
+        "schemas/track.yaml.json": "challenges/**/track.yaml",
+        "schemas/post.json": "challenges/*/posts/*.yaml"
     }
 }
