@@ -44,11 +44,14 @@ app.add_typer(version_app)
 
 @app.callback()
 def global_options(
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable DEBUG logging.")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Enable DEBUG logging.")
+    ] = False,
 ):
     if verbose:
         LOG.setLevel(logging.DEBUG)
         LOG.handlers[0].setLevel(logging.DEBUG)
+
 
 def main():
     app()

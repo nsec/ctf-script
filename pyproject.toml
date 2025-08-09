@@ -14,6 +14,7 @@ dependencies = [
     "jsonschema==4.23.0",
     "pyyaml<7",
     "rich==14.1.0",
+    "ruff==0.12.8",
     "setuptools",
     "typer==0.16.0",
 ]
@@ -34,3 +35,18 @@ packages = [{ include = "ctf" }]
 
 [tool.setuptools.package-data]
 ctf = ["schemas/*", "templates/*"]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

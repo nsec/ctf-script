@@ -12,6 +12,7 @@ from ctf.logger import LOG
 
 __CTF_ROOT_DIRECTORY = ""
 
+
 def available_incus_remotes() -> list[str]:
     try:
         r = subprocess.run(
@@ -32,7 +33,11 @@ def get_all_available_tracks() -> set[str]:
     tracks = set()
 
     for entry in os.listdir(
-        path=(challenges_directory := os.path.join(find_ctf_root_directory(), "challenges"))
+        path=(
+            challenges_directory := os.path.join(
+                find_ctf_root_directory(), "challenges"
+            )
+        )
     ):
         if not os.path.isdir(s=os.path.join(challenges_directory, entry)):
             continue
@@ -213,7 +218,7 @@ def find_ctf_root_directory() -> str:
     global __CTF_ROOT_DIRECTORY
     if __CTF_ROOT_DIRECTORY:
         return __CTF_ROOT_DIRECTORY
-    
+
     path = os.path.join(os.getcwd(), ".")
 
     while path != (path := os.path.dirname(p=path)):

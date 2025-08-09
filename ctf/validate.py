@@ -5,7 +5,13 @@ import textwrap
 
 import rich.table
 import typer
-from rich.progress import Progress, BarColumn, MofNCompleteColumn, TimeRemainingColumn, TextColumn
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 from ctf import CTF_ROOT_DIRECTORY, SCHEMAS_ROOT_DIRECTORY
 from ctf.logger import LOG
@@ -76,8 +82,15 @@ def validate() -> None:
             )
         )
 
-    with Progress(BarColumn(), MofNCompleteColumn(), TimeRemainingColumn(), TextColumn("{task.description}")) as progress:
-        task = progress.add_task("Running Validators...", total=(len(validators) * len(tracks)))
+    with Progress(
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeRemainingColumn(),
+        TextColumn("{task.description}"),
+    ) as progress:
+        task = progress.add_task(
+            "Running Validators...", total=(len(validators) * len(tracks))
+        )
 
         for validator in validators:
             LOG.debug(msg=f"Running {type(validator).__name__}")
@@ -112,7 +125,9 @@ def validate() -> None:
             )
         )
 
-        table = rich.table.Table(title=f"❌ Found {len(errors_list)} validation error(s)", expand=True)
+        table = rich.table.Table(
+            title=f"❌ Found {len(errors_list)} validation error(s)", expand=True
+        )
         table.add_column("Track", style="cyan", no_wrap=True)
         table.add_column("Error", style="red")
         table.add_column("Description")

@@ -6,5 +6,8 @@ LOG = logging.getLogger()
 LOG.setLevel(level=logging.INFO)
 FORMAT = "%(message)s"
 logging.basicConfig(
-    level=logging.DEBUG, format=FORMAT, datefmt="[%X]", handlers=[RichHandler(level=logging.INFO)]
+    level=logging.DEBUG,
+    format=FORMAT,
+    datefmt="[%X]",
+    handlers=[RichHandler(level=logging.INFO)],
 )
