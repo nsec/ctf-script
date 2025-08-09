@@ -1,12 +1,12 @@
 import os
 from enum import StrEnum
 
+import rich
 import typer
-from tabulate import tabulate
+from rich.table import Table
 from typing_extensions import Annotated
 
 from ctf import CTF_ROOT_DIRECTORY
-from ctf.logger import LOG
 from ctf.utils import parse_post_yamls, parse_track_yaml
 
 app = typer.Typer()
@@ -52,19 +52,16 @@ def list_tracks(
         )
 
     if format.value == "pretty":
-        LOG.info(
-            "\n"
-            + tabulate(
-                parsed_tracks,
-                headers=[
-                    "Internal track name",
-                    "Discourse Topic Name",
-                    "Dev",
-                    "Support",
-                    "QA",
-                ],
-                tablefmt="fancy_grid",
-            )
-        )
+        table = Table(title="Tracks")
+        table.add_column("Internal track name", style="cyan")
+        table.add_column("Discourse topic name", style="magenta")
+        table.add_column("Dev")
+        table.add_column("Support")
+        table.add_column("QA")
+
+        for parsed_track in sorted(parsed_tracks, key=lambda x: x[0].lower()):
+            table.add_row(*parsed_track)
+
+        rich.print(table)
     else:
         raise ValueError(f"Invalid format: {format.value}")

@@ -1,5 +1,6 @@
 import os
 
+import rich
 import typer
 from typing_extensions import Annotated
 
@@ -49,4 +50,4 @@ def services(
             check = service["check"]
             port = service["port"]
 
-            print(f"{track}/{instance}/{name} {contact} {address} {check} {port}")
+            rich.print(f"{track}/{instance}/{name} {contact} {address} {check} {port}")

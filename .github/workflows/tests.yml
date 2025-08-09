@@ -36,6 +36,11 @@ jobs:
         run: |
           pip install -e .
 
+      - name: ruff
+        run: |
+          ruff format --check ./ctf
+          ruff check ./ctf
+
       - name: ctf init
         run: |
           ctf init test-ctf

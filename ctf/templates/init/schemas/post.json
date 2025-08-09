@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "type": {
+      "description": "Type of post. Use `topic` for the initial message of a track, and use `post` for subsequent posts (for example posts after a flag is submitted). `posts` is for multiple posts in one file (post).",
+      "type": "string",
+      "enum": [
+        "post",
+        "posts",
+        "topic"
+      ]
+    },
+    "topic": {
+      "description": "The discourse topic to post this post into. For a given track, this should always have the same value across posts.",
+      "type": "string",
+      "minLength": 1
+    },
+    "trigger": {
+      "description": "Defines a custom trigger to post a message after a specific action happened, for example a flag is submitted.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "Type of trigger: use `flag` to post after a given flag is submitted (the value of the flag should be set in the `tag` property.)",
+          "type": "string",
+          "enum": [
+            "flag"
+          ]
+        },
+        "tag": {
+          "description": "Value of the trigger. For a flag trigger, this is the flag value.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "type",
+        "tag"
+      ]
+    },
+    "api": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "description": "The discourse user this post is posted by.",
+          "type": "string",
+          "enum": ["nsec","system","theChief","theMuscle","theFace","theFixer","theMechanic"]
+        }
+      },
+      "required": [
+        "user"
+      ]
+    },
+    "title": {
+      "description": "The discourse title of the topic. This should be the same across posts of the same track.",
+      "type": "string",
+      "minLength": 1
+    },
+    "body": {
+      "description": "Content of the post. Markdown is supported.",
+      "type": "string",
+      "minLength": 1
+    },
+    "posts": {
+      "description": "",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "api": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "description": "The discourse user this post is posted by.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "user"
+            ]
+          },
+          "body": {
+            "description": "Content of the post. Markdown is supported.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "api",
+          "body"
+        ]
+      }
+    }
+  },
+  "if": {
+    "properties": {
+      "type": {
+        "const": "topic"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "type",
+      "api",
+      "title",
+      "body"
+    ]
+  },
+  "else": {
+    "if": {
+      "properties": {
+        "type": {
+          "const": "post"
+        }
+      }
+    },
+    "then": {
+      "required": [
+        "type",
+        "api",
+        "body"
+      ]
+    },
+    "else": {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "posts"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "type",
+          "posts"
+        ]
+      }
+    }
+  }
+}
