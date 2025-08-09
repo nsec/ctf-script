@@ -5,7 +5,9 @@ It uses:
 - YAML files to describe a challenge and forum posts
 - OpenTofu (terraform fork) to describe the infrastructure
 - Incus (LXD fork) to run the challenges in containers
-- Ansible to configure the challenges
+- Ansible playbooks to configure the challenges
+
+![Demo GIF](./doc/images/demo.gif)
 
 This tool is used by the NorthSec CTF team to manage their challenges since 2025.
 [NorthSec](https://nsec.io/) is one of the largest on-site cybersecurity CTF in the world, held annually in Montreal, Canada, 
