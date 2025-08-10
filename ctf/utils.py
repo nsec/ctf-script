@@ -7,6 +7,7 @@ from typing import Any, Generator
 
 import jinja2
 import yaml
+
 from ctf import ENV
 from ctf.logger import LOG
 
