@@ -5,9 +5,10 @@ import subprocess
 import typer
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY, ENV
+from ctf import ENV
 from ctf.logger import LOG
 from ctf.utils import (
+    find_ctf_root_directory,
     get_terraform_tracks_from_modules,
     remove_tracks_from_terraform_modules,
     terraform_binary,
@@ -50,7 +51,7 @@ def destroy(
     LOG.info(msg="tofu destroy...")
 
     if not os.path.exists(
-        path=os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "modules.tf")
+        path=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf")
     ):
         LOG.critical(msg="Nothing to destroy.")
         exit(code=1)
@@ -118,7 +119,7 @@ def destroy(
                 else [f"-target=module.track-{track}" for track in terraform_tracks]
             ),
         ],
-        cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
+        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
         check=False,
     )
 

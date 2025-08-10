@@ -8,8 +8,8 @@ import jinja2
 import typer
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY, TEMPLATES_ROOT_DIRECTORY
 from ctf.logger import LOG
+from ctf.utils import find_ctf_root_directory, get_ctf_script_templates_directory
 
 app = typer.Typer()
 
@@ -63,7 +63,7 @@ def new(
     if os.path.exists(
         path=(
             new_challenge_directory := os.path.join(
-                CTF_ROOT_DIRECTORY, "challenges", name
+                find_ctf_root_directory(), "challenges", name
             )
         )
     ):
@@ -82,7 +82,7 @@ def new(
 
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(
-            searchpath=TEMPLATES_ROOT_DIRECTORY, encoding="utf-8"
+            searchpath=get_ctf_script_templates_directory(), encoding="utf-8"
         )
     )
 
@@ -191,7 +191,8 @@ def new(
     LOG.debug(msg=f"Wrote {p}.")
 
     relpath = os.path.relpath(
-        os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common"), terraform_directory
+        os.path.join(find_ctf_root_directory(), ".deploy", "common"),
+        terraform_directory,
     )
 
     os.symlink(
@@ -278,7 +279,7 @@ def new(
     if template == Template.RUST_WEBSERVICE:
         # Copy the entire challenge template
         shutil.copytree(
-            os.path.join(TEMPLATES_ROOT_DIRECTORY, "rust-webservice"),
+            os.path.join(get_ctf_script_templates_directory(), "rust-webservice"),
             ansible_challenge_directory,
             dirs_exist_ok=True,
         )

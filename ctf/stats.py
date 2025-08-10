@@ -9,9 +9,8 @@ import rich
 import typer
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY
 from ctf.logger import LOG
-from ctf.utils import parse_track_yaml
+from ctf.utils import find_ctf_root_directory, parse_track_yaml
 
 try:
     import pybadges
@@ -68,7 +67,7 @@ def stats(
     stats = {}
     distinct_tracks: set[str] = set()
     for entry in os.listdir(
-        (challenges_directory := os.path.join(CTF_ROOT_DIRECTORY, "challenges"))
+        (challenges_directory := os.path.join(find_ctf_root_directory(), "challenges"))
     ):
         if os.path.isdir(
             (track_directory := os.path.join(challenges_directory, entry))

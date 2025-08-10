@@ -4,8 +4,8 @@ import os
 import re
 from dataclasses import dataclass
 
-from ctf import CTF_ROOT_DIRECTORY
 from ctf.utils import (
+    find_ctf_root_directory,
     get_all_file_paths_recursively,
     parse_post_yamls,
     parse_track_yaml,
@@ -40,7 +40,7 @@ class FilesValidator(Validator):
         if os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "files"
+                    find_ctf_root_directory(), "challenges", track_name, "files"
                 )
             )
         ):
@@ -132,7 +132,7 @@ class FireworksAskGodTagValidator(Validator):
         errors: list[ValidationError] = []
 
         sound_path = os.path.join(
-            CTF_ROOT_DIRECTORY, "challenges", "*", "files", "askgod", "sounds"
+            find_ctf_root_directory(), "challenges", "*", "files", "askgod", "sounds"
         )
         for sound_tag, track_names in self.sound_tags_mapping.items():
             if len(glob.glob(pathname=os.path.join(sound_path, sound_tag))) == 0:
@@ -148,7 +148,7 @@ class FireworksAskGodTagValidator(Validator):
                 )
 
         gif_path = os.path.join(
-            CTF_ROOT_DIRECTORY, "challenges", "*", "files", "askgod", "gifs"
+            find_ctf_root_directory(), "challenges", "*", "files", "askgod", "gifs"
         )
         for gif_tag, track_names in self.gif_tags_mapping.items():
             if len(glob.glob(pathname=os.path.join(gif_path, gif_tag))) == 0:
@@ -194,7 +194,7 @@ class DiscoursePostsAskGodTagValidator(Validator):
                 self.discourse_posts.append((track_name, discourse_post))
                 if not os.path.exists(
                     os.path.join(
-                        CTF_ROOT_DIRECTORY,
+                        find_ctf_root_directory(),
                         "challenges",
                         track_name,
                         "posts",
@@ -209,7 +209,7 @@ class DiscoursePostsAskGodTagValidator(Validator):
                             details={
                                 "Topic": discourse_post["topic"],
                                 "Posts directory": os.path.join(
-                                    CTF_ROOT_DIRECTORY,
+                                    find_ctf_root_directory(),
                                     "challenges",
                                     track_name,
                                     "posts",
@@ -268,7 +268,11 @@ class PlaceholderValuesValidator(Validator):
         if os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "terraform", "main.tf"
+                    find_ctf_root_directory(),
+                    "challenges",
+                    track_name,
+                    "terraform",
+                    "main.tf",
                 )
             )
         ):
@@ -278,7 +282,7 @@ class PlaceholderValuesValidator(Validator):
         if os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "track.yaml"
+                    find_ctf_root_directory(), "challenges", track_name, "track.yaml"
                 )
             )
         ):
@@ -288,7 +292,11 @@ class PlaceholderValuesValidator(Validator):
         if os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "ansible", "inventory"
+                    find_ctf_root_directory(),
+                    "challenges",
+                    track_name,
+                    "ansible",
+                    "inventory",
                 )
             )
         ):
@@ -297,7 +305,7 @@ class PlaceholderValuesValidator(Validator):
         if integrated_with_scenario and os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "posts"
+                    find_ctf_root_directory(), "challenges", track_name, "posts"
                 )
             )
         ):
@@ -306,7 +314,7 @@ class PlaceholderValuesValidator(Validator):
         if os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "ansible"
+                    find_ctf_root_directory(), "challenges", track_name, "ansible"
                 )
             )
         ):
@@ -348,7 +356,7 @@ class DiscourseFileNamesValidator(Validator):
         if os.path.exists(
             path=(
                 path := os.path.join(
-                    CTF_ROOT_DIRECTORY, "challenges", track_name, "posts"
+                    find_ctf_root_directory(), "challenges", track_name, "posts"
                 )
             )
         ):
@@ -424,7 +432,7 @@ class OrphanServicesValidator(Validator):
         if track_yaml.get("services"):
             if not os.path.exists(
                 path=os.path.join(
-                    CTF_ROOT_DIRECTORY,
+                    find_ctf_root_directory(),
                     "challenges",
                     track_name,
                     "terraform",
