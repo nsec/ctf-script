@@ -13,8 +13,8 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-from ctf import CTF_ROOT_DIRECTORY, SCHEMAS_ROOT_DIRECTORY
 from ctf.logger import LOG
+from ctf.utils import find_ctf_root_directory, get_ctf_script_schemas_directory
 from ctf.validate_json_schemas import validate_with_json_schemas
 from ctf.validators import ValidationError, validators_list
 
@@ -32,11 +32,13 @@ def validate() -> None:
     validators = [validator_class() for validator_class in validators_list]
 
     tracks = []
-    for track in os.listdir(path=os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
+    for track in os.listdir(path=os.path.join(find_ctf_root_directory(), "challenges")):
         if os.path.isdir(
-            s=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track)
+            s=os.path.join(find_ctf_root_directory(), "challenges", track)
         ) and os.path.exists(
-            path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "track.yaml")
+            path=os.path.join(
+                find_ctf_root_directory(), "challenges", track, "track.yaml"
+            )
         ):
             tracks.append(track)
 
@@ -46,20 +48,29 @@ def validate() -> None:
 
     LOG.debug(msg="Validating track.yaml files against JSON Schema...")
     validate_with_json_schemas(
-        schema=os.path.join(SCHEMAS_ROOT_DIRECTORY, "track.yaml.json"),
-        files_pattern=os.path.join(CTF_ROOT_DIRECTORY, "challenges", "*", "track.yaml"),
+        schema=os.path.join(get_ctf_script_schemas_directory(), "track.yaml.json"),
+        files_pattern=os.path.join(
+            find_ctf_root_directory(), "challenges", "*", "track.yaml"
+        ),
     )
     LOG.debug(msg="Validating discourse post YAML files against JSON Schema...")
     validate_with_json_schemas(
-        schema=os.path.join(SCHEMAS_ROOT_DIRECTORY, "post.json"),
+        schema=os.path.join(get_ctf_script_schemas_directory(), "post.json"),
         files_pattern=os.path.join(
-            CTF_ROOT_DIRECTORY, "challenges", "*", "posts", "*.yaml"
+            find_ctf_root_directory(), "challenges", "*", "posts", "*.yaml"
         ),
     )
 
     LOG.info(msg="Validating terraform files format...")
     r = subprocess.run(
-        args=["tofu", "fmt", "-no-color", "-check", "-recursive", CTF_ROOT_DIRECTORY],
+        args=[
+            "tofu",
+            "fmt",
+            "-no-color",
+            "-check",
+            "-recursive",
+            find_ctf_root_directory(),
+        ],
         capture_output=True,
     )
     if r.returncode != 0:

@@ -4,11 +4,12 @@ import subprocess
 import typer
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY, ENV
+from ctf import ENV
 from ctf.logger import LOG
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     create_terraform_modules_file,
+    find_ctf_root_directory,
     get_all_available_tracks,
     terraform_binary,
     validate_track_can_be_deployed,
@@ -61,10 +62,10 @@ def generate(
 
         for track in distinct_tracks:
             relpath = os.path.relpath(
-                os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common"),
+                os.path.join(find_ctf_root_directory(), ".deploy", "common"),
                 (
                     terraform_directory := os.path.join(
-                        CTF_ROOT_DIRECTORY, "challenges", track, "terraform"
+                        find_ctf_root_directory(), "challenges", track, "terraform"
                     )
                 ),
             )
@@ -103,13 +104,13 @@ def generate(
 
         subprocess.run(
             args=[terraform_binary(), "init", "-upgrade"],
-            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
+            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
             stdout=subprocess.DEVNULL,
             check=True,
         )
         subprocess.run(
             args=[terraform_binary(), "validate"],
-            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
+            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
             check=True,
         )
     else:

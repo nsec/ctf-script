@@ -6,8 +6,7 @@ import typer
 from rich.table import Table
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY
-from ctf.utils import parse_post_yamls, parse_track_yaml
+from ctf.utils import find_ctf_root_directory, parse_post_yamls, parse_track_yaml
 
 app = typer.Typer()
 
@@ -23,11 +22,13 @@ def list_tracks(
     ] = ListOutputFormat.PRETTY,
 ) -> None:
     tracks: set[str] = set()
-    for track in os.listdir(path=os.path.join(CTF_ROOT_DIRECTORY, "challenges")):
+    for track in os.listdir(path=os.path.join(find_ctf_root_directory(), "challenges")):
         if os.path.isdir(
-            s=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track)
+            s=os.path.join(find_ctf_root_directory(), "challenges", track)
         ) and os.path.exists(
-            path=os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "track.yaml")
+            path=os.path.join(
+                find_ctf_root_directory(), "challenges", track, "track.yaml"
+            )
         ):
             tracks.add(track)
 

@@ -8,6 +8,7 @@ from typing import Any, Generator
 import jinja2
 import yaml
 
+from ctf import ENV
 from ctf.logger import LOG
 
 __CTF_ROOT_DIRECTORY = ""
@@ -219,7 +220,11 @@ def find_ctf_root_directory() -> str:
     if __CTF_ROOT_DIRECTORY:
         return __CTF_ROOT_DIRECTORY
 
-    path = os.path.join(os.getcwd(), ".")
+    path = (
+        ENV.get("CTF_ROOT_DIR")
+        if "CTF_ROOT_DIR" in ENV
+        else os.path.join(os.getcwd(), ".")
+    )
 
     while path != (path := os.path.dirname(p=path)):
         dir = os.listdir(path=path)
@@ -231,12 +236,11 @@ def find_ctf_root_directory() -> str:
         break
 
     if path == "/":
-        if "CTF_ROOT_DIR" not in os.environ:
-            LOG.critical(
-                msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
-            )
-            exit(1)
-        return (__CTF_ROOT_DIRECTORY := os.environ.get("CTF_ROOT_DIR", default="."))
+        LOG.critical(
+            msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
+        )
+        raise
+        exit(1)
 
     LOG.debug(msg=f"Found root directory: {path}")
     return (__CTF_ROOT_DIRECTORY := path)

@@ -7,13 +7,14 @@ import textwrap
 import typer
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY, ENV
+from ctf import ENV
 from ctf.destroy import destroy
 from ctf.generate import generate
 from ctf.logger import LOG
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     check_git_lfs,
+    find_ctf_root_directory,
     get_all_available_tracks,
     get_terraform_tracks_from_modules,
     parse_track_yaml,
@@ -91,7 +92,7 @@ def deploy(
     try:
         subprocess.run(
             args=[terraform_binary(), "apply", "-auto-approve"],
-            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
+            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
             check=True,
         )
     except subprocess.CalledProcessError:
@@ -107,7 +108,7 @@ def deploy(
 
         subprocess.run(
             args=[terraform_binary(), "apply", "-auto-approve"],
-            cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
+            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
             check=True,
         )
     except KeyboardInterrupt:
@@ -121,7 +122,9 @@ def deploy(
     for track in distinct_tracks:
         if not os.path.exists(
             path=(
-                path := os.path.join(CTF_ROOT_DIRECTORY, "challenges", track, "ansible")
+                path := os.path.join(
+                    find_ctf_root_directory(), "challenges", track, "ansible"
+                )
             )
         ):
             continue

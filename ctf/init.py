@@ -4,8 +4,9 @@ import shutil
 import typer
 from typing_extensions import Annotated
 
-from ctf import CTF_ROOT_DIRECTORY, TEMPLATES_ROOT_DIRECTORY
+from ctf import ENV
 from ctf.logger import LOG
+from ctf.utils import get_ctf_script_templates_directory
 
 app = typer.Typer()
 
@@ -16,7 +17,7 @@ app = typer.Typer()
 def init(
     path: Annotated[
         str, typer.Argument(help="Directory in which to initialize a CTF")
-    ] = CTF_ROOT_DIRECTORY,
+    ] = "",
     force: Annotated[
         bool,
         typer.Option(
@@ -24,6 +25,14 @@ def init(
         ),
     ] = False,
 ) -> None:
+    # If path is not set, take the one from --location or CTF_ROOT_DIR, else it's the current directory.
+    if not path:
+        path = (
+            ENV.get("CTF_ROOT_DIR")
+            if "CTF_ROOT_DIR" in ENV
+            else os.path.join(os.getcwd(), ".")
+        )
+
     created_directory = False
     created_assets: list[str] = []
     try:
@@ -40,7 +49,9 @@ def init(
             )
             exit(code=1)
 
-        for asset in os.listdir(p := os.path.join(TEMPLATES_ROOT_DIRECTORY, "init")):
+        for asset in os.listdir(
+            p := os.path.join(get_ctf_script_templates_directory(), "init")
+        ):
             dst_asset = os.path.join(path, asset)
             if os.path.isdir(src_asset := os.path.join(p, asset)):
                 shutil.copytree(src_asset, dst_asset, dirs_exist_ok=True)
