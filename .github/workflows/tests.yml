@@ -47,10 +47,10 @@ jobs:
 
       - name: Copy CTF files
         run: |
-            mkdir -p test-ctf/challenges
-            cp -r ./challenges test-ctf/
-            ls -al test-ctf/
-            ls -al test-ctf/challenges
+          mkdir -p test-ctf/challenges
+          cp -r ./challenges test-ctf/
+          ls -al test-ctf/
+          ls -al test-ctf/challenges
 
       - name: ctf version
         working-directory: test-ctf
@@ -196,10 +196,3 @@ jobs:
           ctf redeploy --production --tracks mock-track-python-service
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
           ctf destroy --force
-
-      - name: Check deployment results
-        run: |
-          incus project list
-          incus network zone record list ctf
-          incus network list --all-projects
-          incus list --all-projects

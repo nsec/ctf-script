@@ -230,7 +230,7 @@ def run_ansible_playbook(remote: str, production: bool, track: str, path: str) -
     LOG.info(msg=f"Running common yaml with ansible for track {track}...")
     ansible_args = [
         "ansible-playbook",
-        "../../../.deploy/common.yaml",
+        os.path.join(CTF_ROOT_DIRECTORY, ".deploy", "common.yaml"),
         "-i",
         "inventory",
     ] + extra_args

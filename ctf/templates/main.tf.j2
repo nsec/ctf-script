@@ -8,8 +8,8 @@ resource "incus_project" "this" {
   config = {
     "features.images"       = "false"
     "user.contacts.dev"     = join(", ", local.track.contacts.dev)
-    "user.contacts.qa"      = join(", ", local.track.contacts.qa)
-    "user.contacts.support" = join(", ", local.track.contacts.support)
+    "user.contacts.qa"      = length(local.track.contacts.qa) > 0 ? join(", ", local.track.contacts.qa) : null
+    "user.contacts.support" = length(local.track.contacts.support) > 0 ? join(", ", local.track.contacts.support) : null
   }
 }
 
