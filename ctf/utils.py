@@ -7,7 +7,6 @@ from typing import Any, Generator
 
 import jinja2
 import yaml
-
 from ctf import ENV
 from ctf.logger import LOG
 
@@ -225,15 +224,12 @@ def find_ctf_root_directory() -> str:
         if "CTF_ROOT_DIR" in ENV
         else os.path.join(os.getcwd(), ".")
     )
+    if not is_ctf_dir(path=path):
+        while path != (path := os.path.dirname(p=path)):
+            ctf_dir = is_ctf_dir(path)
 
-    while path != (path := os.path.dirname(p=path)):
-        dir = os.listdir(path=path)
-
-        if ".deploy" not in dir:
-            continue
-        if "challenges" not in dir:
-            continue
-        break
+            if ctf_dir:
+                break
 
     if path == "/":
         LOG.critical(
@@ -244,6 +240,16 @@ def find_ctf_root_directory() -> str:
 
     LOG.debug(msg=f"Found root directory: {path}")
     return (__CTF_ROOT_DIRECTORY := path)
+
+
+def is_ctf_dir(path):
+    ctf_dir = True
+    dir = os.listdir(path=path)
+    if ".deploy" not in dir:
+        ctf_dir = False
+    if "challenges" not in dir:
+        ctf_dir = False
+    return ctf_dir
 
 
 def terraform_binary() -> str:
