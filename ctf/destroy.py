@@ -57,6 +57,8 @@ def destroy(
 
     terraform_tracks = get_terraform_tracks_from_modules()
 
+    total_deployed_tracks = len(terraform_tracks)
+
     r = (
         subprocess.run(
             args=["incus", "project", "get-current"],
@@ -110,7 +112,11 @@ def destroy(
             terraform_binary(),
             "destroy",
             "-auto-approve",
-            *[f"-target=module.track-{track}" for track in terraform_tracks],
+            *(
+                []  # If every track needs to be destroyed, destroy everything including the network zone as well.
+                if total_deployed_tracks == len(terraform_tracks)
+                else [f"-target=module.track-{track}" for track in terraform_tracks]
+            ),
         ],
         cwd=os.path.join(CTF_ROOT_DIRECTORY, ".deploy"),
         check=False,
@@ -194,6 +200,7 @@ def destroy(
                     capture_output=True,
                     env=ENV,
                 )
+
     remove_tracks_from_terraform_modules(
         tracks=terraform_tracks,
         remote=remote,

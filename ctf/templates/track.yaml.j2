@@ -39,7 +39,7 @@ services:
   # Each service name must be unique for a given instance (container/VM).
   - name: {% if data.template == "python-service" %}HTTP-5000{% else %}HTTP{% endif %}
     # Name of the container or VM
-    instance: main-site
+    instance: {{ data.name }}
     # The IPv6 address was randomly generated from the MAC Address (hwaddr) and the subnets defined in main.tf.
     # If you need other machines, you can choose another MAC Address and get the IPv6 from the MAC AND the IPv6 subnet ({{ data.ipv6_subnet }}) at https://eui64-calc.princelle.org/
     address: '{{ data.full_ipv6_address }}'
