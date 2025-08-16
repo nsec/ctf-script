@@ -11,6 +11,7 @@ from ctf.utils import (
     create_terraform_modules_file,
     find_ctf_root_directory,
     get_all_available_tracks,
+    load_yaml_file,
     terraform_binary,
     validate_track_can_be_deployed,
 )
@@ -54,6 +55,20 @@ def generate(
         LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
         # Generate the Terraform modules file.
         create_terraform_modules_file(remote=remote, production=production)
+
+        for track in distinct_tracks:
+            if os.path.isfile(
+                build_yaml_file_path := os.path.join(
+                    find_ctf_root_directory(),
+                    "challenges",
+                    track,
+                    "ansible",
+                    "build.yaml",
+                )
+            ) and (build_yaml_file := load_yaml_file(build_yaml_file_path)) and build_yaml_file:
+                #TODO: set build for track
+                pass
+
         add_tracks_to_terraform_modules(
             tracks=distinct_tracks,
             remote=remote,

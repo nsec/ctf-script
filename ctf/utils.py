@@ -80,6 +80,9 @@ def add_tracks_to_terraform_modules(
                     {% for track in tracks %}
                     module "track-{{ track }}" {
                       source = "../challenges/{{ track }}/terraform"
+                    {% if build_container %}
+                      build_container = true
+                    {% endif %}
                     {% if production %}
                       deploy = "production"
                     {% endif %}
@@ -96,6 +99,7 @@ def add_tracks_to_terraform_modules(
         fd.write(
             template.render(
                 tracks=tracks - get_terraform_tracks_from_modules(),
+                build_container=build_container,
                 production=production,
                 remote=remote,
             )
@@ -145,6 +149,7 @@ def remove_tracks_from_terraform_modules(
     current_tracks = get_terraform_tracks_from_modules()
 
     create_terraform_modules_file(remote=remote, production=production)
+    # TODO: loosing the build_container
     add_tracks_to_terraform_modules(
         tracks=(current_tracks - tracks), remote=remote, production=production
     )
@@ -175,19 +180,16 @@ def remove_ctf_script_root_directory_from_path(path: str) -> str:
     return os.path.relpath(path=path, start=find_ctf_root_directory())
 
 
+def load_yaml_file(file: str) -> dict[str, Any]:
+    return yaml.safe_load(stream=open(file, mode="r", encoding="utf-8"))
+
+
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
-    r = yaml.safe_load(
-        stream=open(
-            file=(
-                p := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "track.yaml"
-                )
-            ),
-            mode="r",
-            encoding="utf-8",
+    r = load_yaml_file(
+        p := os.path.join(
+            find_ctf_root_directory(), "challenges", track_name, "track.yaml"
         )
     )
-
     r["file_location"] = remove_ctf_script_root_directory_from_path(path=p)
 
     return r
@@ -203,14 +205,11 @@ def parse_post_yamls(track_name: str) -> list[dict]:
         )
     ):
         if post.endswith(".yml") or post.endswith(".yaml"):
-            with open(
-                file=os.path.join(posts_dir, post), mode="r", encoding="utf-8"
-            ) as f:
-                r = post_data = yaml.safe_load(stream=f)
-                r["file_location"] = remove_ctf_script_root_directory_from_path(
-                    path=posts_dir
-                )
-                posts.append(post_data)
+            r = load_yaml_file(os.path.join(posts_dir, post))
+            r["file_location"] = remove_ctf_script_root_directory_from_path(
+                path=posts_dir
+            )
+            posts.append(r)
 
     return posts
 
