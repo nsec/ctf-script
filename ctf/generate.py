@@ -6,12 +6,13 @@ from typing_extensions import Annotated
 
 from ctf import ENV
 from ctf.logger import LOG
+from ctf.models import Track
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     create_terraform_modules_file,
+    does_track_require_build_container,
     find_ctf_root_directory,
     get_all_available_tracks,
-    load_yaml_file,
     terraform_binary,
     validate_track_can_be_deployed,
 )
@@ -41,10 +42,10 @@ def generate(
     remote: Annotated[
         str, typer.Option("--remote", help="Incus remote to deploy to")
     ] = "local",
-) -> set[str]:
+) -> set[Track]:
     ENV["INCUS_REMOTE"] = remote
     # Get the list of tracks.
-    distinct_tracks = set(
+    distinct_tracks: set[Track] = set(
         track
         for track in get_all_available_tracks()
         if validate_track_can_be_deployed(track=track)
@@ -56,18 +57,17 @@ def generate(
         # Generate the Terraform modules file.
         create_terraform_modules_file(remote=remote, production=production)
 
+        tmp_tracks: set[Track] = set()
         for track in distinct_tracks:
-            if os.path.isfile(
-                build_yaml_file_path := os.path.join(
-                    find_ctf_root_directory(),
-                    "challenges",
-                    track,
-                    "ansible",
-                    "build.yaml",
+            tmp_tracks.add(
+                Track(
+                    name=track.name,
+                    remote=track.remote,
+                    production=track.production,
+                    require_build_container=does_track_require_build_container(track),
                 )
-            ) and (build_yaml_file := load_yaml_file(build_yaml_file_path)) and build_yaml_file:
-                #TODO: set build for track
-                pass
+            )
+        distinct_tracks = tmp_tracks
 
         add_tracks_to_terraform_modules(
             tracks=distinct_tracks,
@@ -80,7 +80,7 @@ def generate(
                 os.path.join(find_ctf_root_directory(), ".deploy", "common"),
                 (
                     terraform_directory := os.path.join(
-                        find_ctf_root_directory(), "challenges", track, "terraform"
+                        find_ctf_root_directory(), "challenges", track.name, "terraform"
                     )
                 ),
             )

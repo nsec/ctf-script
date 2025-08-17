@@ -7,6 +7,7 @@ from typing_extensions import Annotated
 
 from ctf import ENV
 from ctf.logger import LOG
+from ctf.models import Track
 from ctf.utils import (
     find_ctf_root_directory,
     get_terraform_tracks_from_modules,
@@ -60,8 +61,8 @@ def destroy(
 
     total_deployed_tracks = len(terraform_tracks)
 
-    r = (
-        subprocess.run(
+    current_project = Track(
+        name=subprocess.run(
             args=["incus", "project", "get-current"],
             check=True,
             capture_output=True,
@@ -71,16 +72,16 @@ def destroy(
         .strip()
     )
 
-    tmp_tracks = set(tracks)
+    tmp_tracks: set[Track] = set(Track(name=x) for x in tracks)
     if tmp_tracks and tmp_tracks != terraform_tracks:
         terraform_tracks &= tmp_tracks
         if not terraform_tracks:
             LOG.warning("No track to destroy.")
             return
 
-    if r in terraform_tracks:
-        projects = {
-            project["name"]
+    if current_project in terraform_tracks:
+        projects: set[Track] = {
+            Track(name=project["name"])
             for project in json.loads(
                 s=subprocess.run(
                     args=["incus", "project", "list", "--format=json"],
@@ -91,8 +92,8 @@ def destroy(
             )
         }
 
-        projects = list((projects - terraform_tracks))
-        if len(projects) == 0:
+        project_list = list((projects - terraform_tracks))
+        if len(project_list) == 0:
             LOG.critical(
                 msg="No project to switch to. This should never happen as the default should always exists."
             )
@@ -102,7 +103,7 @@ def destroy(
             "incus",
             "project",
             "switch",
-            "default" if "default" in projects else projects[0],
+            "default" if "default" in project_list else project_list[0].name,
         ]
 
         LOG.info(msg=f"Running `{' '.join(cmd)}`")
@@ -116,15 +117,15 @@ def destroy(
             *(
                 []  # If every track needs to be destroyed, destroy everything including the network zone as well.
                 if total_deployed_tracks == len(terraform_tracks)
-                else [f"-target=module.track-{track}" for track in terraform_tracks]
+                else [f"-target=module.track-{track.name}" for track in terraform_tracks]
             ),
         ],
         cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
         check=False,
     )
 
-    projects = [
-        project["name"]
+    projects = {
+        Track(name=project["name"])
         for project in json.loads(
             s=subprocess.run(
                 args=["incus", "project", "list", "--format=json"],
@@ -133,10 +134,10 @@ def destroy(
                 env=ENV,
             ).stdout.decode()
         )
-    ]
+    }
 
-    networks = [
-        network["name"]
+    networks = {
+        Track(name=network["name"])
         for network in json.loads(
             s=subprocess.run(
                 args=["incus", "network", "list", "--format=json"],
@@ -145,10 +146,10 @@ def destroy(
                 env=ENV,
             ).stdout.decode()
         )
-    ]
+    }
 
-    network_acls = [
-        network_acl["name"]
+    network_acls = {
+        Track(name=network_acl["name"])
         for network_acl in json.loads(
             s=subprocess.run(
                 args=["incus", "network", "acl", "list", "--format=json"],
@@ -157,46 +158,46 @@ def destroy(
                 env=ENV,
             ).stdout.decode()
         )
-    ]
+    }
 
     for module in terraform_tracks:
         if module in projects:
-            LOG.warning(msg=f"The project {module} was not destroyed properly.")
+            LOG.warning(msg=f"The project {module.name} was not destroyed properly.")
             if (
                 force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
-                    args=["incus", "project", "delete", module, "--force"],
+                    args=["incus", "project", "delete", module.name, "--force"],
                     check=False,
                     capture_output=True,
                     input=b"yes\n",
                     env=ENV,
                 )
 
-        if (tmp_module := module[0:15]) in networks:
-            LOG.warning(msg=f"The network {tmp_module} was not destroyed properly.")
+        if (tmp_module_name := module.name[0:15]) in networks:
+            LOG.warning(msg=f"The network {tmp_module_name} was not destroyed properly.")
             if (
                 force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
-                    args=["incus", "network", "delete", tmp_module],
+                    args=["incus", "network", "delete", tmp_module_name],
                     check=False,
                     capture_output=True,
                     env=ENV,
                 )
 
         if (tmp_module := module) in network_acls or (
-            tmp_module := f"{module}-default"
+            tmp_module := f"{module.name}-default"
         ) in network_acls:
-            LOG.warning(msg=f"The network ACL {tmp_module} was not destroyed properly.")
+            LOG.warning(msg=f"The network ACL {tmp_module.name} was not destroyed properly.")
             if (
                 force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
             ):
                 subprocess.run(
-                    args=["incus", "network", "acl", "delete", tmp_module],
+                    args=["incus", "network", "acl", "delete", tmp_module.name],
                     check=False,
                     capture_output=True,
                     env=ENV,

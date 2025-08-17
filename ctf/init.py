@@ -28,7 +28,7 @@ def init(
     # If path is not set, take the one from --location or CTF_ROOT_DIR, else it's the current directory.
     if not path:
         path = (
-            ENV.get("CTF_ROOT_DIR")
+            str(ENV.get("CTF_ROOT_DIR"))
             if "CTF_ROOT_DIR" in ENV
             else os.path.join(os.getcwd(), ".")
         )

@@ -17,6 +17,7 @@ dependencies = [
     "ruff==0.12.8",
     "setuptools",
     "typer==0.16.0",
+    "pydantic"
 ]
 version = "3.0.0"
 classifiers = [

@@ -11,9 +11,11 @@ from ctf import ENV
 from ctf.destroy import destroy
 from ctf.generate import generate
 from ctf.logger import LOG
+from ctf.models import Track
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     check_git_lfs,
+    does_track_require_build_container,
     find_ctf_root_directory,
     get_all_available_tracks,
     get_terraform_tracks_from_modules,
@@ -61,6 +63,18 @@ def deploy(
             if validate_track_can_be_deployed(track=track) and track in tracks
         )
 
+        tmp_tracks: set[Track] = set()
+        for track in distinct_tracks:
+            tmp_tracks.add(
+                Track(
+                    name=track.name,
+                    remote=track.remote,
+                    production=track.production,
+                    require_build_container=does_track_require_build_container(track),
+                )
+            )
+        distinct_tracks = tmp_tracks
+
         add_tracks_to_terraform_modules(
             tracks=distinct_tracks - get_terraform_tracks_from_modules(),
             remote=remote,
@@ -84,7 +98,7 @@ def deploy(
             "git",
             "lfs",
             "pull",
-            f"--include={','.join([os.path.join('challenges', track, 'ansible', '*') for track in distinct_tracks])}",
+            f"--include={','.join([os.path.join('challenges', track.name, 'ansible', '*') for track in distinct_tracks])}",
         ],
         check=True,
     )
@@ -106,6 +120,8 @@ def deploy(
         force = True
         destroy(tracks=tracks, production=production, remote=remote, force=force)
 
+        distinct_tracks = generate(tracks=tracks, production=production, remote=remote)
+
         subprocess.run(
             args=[terraform_binary(), "apply", "-auto-approve"],
             cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
@@ -120,17 +136,23 @@ def deploy(
         exit(code=0)
 
     for track in distinct_tracks:
+        if track.require_build_container:
+            # TODO: Ansible build containers here
+            
+            # TODO: Set the "build_container" OpenTofu variable to false in module.tf
+            pass
+
         if not os.path.exists(
             path=(
                 path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track, "ansible"
+                    find_ctf_root_directory(), "challenges", track.name, "ansible"
                 )
             )
         ):
             continue
 
         run_ansible_playbook(
-            remote=remote, production=production, track=track, path=path
+            remote=remote, production=production, track=track.name, path=path
         )
 
         if not production:
@@ -154,7 +176,7 @@ def deploy(
 
             if remote == "local":
                 LOG.debug(msg=f"Parsing track.yaml for track {track}")
-                track_yaml = parse_track_yaml(track_name=track)
+                track_yaml = parse_track_yaml(track_name=track.name)
 
                 for service in track_yaml["services"]:
                     if service.get("dev_port_mapping"):
@@ -175,12 +197,12 @@ def deploy(
                                 "device",
                                 "add",
                                 machine_name,
-                                f"proxy-{track}-{service['dev_port_mapping']}-to-{service['port']}",
+                                f"proxy-{track.name}-{service['dev_port_mapping']}-to-{service['port']}",
                                 "proxy",
                                 f"listen=tcp:0.0.0.0:{service['dev_port_mapping']}",
                                 f"connect=tcp:127.0.0.1:{service['port']}",
                                 "--project",
-                                track,
+                                track.name,
                             ],
                             cwd=path,
                             check=True,
@@ -212,7 +234,7 @@ def deploy(
                 msg=f"Running `incus project switch {tracks_list[track_index - 1]}`"
             )
             subprocess.run(
-                args=["incus", "project", "switch", tracks_list[track_index - 1]],
+                args=["incus", "project", "switch", tracks_list[track_index - 1].name],
                 check=True,
                 env=ENV,
             )
