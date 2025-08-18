@@ -117,7 +117,9 @@ def destroy(
             *(
                 []  # If every track needs to be destroyed, destroy everything including the network zone as well.
                 if total_deployed_tracks == len(terraform_tracks)
-                else [f"-target=module.track-{track.name}" for track in terraform_tracks]
+                else [
+                    f"-target=module.track-{track.name}" for track in terraform_tracks
+                ]
             ),
         ],
         cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
@@ -176,7 +178,9 @@ def destroy(
                 )
 
         if (tmp_module_name := module.name[0:15]) in networks:
-            LOG.warning(msg=f"The network {tmp_module_name} was not destroyed properly.")
+            LOG.warning(
+                msg=f"The network {tmp_module_name} was not destroyed properly."
+            )
             if (
                 force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
@@ -191,7 +195,9 @@ def destroy(
         if (tmp_module := module) in network_acls or (
             tmp_module := f"{module.name}-default"
         ) in network_acls:
-            LOG.warning(msg=f"The network ACL {tmp_module.name} was not destroyed properly.")
+            LOG.warning(
+                msg=f"The network ACL {tmp_module.name} was not destroyed properly."
+            )
             if (
                 force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"

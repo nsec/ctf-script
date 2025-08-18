@@ -20,6 +20,7 @@ from ctf.utils import (
     get_all_available_tracks,
     get_terraform_tracks_from_modules,
     parse_track_yaml,
+    remove_tracks_from_terraform_modules,
     terraform_binary,
     validate_track_can_be_deployed,
 )
@@ -76,9 +77,7 @@ def deploy(
         distinct_tracks = tmp_tracks
 
         add_tracks_to_terraform_modules(
-            tracks=distinct_tracks - get_terraform_tracks_from_modules(),
-            remote=remote,
-            production=production,
+            tracks=distinct_tracks - get_terraform_tracks_from_modules()
         )
     else:
         # Run generate first.
@@ -137,10 +136,70 @@ def deploy(
 
     for track in distinct_tracks:
         if track.require_build_container:
-            # TODO: Ansible build containers here
-            
-            # TODO: Set the "build_container" OpenTofu variable to false in module.tf
-            pass
+            run_ansible_playbook(
+                remote=remote,
+                production=production,
+                track=track.name,
+                path=os.path.join(
+                    find_ctf_root_directory(), "challenges", track.name, "ansible"
+                ),
+                playbook="build.yaml",
+                execute_common=False,
+            )
+
+            remove_tracks_from_terraform_modules(
+                {track}, remote=remote, production=production
+            )
+            add_tracks_to_terraform_modules(
+                {
+                    Track(
+                        name=track.name,
+                        remote=track.remote,
+                        production=track.production,
+                        require_build_container=False,
+                    )
+                }
+            )
+
+            try:
+                subprocess.run(
+                    args=[terraform_binary(), "apply", "-auto-approve"],
+                    cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+                    check=True,
+                )
+            except subprocess.CalledProcessError:
+                LOG.warning(
+                    f"The project could not deploy due to instable state. It is often due to CTRL+C while deploying as {os.path.basename(terraform_binary())} was not able to save the state of each object created."
+                )
+
+                if (
+                    input("Do you want to clean and start over? [Y/n] ").lower() or "y"
+                ) != "y":
+                    exit(code=1)
+
+                force = True
+                destroy(
+                    tracks=tracks, production=production, remote=remote, force=force
+                )
+
+                distinct_tracks = generate(
+                    tracks=tracks, production=production, remote=remote
+                )
+
+                subprocess.run(
+                    args=[terraform_binary(), "apply", "-auto-approve"],
+                    cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+                    check=True,
+                )
+            except KeyboardInterrupt:
+                LOG.warning(
+                    "CTRL+C was detected during Terraform deployment. Destroying everything..."
+                )
+                force = True
+                destroy(
+                    tracks=tracks, production=production, remote=remote, force=force
+                )
+                exit(code=0)
 
         if not os.path.exists(
             path=(
@@ -244,7 +303,14 @@ def deploy(
             )
 
 
-def run_ansible_playbook(remote: str, production: bool, track: str, path: str) -> None:
+def run_ansible_playbook(
+    remote: str,
+    production: bool,
+    track: str,
+    path: str,
+    playbook: str = "deploy.yaml",
+    execute_common: bool = True,
+) -> None:
     extra_args = []
     if remote:
         extra_args += ["-e", f"ansible_incus_remote={remote}"]
@@ -252,23 +318,24 @@ def run_ansible_playbook(remote: str, production: bool, track: str, path: str) -
     if production:
         extra_args += ["-e", "nsec_production=true"]
 
-    LOG.info(msg=f"Running common yaml with ansible for track {track}...")
-    ansible_args = [
-        "ansible-playbook",
-        os.path.join("..", "..", "..", ".deploy", "common.yaml"),
-        "-i",
-        "inventory",
-    ] + extra_args
-    subprocess.run(
-        args=ansible_args,
-        cwd=path,
-        check=True,
-    )
+    if execute_common:
+        LOG.info(msg=f"Running common yaml with ansible for track {track}...")
+        ansible_args = [
+            "ansible-playbook",
+            os.path.join("..", "..", "..", ".deploy", "common.yaml"),
+            "-i",
+            "inventory",
+        ] + extra_args
+        subprocess.run(
+            args=ansible_args,
+            cwd=path,
+            check=True,
+        )
 
-    LOG.info(msg=f"Running deploy.yaml with ansible for track {track}...")
+    LOG.info(msg=f"Running {playbook} with ansible for track {track}...")
     ansible_args = [
         "ansible-playbook",
-        "deploy.yaml",
+        playbook,
         "-i",
         "inventory",
     ] + extra_args

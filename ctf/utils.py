@@ -93,9 +93,7 @@ def validate_track_can_be_deployed(track: Track) -> bool:
     )
 
 
-def add_tracks_to_terraform_modules(
-    tracks: set[Track], remote: str, production: bool = False
-):
+def add_tracks_to_terraform_modules(tracks: set[Track]):
     with open(
         file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="a"
     ) as fd:
@@ -105,16 +103,9 @@ def add_tracks_to_terraform_modules(
                     {% for track in tracks %}
                     module "track-{{ track.name }}" {
                       source = "../challenges/{{ track.name }}/terraform"
-
                       build_container = {{ 'true' if track.require_build_container else 'false' }}
-
-                    {% if track.production %}
-                      deploy = "production"
-                    {% endif %}
-                    {% if track.remote %}
-                      incus_remote = "{{ track.remote }}"
-                    {% endif %}
-
+                      {% if track.production %}deploy = "production"{% endif %}
+                      {% if track.remote %}incus_remote = "{{ track.remote }}"{% endif %}
                       depends_on = [module.common]
                     }
                     {% endfor %}
@@ -124,9 +115,6 @@ def add_tracks_to_terraform_modules(
         fd.write(
             template.render(
                 tracks=tracks - get_terraform_tracks_from_modules(),
-                build_container=True,  # build_container,
-                production=production,
-                remote=remote,
             )
         )
 
@@ -140,12 +128,8 @@ def create_terraform_modules_file(remote: str, production: bool = False):
                 text="""\
                     module "common" {
                       source = "./common"
-                    {% if production %}
-                      deploy = "production"
-                    {% endif %}
-                    {% if remote %}
-                      incus_remote = "{{ remote }}"
-                    {% endif %}
+                      {% if production %}deploy = "production"{% endif %}
+                      {% if remote %}incus_remote = "{{ remote }}"{% endif %}
                     }
                     """
             )
@@ -212,9 +196,7 @@ def remove_tracks_from_terraform_modules(
     current_tracks = get_terraform_tracks_from_modules()
 
     create_terraform_modules_file(remote=remote, production=production)
-    add_tracks_to_terraform_modules(
-        tracks=(current_tracks - tracks), remote=remote, production=production
-    )
+    add_tracks_to_terraform_modules(tracks=(current_tracks - tracks))
 
 
 def get_all_file_paths_recursively(path: str) -> Generator[str, None, None]:

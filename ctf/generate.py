@@ -69,11 +69,7 @@ def generate(
             )
         distinct_tracks = tmp_tracks
 
-        add_tracks_to_terraform_modules(
-            tracks=distinct_tracks,
-            remote=remote,
-            production=production,
-        )
+        add_tracks_to_terraform_modules(tracks=distinct_tracks)
 
         for track in distinct_tracks:
             relpath = os.path.relpath(
