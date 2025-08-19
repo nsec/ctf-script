@@ -1,0 +1,60 @@
+- name: "Build container"
+  hosts: "build-container"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+
+    - name: Initial System Upgrade
+      ansible.builtin.apt:
+        update_cache: true
+        install_recommends: false
+        upgrade: full
+
+    # Install tools to compile/build the track
+    - name: Install GCC
+      ansible.builtin.apt:
+        name:
+          - gcc
+        state: present
+
+    # Copy the challenge on the container
+    - name: Create main.c
+      ansible.builtin.copy:
+        dest: /tmp/main.c
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          #include <stdio.h>
+
+          int main() {
+            printf("{{ '{{' }} track_flags.{{ data.name | replace("-","_") }}_flag_1 {{ '}}' }} (1/1)");
+            return 0;
+          }
+
+    # Compile the program
+    - name: Build main program
+      ansible.builtin.command: gcc /tmp/main.c -o /tmp/main
+      changed_when: false
+
+    # Create a TAR archive with the compiled program
+    - name: Create archive of build
+      community.general.archive:
+        path: /tmp/main
+        dest: /tmp/build.tar
+        format: tar
+        mode: '0644'
+
+    # Extract the archive from the build container and save it on the local host
+    - name: Fetch archive
+      ansible.builtin.fetch:
+        src: /tmp/build.tar
+        dest: /tmp/
+        flat: true

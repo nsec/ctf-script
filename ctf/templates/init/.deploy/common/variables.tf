@@ -8,6 +8,12 @@ variable "deploy" {
   type    = string
 }
 
+variable "build_container" {
+  default = false
+  type    = bool
+}
+
+
 locals {
   track = yamldecode(file("${path.module}/../track.yaml"))
 }

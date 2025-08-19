@@ -49,7 +49,7 @@ def generate(
         track
         for track in get_all_available_tracks()
         if validate_track_can_be_deployed(track=track)
-        and (not tracks or track in tracks)
+        and (not tracks or track.name in tracks)
     )
 
     if distinct_tracks:

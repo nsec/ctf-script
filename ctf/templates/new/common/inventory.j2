@@ -15,3 +15,9 @@ all:
     ansible_incus_project: {{ data.name }}
 
     # Add variables if needed here.
+{% if data.with_build %}
+build:
+  hosts:
+    build-container:
+      ansible_incus_host: build-container
+{% endif %}
