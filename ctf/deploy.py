@@ -15,14 +15,10 @@ from ctf.models import Track
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     check_git_lfs,
-    does_track_require_build_container,
     find_ctf_root_directory,
-    get_all_available_tracks,
-    get_terraform_tracks_from_modules,
     parse_track_yaml,
     remove_tracks_from_terraform_modules,
     terraform_binary,
-    validate_track_can_be_deployed,
 )
 
 app = typer.Typer()
@@ -57,31 +53,10 @@ def deploy(
     ] = False,
 ):
     ENV["INCUS_REMOTE"] = remote
-    if redeploy:
-        distinct_tracks = set(
-            track
-            for track in get_all_available_tracks()
-            if validate_track_can_be_deployed(track=track) and track in tracks
-        )
-
-        tmp_tracks: set[Track] = set()
-        for track in distinct_tracks:
-            tmp_tracks.add(
-                Track(
-                    name=track.name,
-                    remote=track.remote,
-                    production=track.production,
-                    require_build_container=does_track_require_build_container(track),
-                )
-            )
-        distinct_tracks = tmp_tracks
-
-        add_tracks_to_terraform_modules(
-            tracks=distinct_tracks - get_terraform_tracks_from_modules()
-        )
-    else:
-        # Run generate first.
-        distinct_tracks = generate(tracks=tracks, production=production, remote=remote)
+    # Run generate first.
+    distinct_tracks = generate(
+        tracks=tracks, production=production, remote=remote, redeploy=redeploy
+    )
 
     # Check if Git LFS is installed on the system as it is required for deployment.
     if not check_git_lfs():
@@ -116,8 +91,7 @@ def deploy(
         if (input("Do you want to clean and start over? [Y/n] ").lower() or "y") != "y":
             exit(code=1)
 
-        force = True
-        destroy(tracks=tracks, production=production, remote=remote, force=force)
+        destroy(tracks=tracks, production=production, remote=remote, force=True)
 
         distinct_tracks = generate(tracks=tracks, production=production, remote=remote)
 
@@ -130,8 +104,7 @@ def deploy(
         LOG.warning(
             "CTRL+C was detected during Terraform deployment. Destroying everything..."
         )
-        force = True
-        destroy(tracks=tracks, production=production, remote=remote, force=force)
+        destroy(tracks=tracks, production=production, remote=remote, force=True)
         exit(code=0)
 
     for track in distinct_tracks:
@@ -177,10 +150,7 @@ def deploy(
                 ) != "y":
                     exit(code=1)
 
-                force = True
-                destroy(
-                    tracks=tracks, production=production, remote=remote, force=force
-                )
+                destroy(tracks=tracks, production=production, remote=remote, force=True)
 
                 distinct_tracks = generate(
                     tracks=tracks, production=production, remote=remote
@@ -195,10 +165,7 @@ def deploy(
                 LOG.warning(
                     "CTRL+C was detected during Terraform deployment. Destroying everything..."
                 )
-                force = True
-                destroy(
-                    tracks=tracks, production=production, remote=remote, force=force
-                )
+                destroy(tracks=tracks, production=production, remote=remote, force=True)
                 exit(code=0)
 
         if not os.path.exists(

@@ -1,1 +1,0 @@
-../../../.deploy/common/versions.tf

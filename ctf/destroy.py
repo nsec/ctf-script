@@ -177,7 +177,7 @@ def destroy(
                     env=ENV,
                 )
 
-        if (tmp_module_name := module.name[0:15]) in networks:
+        if (tmp_module_name := module.name[:15]) in networks:
             LOG.warning(
                 msg=f"The network {tmp_module_name} was not destroyed properly."
             )
@@ -193,7 +193,7 @@ def destroy(
                 )
 
         if (tmp_module := module) in network_acls or (
-            tmp_module := f"{module.name}-default"
+            tmp_module := Track(name=f"{module.name}-default")
         ) in network_acls:
             LOG.warning(
                 msg=f"The network ACL {tmp_module.name} was not destroyed properly."
