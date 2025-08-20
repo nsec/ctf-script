@@ -1,7 +1,7 @@
 # This YAML file defines all machines that Ansible needs to know about to run playbooks and configure machines.
 all:
   hosts:
-    # The following line defines how this machine will be refered to in ansible scripts.
+    # The following line defines how this machine will be referred to in ansible scripts.
     {{ data.name }}:
       # This one tells ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
       ansible_incus_host: {{ data.name }}
