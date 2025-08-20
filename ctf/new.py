@@ -82,7 +82,12 @@ def new(
 
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(
-            searchpath=get_ctf_script_templates_directory(), encoding="utf-8"
+            searchpath=(
+                new_template_path := os.path.join(
+                    get_ctf_script_templates_directory(), "new"
+                )
+            ),
+            encoding="utf-8",
         )
     )
 
@@ -106,7 +111,7 @@ def new(
     ipv6_address = f"216:3eff:fe{rb[0]}{rb[1]}:{rb[2]}{rb[3]}{rb[4]}{rb[5]}"
     full_ipv6_address = f"{ipv6_subnet}:{ipv6_address}"
 
-    track_template = env.get_template(name="track.yaml.j2")
+    track_template = env.get_template(name=os.path.join("common", "track.yaml.j2"))
     render = track_template.render(
         data={
             "name": name,
@@ -130,7 +135,7 @@ def new(
 
     LOG.debug(msg=f"Directory {posts_directory} created.")
 
-    track_template = env.get_template(name="topic.yaml.j2")
+    track_template = env.get_template(name=os.path.join("common", "topic.yaml.j2"))
     render = track_template.render(data={"name": name})
     with open(
         file=(p := os.path.join(posts_directory, f"{name}.yaml")),
@@ -141,7 +146,7 @@ def new(
 
     LOG.debug(msg=f"Wrote {p}.")
 
-    track_template = env.get_template(name="post.yaml.j2")
+    track_template = env.get_template(name=os.path.join("common", "post.yaml.j2"))
     render = track_template.render(data={"name": name})
     with open(
         file=(p := os.path.join(posts_directory, f"{name}_flag1.yaml")),
@@ -170,7 +175,7 @@ def new(
 
     LOG.debug(msg=f"Directory {terraform_directory} created.")
 
-    track_template = env.get_template(name="main.tf.j2")
+    track_template = env.get_template(name=os.path.join("common", "main.tf.j2"))
 
     render = track_template.render(
         data={
@@ -215,7 +220,7 @@ def new(
 
     LOG.debug(msg=f"Directory {ansible_directory} created.")
 
-    track_template = env.get_template(name=f"deploy-{template}.yaml.j2")
+    track_template = env.get_template(name=os.path.join(template, "deploy.yaml.j2"))
     render = track_template.render(data={"name": name})
     with open(
         file=(p := os.path.join(ansible_directory, "deploy.yaml")),
@@ -226,7 +231,7 @@ def new(
 
     LOG.debug(msg=f"Wrote {p}.")
 
-    track_template = env.get_template(name="inventory.j2")
+    track_template = env.get_template(name=os.path.join("common", "inventory.j2"))
     render = track_template.render(data={"name": name})
     with open(
         file=(p := os.path.join(ansible_directory, "inventory")),
@@ -244,7 +249,9 @@ def new(
     LOG.debug(msg=f"Directory {ansible_challenge_directory} created.")
 
     if template == Template.APACHE_PHP:
-        track_template = env.get_template(name="index.php.j2")
+        track_template = env.get_template(
+            name=os.path.join(Template.APACHE_PHP, "index.php.j2")
+        )
         render = track_template.render(data={"name": name})
         with open(
             file=(p := os.path.join(ansible_challenge_directory, "index.php")),
@@ -256,7 +263,9 @@ def new(
         LOG.debug(msg=f"Wrote {p}.")
 
     if template == Template.PYTHON_SERVICE:
-        track_template = env.get_template(name="app.py.j2")
+        track_template = env.get_template(
+            name=os.path.join(Template.PYTHON_SERVICE, "app.py.j2")
+        )
         render = track_template.render(data={"name": name})
         with open(
             file=(p := os.path.join(ansible_challenge_directory, "app.py")),
@@ -279,13 +288,19 @@ def new(
     if template == Template.RUST_WEBSERVICE:
         # Copy the entire challenge template
         shutil.copytree(
-            os.path.join(get_ctf_script_templates_directory(), "rust-webservice"),
+            os.path.join(
+                new_template_path,
+                Template.RUST_WEBSERVICE,
+                "source",
+            ),
             ansible_challenge_directory,
             dirs_exist_ok=True,
         )
         LOG.debug(msg=f"Wrote files to {ansible_challenge_directory}")
 
-        manifest_template = env.get_template(name="Cargo.toml.j2")
+        manifest_template = env.get_template(
+            name=os.path.join(Template.RUST_WEBSERVICE, "Cargo.toml.j2")
+        )
         render = manifest_template.render(data={"name": name})
         with open(
             file=(p := os.path.join(ansible_challenge_directory, "Cargo.toml")),
