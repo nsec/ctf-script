@@ -6,7 +6,7 @@ import typer
 from typer import Typer
 from typing_extensions import Annotated
 
-from ctf import ENV, LOG, state
+from ctf import ENV, LOG, STATE
 from ctf.check import app as check_app
 from ctf.deploy import app as deploy_app
 from ctf.destroy import app as destroy_app
@@ -52,7 +52,7 @@ def global_options(
     if verbose:
         LOG.setLevel(logging.DEBUG)
         LOG.handlers[0].setLevel(logging.DEBUG)
-        state["verbose"] = True
+        STATE["verbose"] = True
 
     if location:
         ENV["CTF_ROOT_DIR"] = location
