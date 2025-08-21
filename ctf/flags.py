@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+from enum import StrEnum
 
 import rich
 import typer
@@ -9,10 +10,16 @@ import yaml
 from typing_extensions import Annotated
 
 from ctf.logger import LOG
-from ctf.models import OutputFormat, Track
+from ctf.models import Track
 from ctf.utils import find_ctf_root_directory, parse_track_yaml
 
 app = typer.Typer()
+
+
+class OutputFormat(StrEnum):
+    JSON = "json"
+    CSV = "csv"
+    YAML = "yaml"
 
 
 @app.command(help="Get flags from tracks")

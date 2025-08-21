@@ -1,14 +1,19 @@
 import os
+from enum import StrEnum
 
 import rich
 import typer
 from rich.table import Table
 from typing_extensions import Annotated
 
-from ctf.models import ListOutputFormat, Track
+from ctf.models import Track
 from ctf.utils import find_ctf_root_directory, parse_post_yamls, parse_track_yaml
 
 app = typer.Typer()
+
+
+class ListOutputFormat(StrEnum):
+    PRETTY = "pretty"
 
 
 @app.command("list", help="List tracks and their author(s).")

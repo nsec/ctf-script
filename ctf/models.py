@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import (
@@ -9,24 +8,6 @@ from pydantic import (
 )
 
 IncusStr = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$")]
-
-
-class ListOutputFormat(StrEnum):
-    PRETTY = "pretty"
-
-
-class OutputFormat(StrEnum):
-    JSON = "json"
-    CSV = "csv"
-    YAML = "yaml"
-
-
-class Template(StrEnum):
-    APACHE_PHP = "apache-php"
-    PYTHON_SERVICE = "python-service"
-    FILES_ONLY = "files-only"
-    TRACK_YAML_ONLY = "track-yaml-only"
-    RUST_WEBSERVICE = "rust-webservice"
 
 
 class Track(BaseModel):

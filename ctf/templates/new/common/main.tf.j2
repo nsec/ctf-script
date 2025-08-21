@@ -140,8 +140,8 @@ resource "incus_instance" "build_container" {
     properties = {
       "pool" = "default"
       "path" = "/"
-      # This limit should only be adjusted if you NEED more resources.
-      "size" = "1GiB"
+      # !!!! Change this limit if needed !!!! #
+      "size" = "3GiB"
     }
   }
 

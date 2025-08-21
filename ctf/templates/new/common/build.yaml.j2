@@ -1,3 +1,5 @@
+# This Ansible script is used to compile your challenge, create an archive and extract that archive on to the local host.
+# This script only shows a proof of concept of building a C program. Change it as per your needs.
 - name: "Build container"
   hosts: "build-container"
   vars_files:
@@ -17,14 +19,14 @@
         install_recommends: false
         upgrade: full
 
-    # Install tools to compile/build the track
-    - name: Install GCC
+    # Install the tools required to compile your code such as npm, nodejs, gcc...
+    - name: Install dependencies to build the track
       ansible.builtin.apt:
         name:
           - gcc
         state: present
 
-    # Copy the challenge on the container
+    # Copy the challenge on the container. This example only creates a C program on the host, but you could copy a whole directory to compile your track.
     - name: Create main.c
       ansible.builtin.copy:
         dest: /tmp/main.c
@@ -39,7 +41,7 @@
             return 0;
           }
 
-    # Compile the program
+    # Modify this command depending on how the track needs to be built
     - name: Build main program
       ansible.builtin.command: gcc /tmp/main.c -o /tmp/main
       changed_when: false

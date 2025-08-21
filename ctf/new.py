@@ -2,16 +2,24 @@ import os
 import re
 import secrets
 import shutil
+from enum import StrEnum
 
 import jinja2
 import typer
 from typing_extensions import Annotated
 
 from ctf.logger import LOG
-from ctf.models import Template
 from ctf.utils import find_ctf_root_directory, get_ctf_script_templates_directory
 
 app = typer.Typer()
+
+
+class Template(StrEnum):
+    APACHE_PHP = "apache-php"
+    PYTHON_SERVICE = "python-service"
+    FILES_ONLY = "files-only"
+    TRACK_YAML_ONLY = "track-yaml-only"
+    RUST_WEBSERVICE = "rust-webservice"
 
 
 @app.command(help="Create a new CTF track with a given name")
