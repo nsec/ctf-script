@@ -15,6 +15,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "version":
 
 
 ENV = {}
+STATE = {"verbose": False}
 for k, v in os.environ.items():
     ENV[k] = v
 

@@ -7,7 +7,7 @@ import textwrap
 import typer
 from typing_extensions import Annotated
 
-from ctf import ENV
+from ctf import ENV, STATE
 from ctf.destroy import destroy
 from ctf.generate import generate
 from ctf.logger import LOG
@@ -279,6 +279,8 @@ def run_ansible_playbook(
     execute_common: bool = True,
 ) -> None:
     extra_args = []
+    if STATE["verbose"]:
+        extra_args.append("-vvv")
     if remote:
         extra_args += ["-e", f"ansible_incus_remote={remote}"]
 
