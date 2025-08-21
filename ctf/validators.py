@@ -2,8 +2,8 @@ import abc
 import glob
 import os
 import re
-from dataclasses import dataclass
 
+from ctf.models import ValidationError
 from ctf.utils import (
     find_ctf_root_directory,
     get_all_file_paths_recursively,
@@ -11,14 +11,6 @@ from ctf.utils import (
     parse_track_yaml,
     remove_ctf_script_root_directory_from_path,
 )
-
-
-@dataclass
-class ValidationError:
-    error_name: str
-    error_description: str
-    details: dict[str, str]
-    track_name: str = ""
 
 
 class Validator(abc.ABC):

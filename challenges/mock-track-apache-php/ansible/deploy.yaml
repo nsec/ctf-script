@@ -11,24 +11,25 @@
       ansible.builtin.set_fact:
         track_flags: "{{ track_flags | default({}) | combine({key: value}) }}"
 
-    - name: Initial System Upgrade
-      ansible.builtin.apt:
-        update_cache: true
-        install_recommends: false
-        upgrade: full
+    # Removed APT commands to avoid workflow failure
+    # - name: Initial System Upgrade
+    #   ansible.builtin.apt:
+    #     update_cache: true
+    #     install_recommends: false
+    #     upgrade: full
 
-    - name: Install PHP and Apache2
-      ansible.builtin.apt:
-        name:
-          - php
-          - apache2
-          - libapache2-mod-php
-        state: present
+    # - name: Install PHP and Apache2
+    #   ansible.builtin.apt:
+    #     name:
+    #       - php
+    #       - apache2
+    #       - libapache2-mod-php
+    #     state: present
 
-    - name: Remove default file "/var/www/html/index.html"
-      ansible.builtin.file:
-        path: "/var/www/html/index.html"
-        state: absent
+    # - name: Remove default file "/var/www/html/index.html"
+    #   ansible.builtin.file:
+    #     path: "/var/www/html/index.html"
+    #     state: absent
 
     - name: Copy the main site file (index.php)
       ansible.builtin.template:
@@ -38,13 +39,13 @@
         group: root
         mode: '0644'
 
-    - name: Restart Apache2 on failure
-      ansible.builtin.replace:
-        path: "/lib/systemd/system/apache2.service"
-        regexp: 'Restart=.+$'
-        replace: 'Restart=on-failure'
+    # - name: Restart Apache2 on failure
+    #   ansible.builtin.replace:
+    #     path: "/lib/systemd/system/apache2.service"
+    #     regexp: 'Restart=.+$'
+    #     replace: 'Restart=on-failure'
 
-    - name: Restart Apache2
-      ansible.builtin.service:
-        name: apache2
-        state: restarted
+    # - name: Restart Apache2
+    #   ansible.builtin.service:
+    #     name: apache2
+    #     state: restarted

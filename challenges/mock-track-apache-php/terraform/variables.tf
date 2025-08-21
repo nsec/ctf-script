@@ -1,1 +1,0 @@
-../../../.deploy/common/variables.tf

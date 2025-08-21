@@ -2,7 +2,7 @@
 
 # Example on how to run stuff on all hosts of the track
 - name: "Install Python, PIP and VirtualEnvironment on each host"
-  hosts: "*"
+  hosts: all{% if data.with_build %},!build{% endif %}
   vars_files:
     - ../track.yaml
   tasks:
@@ -16,7 +16,7 @@
         value: "{{ '{{ item.flag }}' }}"
       ansible.builtin.set_fact:
         track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
-        
+
     - name: Initial System Upgrade
       ansible.builtin.apt:
         update_cache: true
@@ -106,10 +106,13 @@
         state: restarted
         enabled: true
         daemon_reload: true
-
-# If you have many servers in your track with different deployments, it's probably better to separate them in ansible playbooks and import them like this.
-# - import_playbook: main-website.yaml
-# - import_playbook: challenge-robots.yaml
-# - import_playbook: challenge-lfi.yaml
-# - import_playbook: challenge-xxe.yaml
-        
+{% if data.with_build %}
+    # When using a build container, the unarchive module can be used to install the content on the remote.
+    - name: Unarchive the content of the build
+      ansible.builtin.unarchive:
+        src: /tmp/build.tar
+        dest: /tmp/
+        owner: root
+        group: root
+        mode: '0755'
+{% endif %}

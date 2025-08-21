@@ -6,11 +6,14 @@ from typing_extensions import Annotated
 
 from ctf import ENV
 from ctf.logger import LOG
+from ctf.models import Track
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     create_terraform_modules_file,
+    does_track_require_build_container,
     find_ctf_root_directory,
     get_all_available_tracks,
+    get_terraform_tracks_from_modules,
     terraform_binary,
     validate_track_can_be_deployed,
 )
@@ -40,24 +43,41 @@ def generate(
     remote: Annotated[
         str, typer.Option("--remote", help="Incus remote to deploy to")
     ] = "local",
-) -> set[str]:
+    redeploy: Annotated[
+        bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
+    ] = False,
+) -> set[Track]:
     ENV["INCUS_REMOTE"] = remote
     # Get the list of tracks.
-    distinct_tracks = set(
+    distinct_tracks: set[Track] = set(
         track
         for track in get_all_available_tracks()
         if validate_track_can_be_deployed(track=track)
-        and (not tracks or track in tracks)
+        and (not tracks or track.name in tracks)
     )
 
     if distinct_tracks:
         LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
         # Generate the Terraform modules file.
-        create_terraform_modules_file(remote=remote, production=production)
+        if not redeploy:
+            create_terraform_modules_file(remote=remote, production=production)
+
+        tmp_tracks: set[Track] = set()
+        for track in distinct_tracks:
+            tmp_tracks.add(
+                Track(
+                    name=track.name,
+                    remote=track.remote,
+                    production=track.production,
+                    require_build_container=does_track_require_build_container(track),
+                )
+            )
+        distinct_tracks = tmp_tracks
+
         add_tracks_to_terraform_modules(
-            tracks=distinct_tracks,
-            remote=remote,
-            production=production,
+            tracks=distinct_tracks - get_terraform_tracks_from_modules()
+            if redeploy
+            else distinct_tracks
         )
 
         for track in distinct_tracks:
@@ -65,7 +85,7 @@ def generate(
                 os.path.join(find_ctf_root_directory(), ".deploy", "common"),
                 (
                     terraform_directory := os.path.join(
-                        find_ctf_root_directory(), "challenges", track, "terraform"
+                        find_ctf_root_directory(), "challenges", track.name, "terraform"
                     )
                 ),
             )

@@ -1,11 +1,11 @@
 # This YAML file defines all machines that Ansible needs to know about to run playbooks and configure machines.
 all:
   hosts:
-    # The following line defines how this machine will be referred to in ansible scripts.
+    # The following line defines how this machine will be referred to in Ansible scripts.
     {{ data.name }}:
-      # This one tells ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
+      # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
       ansible_incus_host: {{ data.name }}
-  # You can set variables here to use in your ansible playbooks. For example, you can set the flags here to set them dynamically when setting up the challenge.
+  # You can set variables here to use in your Ansible playbooks. For example, you can set the flags here to set them dynamically when setting up the challenge.
   vars:
     # Do not change these.
     ansible_connection: community.general.incus
@@ -15,3 +15,13 @@ all:
     ansible_incus_project: {{ data.name }}
 
     # Add variables if needed here.
+{% if data.with_build %}
+# This section is needed if you need a build container. It's a group of hosts regrouped under the name "build" which MUST remain the same.
+# The group "build" is removed from the "cleanup.yaml" and "common.yaml", which is why you should not change it.
+build:
+  hosts:
+    # The following line defines how this machine will be referred to in "build.yaml" Ansible script.
+    build-container:
+      # The name must be the same as the previous line.
+      ansible_incus_host: build-container
+{% endif %}

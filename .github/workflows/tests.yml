@@ -160,7 +160,7 @@ jobs:
       - name: Test deployment looping through tracks
         working-directory: test-ctf
         run: |
-          IFS=" " read -r -a tracks <<< "$(python3 -c 'from ctf.utils import get_all_available_tracks,validate_track_can_be_deployed;print(str([t for t in get_all_available_tracks() if validate_track_can_be_deployed(t)]).strip("[]\x27").replace("\x27, \x27"," "))')"
+          IFS=" " read -r -a tracks <<< "$(python3 -c 'from ctf.utils import get_all_available_tracks,validate_track_can_be_deployed;print(str([t.name for t in get_all_available_tracks() if validate_track_can_be_deployed(t)]).strip("[]\x27").replace("\x27, \x27"," "))')"
 
           [ "${#tracks[@]}" -eq 0 ] && exit 1
 

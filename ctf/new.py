@@ -2,7 +2,7 @@ import os
 import re
 import secrets
 import shutil
-from enum import StrEnum, unique
+from enum import StrEnum
 
 import jinja2
 import typer
@@ -14,7 +14,6 @@ from ctf.utils import find_ctf_root_directory, get_ctf_script_templates_director
 app = typer.Typer()
 
 
-@unique
 class Template(StrEnum):
     APACHE_PHP = "apache-php"
     PYTHON_SERVICE = "python-service"
@@ -46,6 +45,13 @@ def new(
         typer.Option(
             "--force",
             help="If directory already exists, delete it and create it again.",
+        ),
+    ] = False,
+    with_build_container: Annotated[
+        bool,
+        typer.Option(
+            "--with-build",
+            help="If a build container is required.",
         ),
     ] = False,
 ) -> None:
@@ -184,6 +190,7 @@ def new(
             "ipv6": ipv6_address,
             "ipv6_subnet": ipv6_subnet,
             "full_ipv6_address": full_ipv6_address,
+            "with_build": with_build_container,
         }
     )
     with open(
@@ -221,7 +228,9 @@ def new(
     LOG.debug(msg=f"Directory {ansible_directory} created.")
 
     track_template = env.get_template(name=os.path.join(template, "deploy.yaml.j2"))
-    render = track_template.render(data={"name": name})
+    render = track_template.render(
+        data={"name": name, "with_build": with_build_container}
+    )
     with open(
         file=(p := os.path.join(ansible_directory, "deploy.yaml")),
         mode="w",
@@ -231,8 +240,23 @@ def new(
 
     LOG.debug(msg=f"Wrote {p}.")
 
+    if with_build_container:
+        track_template = env.get_template(name=os.path.join("common", "build.yaml.j2"))
+        render = track_template.render(
+            data={"name": name, "with_build": with_build_container}
+        )
+        with open(
+            file=(p := os.path.join(ansible_directory, "build.yaml")),
+            mode="w",
+            encoding="utf-8",
+        ) as f:
+            f.write(render)
+        LOG.debug(msg=f"Wrote {p}.")
+
     track_template = env.get_template(name=os.path.join("common", "inventory.j2"))
-    render = track_template.render(data={"name": name})
+    render = track_template.render(
+        data={"name": name, "with_build": with_build_container}
+    )
     with open(
         file=(p := os.path.join(ansible_directory, "inventory")),
         mode="w",

@@ -10,6 +10,7 @@ import yaml
 
 from ctf import ENV
 from ctf.logger import LOG
+from ctf.models import Track
 
 __CTF_ROOT_DIRECTORY = ""
 
@@ -30,7 +31,7 @@ def check_git_lfs() -> bool:
     return not bool(subprocess.run(args=["git", "lfs"], capture_output=True).returncode)
 
 
-def get_all_available_tracks() -> set[str]:
+def get_all_available_tracks() -> set[Track]:
     tracks = set()
 
     for entry in os.listdir(
@@ -43,34 +44,56 @@ def get_all_available_tracks() -> set[str]:
         if not os.path.isdir(s=os.path.join(challenges_directory, entry)):
             continue
 
-        tracks.add(entry)
+        tracks.add(Track(name=entry))
 
     return tracks
 
 
-def validate_track_can_be_deployed(track: str) -> bool:
+def does_track_require_build_container(track: Track) -> bool:
+    return os.path.isfile(
+        build_yaml_file_path := os.path.join(
+            find_ctf_root_directory(),
+            "challenges",
+            track.name,
+            "ansible",
+            "build.yaml",
+        )
+    ) and bool(load_yaml_file(build_yaml_file_path))
+
+
+def validate_track_can_be_deployed(track: Track) -> bool:
     return (
         os.path.exists(
             path=os.path.join(
-                find_ctf_root_directory(), "challenges", track, "terraform", "main.tf"
+                find_ctf_root_directory(),
+                "challenges",
+                track.name,
+                "terraform",
+                "main.tf",
             )
         )
         and os.path.exists(
             path=os.path.join(
-                find_ctf_root_directory(), "challenges", track, "ansible", "deploy.yaml"
+                find_ctf_root_directory(),
+                "challenges",
+                track.name,
+                "ansible",
+                "deploy.yaml",
             )
         )
         and os.path.exists(
             path=os.path.join(
-                find_ctf_root_directory(), "challenges", track, "ansible", "inventory"
+                find_ctf_root_directory(),
+                "challenges",
+                track.name,
+                "ansible",
+                "inventory",
             )
         )
     )
 
 
-def add_tracks_to_terraform_modules(
-    tracks: set[str], remote: str, production: bool = False
-):
+def add_tracks_to_terraform_modules(tracks: set[Track]):
     with open(
         file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="a"
     ) as fd:
@@ -78,15 +101,11 @@ def add_tracks_to_terraform_modules(
             source=textwrap.dedent(
                 text="""\
                     {% for track in tracks %}
-                    module "track-{{ track }}" {
-                      source = "../challenges/{{ track }}/terraform"
-                    {% if production %}
-                      deploy = "production"
-                    {% endif %}
-                    {% if remote %}
-                      incus_remote = "{{ remote }}"
-                    {% endif %}
-
+                    module "track-{{ track.name }}" {
+                      source = "../challenges/{{ track.name }}/terraform"
+                      build_container = {{ 'true' if track.require_build_container else 'false' }}
+                      {% if track.production %}deploy = "production"{% endif %}
+                      {% if track.remote %}incus_remote = "{{ track.remote }}"{% endif %}
                       depends_on = [module.common]
                     }
                     {% endfor %}
@@ -96,8 +115,6 @@ def add_tracks_to_terraform_modules(
         fd.write(
             template.render(
                 tracks=tracks - get_terraform_tracks_from_modules(),
-                production=production,
-                remote=remote,
             )
         )
 
@@ -111,43 +128,76 @@ def create_terraform_modules_file(remote: str, production: bool = False):
                 text="""\
                     module "common" {
                       source = "./common"
-                    {% if production %}
-                      deploy = "production"
-                    {% endif %}
-                    {% if remote %}
-                      incus_remote = "{{ remote }}"
-                    {% endif %}
+                      {% if production %}deploy = "production"{% endif %}
+                      {% if remote %}incus_remote = "{{ remote }}"{% endif %}
                     }
+                    
                     """
             )
         )
         fd.write(template.render(production=production, remote=remote))
 
 
-def get_terraform_tracks_from_modules() -> set[str]:
+def get_terraform_tracks_from_modules() -> set[Track]:
     with open(
         file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="r"
     ) as f:
         modules_tf = f.read()
 
-    return set(
-        re.findall(
-            pattern=r"^module \"track-([a-z][a-z0-9\-]{0,61}[a-z0-9])\"",
-            string=modules_tf,
-            flags=re.MULTILINE,
-        )
+    module_line_regex = re.compile(
+        r"^module \"track-([a-z][a-z0-9\-]{0,61}[a-z0-9])\"\s*\{$"
     )
+    production_line_regex = re.compile(r"^deploy\s*=\s*\"production\"$")
+    remote_line_regex = re.compile(r"^incus_remote\s*=\s*\"([^\"]+)\"$")
+    build_container_line_regex = re.compile(r"^build_container\s*=\s*true$")
+
+    tracks: set[Track] = set()
+    name: str = ""
+    remote: str = "local"
+    production: bool = False
+    require_build_container: bool = False
+
+    for line in modules_tf.splitlines():
+        if not (line := line.strip()):
+            continue
+
+        if "}" == line and name:
+            tracks.add(
+                Track(
+                    name=name,
+                    remote=remote,
+                    production=production,
+                    require_build_container=require_build_container,
+                )
+            )
+            name = ""
+            remote = "local"
+            production = False
+            require_build_container = False
+            continue
+
+        if m := module_line_regex.match(line):
+            name = m.group(1)
+
+        if production_line_regex.match(line):
+            production = True
+
+        if m := remote_line_regex.match(line):
+            remote = m.group(1)
+
+        if build_container_line_regex.match(line):
+            require_build_container = True
+
+    return tracks
 
 
 def remove_tracks_from_terraform_modules(
-    tracks: set[str], remote: str, production: bool = False
+    tracks: set[Track], remote: str, production: bool = False
 ):
     current_tracks = get_terraform_tracks_from_modules()
 
     create_terraform_modules_file(remote=remote, production=production)
-    add_tracks_to_terraform_modules(
-        tracks=(current_tracks - tracks), remote=remote, production=production
-    )
+    add_tracks_to_terraform_modules(tracks=(current_tracks - tracks))
 
 
 def get_all_file_paths_recursively(path: str) -> Generator[str, None, None]:
@@ -175,19 +225,16 @@ def remove_ctf_script_root_directory_from_path(path: str) -> str:
     return os.path.relpath(path=path, start=find_ctf_root_directory())
 
 
+def load_yaml_file(file: str) -> dict[str, Any]:
+    return yaml.safe_load(stream=open(file, mode="r", encoding="utf-8"))
+
+
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
-    r = yaml.safe_load(
-        stream=open(
-            file=(
-                p := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "track.yaml"
-                )
-            ),
-            mode="r",
-            encoding="utf-8",
+    r = load_yaml_file(
+        p := os.path.join(
+            find_ctf_root_directory(), "challenges", track_name, "track.yaml"
         )
     )
-
     r["file_location"] = remove_ctf_script_root_directory_from_path(path=p)
 
     return r
@@ -203,14 +250,11 @@ def parse_post_yamls(track_name: str) -> list[dict]:
         )
     ):
         if post.endswith(".yml") or post.endswith(".yaml"):
-            with open(
-                file=os.path.join(posts_dir, post), mode="r", encoding="utf-8"
-            ) as f:
-                r = post_data = yaml.safe_load(stream=f)
-                r["file_location"] = remove_ctf_script_root_directory_from_path(
-                    path=posts_dir
-                )
-                posts.append(post_data)
+            r = load_yaml_file(os.path.join(posts_dir, post))
+            r["file_location"] = remove_ctf_script_root_directory_from_path(
+                path=posts_dir
+            )
+            posts.append(r)
 
     return posts
 
@@ -220,8 +264,8 @@ def find_ctf_root_directory() -> str:
     if __CTF_ROOT_DIRECTORY:
         return __CTF_ROOT_DIRECTORY
 
-    path = (
-        ENV.get("CTF_ROOT_DIR")
+    path: str = (
+        str(ENV.get("CTF_ROOT_DIR"))
         if "CTF_ROOT_DIR" in ENV
         else os.path.join(os.getcwd(), ".")
     )
@@ -236,7 +280,6 @@ def find_ctf_root_directory() -> str:
         LOG.critical(
             msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
         )
-        raise
         exit(1)
 
     LOG.debug(msg=f"Found root directory: {path}")

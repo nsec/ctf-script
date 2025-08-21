@@ -2,13 +2,13 @@
 
 # Example on how to run stuff on all hosts of the track
 - name: "Install rust and npm"
-  hosts: "*"
+  hosts: all{% if data.with_build %},!build{% endif %}
   vars_files:
     - ../track.yaml
   tasks:
     # This is a helper task that loads the tracks' `track.yaml` file and loads the flags as
     # ansible facts (like variables) to use in subsequent steps. The key is the `discourse` tag
-    # of the flag. See the index.php file for an example on how to use/print the flags.
+    # of the flag.
     - name: "Load flags"
       loop: "{{ '{{ flags }}' }}"
       vars:
@@ -129,9 +129,13 @@
         state: restarted
         enabled: true
         daemon_reload: true
-
-# If you have many servers in your track with different deployments, it's probably better to separate them in ansible playbooks and import them like this.
-# - import_playbook: main-website.yaml
-# - import_playbook: challenge-robots.yaml
-# - import_playbook: challenge-lfi.yaml
-# - import_playbook: challenge-xxe.yaml
+{% if data.with_build %}
+    # When using a build container, the unarchive module can be used to install the content on the remote.
+    - name: Unarchive the content of the build
+      ansible.builtin.unarchive:
+        src: /tmp/build.tar
+        dest: /tmp/
+        owner: root
+        group: root
+        mode: '0755'
+{% endif %}

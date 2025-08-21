@@ -1,0 +1,62 @@
+# This Ansible script is used to compile your challenge, create an archive and extract that archive on to the local host.
+# This script only shows a proof of concept of building a C program. Change it as per your needs.
+- name: "Build container"
+  hosts: "build-container"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+
+    - name: Initial System Upgrade
+      ansible.builtin.apt:
+        update_cache: true
+        install_recommends: false
+        upgrade: full
+
+    # Install the tools required to compile your code such as npm, nodejs, gcc...
+    - name: Install dependencies to build the track
+      ansible.builtin.apt:
+        name:
+          - gcc
+        state: present
+
+    # Copy the challenge on the container. This example only creates a C program on the host, but you could copy a whole directory to compile your track.
+    - name: Create main.c
+      ansible.builtin.copy:
+        dest: /tmp/main.c
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          #include <stdio.h>
+
+          int main() {
+            printf("{{ '{{' }} track_flags.{{ data.name | replace("-","_") }}_flag_1 {{ '}}' }} (1/1)");
+            return 0;
+          }
+
+    # Modify this command depending on how the track needs to be built
+    - name: Build main program
+      ansible.builtin.command: gcc /tmp/main.c -o /tmp/main
+      changed_when: false
+
+    # Create a TAR archive with the compiled program
+    - name: Create archive of build
+      community.general.archive:
+        path: /tmp/main
+        dest: /tmp/build.tar
+        format: tar
+        mode: '0644'
+
+    # Extract the archive from the build container and save it on the local host
+    - name: Fetch archive
+      ansible.builtin.fetch:
+        src: /tmp/build.tar
+        dest: /tmp/
+        flat: true
