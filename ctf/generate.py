@@ -67,8 +67,8 @@ def generate(
             tmp_tracks.add(
                 Track(
                     name=track.name,
-                    remote=track.remote,
-                    production=track.production,
+                    remote=remote,
+                    production=production,
                     require_build_container=does_track_require_build_container(track),
                 )
             )
