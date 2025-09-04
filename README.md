@@ -35,7 +35,13 @@ my-ctf/
 │   │   ├── track.yaml            # Main file that describes the track
 │   │   ├── files/                # Directory that contains all the files available for download in the track
 │   │   │   ├── somefile.zip
+│   │   │   ├── askgod/
+│   │   │   │   ├── gifs/         # GIF directory for askgod fireworks.
+│   │   │   │   │   └── my-gif.gif
+│   │   │   │   ├── sounds/       # Sound directory for askgod fireworks.
+│   │   │   │   │   └── my-sound.mp3
 │   │   ├── ansible/              # Directory containing Ansible playbooks to configure the track
+│   │   │   ├── build.yaml        # Optional: Playbook when a build container is needed
 │   │   │   ├── deploy.yaml       # Main playbook to deploy the track
 │   │   │   └── inventory         # Inventory file for Ansible
 │   │   ├── terraform/            # Directory containing OpenTofu (terraform fork) files to describe the infrastructure

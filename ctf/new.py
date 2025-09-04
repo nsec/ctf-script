@@ -135,6 +135,17 @@ def new(
 
     LOG.debug(msg=f"Wrote {p}.")
 
+    readme_template = env.get_template(name=os.path.join("common", "README.md.j2"))
+    render = readme_template.render(data={"name": name})
+    with open(
+        file=(p := os.path.join(new_challenge_directory, "README.md")),
+        mode="w",
+        encoding="utf-8",
+    ) as f:
+        f.write(render)
+
+    LOG.debug(msg=f"Wrote {p}.")
+
     posts_directory = os.path.join(new_challenge_directory, "posts")
 
     os.mkdir(path=posts_directory)
