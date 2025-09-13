@@ -10,7 +10,7 @@
         [ ! -e /run/systemd/resolve/resolv.conf ] && exit 0
         rm -f /etc/resolv.conf || true
         cat /run/systemd/resolve/resolv.conf > /etc/resolv.conf
-      when: 'nsec_production | default(False)'
+      when: nsec_production | default(False)
       changed_when: true
 
     - name: Mask most systemd units
@@ -123,7 +123,7 @@
             systemd-udevd.service; do
           ln -s /dev/null /etc/systemd/system/${i} || true
         done
-      when: 'nsec_production | default(False)'
+      when: nsec_production | default(False)
       changed_when: true
 
     - name: Remove all cron jobs
