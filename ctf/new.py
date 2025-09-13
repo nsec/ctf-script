@@ -52,6 +52,7 @@ def new(
         typer.Option(
             "--with-build",
             help="If a build container is required.",
+            prompt="Is a build container required?",
         ),
     ] = False,
 ) -> None:
