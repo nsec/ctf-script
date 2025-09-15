@@ -221,20 +221,31 @@ def stats(
         for value, count in stats["flag_count_per_value"].items():
             number_of_points.append(value * count)
 
-        ax1.bar(list(stats["flag_count_per_value"].keys()), list(stats["flag_count_per_value"].values()), -width,
-                label="Number of points", color="blue", align="edge")
+        ax1.bar(
+            list(stats["flag_count_per_value"].keys()),
+            list(stats["flag_count_per_value"].values()),
+            -width,
+            label="Number of flags",
+            color="blue",
+            align="edge",
+        )
         ax1.set_xlabel("Flag Value (points)")
         ax1.set_ylabel("Number of Flags", color="blue")
-        ax1.tick_params(axis='y', labelcolor="blue")
+        ax1.tick_params(axis="y", labelcolor="blue")
 
         ax2 = ax1.twinx()
 
-        ax2.bar(list(stats["flag_count_per_value"].keys()), number_of_points, width, label="Number of flags",
-                color="orange",
-                align="edge")
+        ax2.bar(
+            list(stats["flag_count_per_value"].keys()),
+            number_of_points,
+            width,
+            label="Number of points",
+            color="orange",
+            align="edge",
+        )
         ax2.set_xlabel("Flag Value")
         ax2.set_ylabel("Number of points", color="orange")
-        ax2.tick_params(axis='y', labelcolor="orange")
+        ax2.tick_params(axis="y", labelcolor="orange")
 
         plt.xticks(
             ticks=range(0, max(stats["flag_count_per_value"].keys()) + 1), rotation=45
@@ -243,7 +254,7 @@ def stats(
         plt.grid(True, linestyle="--", alpha=0.3)
         plt.xlabel("Flag Value")
         plt.title("Number of Flags per Value")
-        fig.legend(loc='upper right')
+        fig.legend(loc="upper right")
 
         plt.savefig(os.path.join(".charts", "flags_per_value.png"))
         plt.clf()
