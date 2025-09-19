@@ -52,7 +52,6 @@ def new(
         typer.Option(
             "--with-build",
             help="If a build container is required.",
-            prompt="Is a build container required?",
         ),
     ] = False,
 ) -> None:
@@ -66,6 +65,9 @@ def new(
 * The name must not end with a dash."""
         )
         exit(code=1)
+
+    if template == Template.RUST_WEBSERVICE:
+        with_build_container = True
 
     if os.path.exists(
         path=(
@@ -253,10 +255,19 @@ def new(
     LOG.debug(msg=f"Wrote {p}.")
 
     if with_build_container:
-        track_template = env.get_template(name=os.path.join("common", "build.yaml.j2"))
+        try:
+            track_template = env.get_template(
+                name=os.path.join(template, "build.yaml.j2")
+            )
+        except jinja2.TemplateNotFound:
+            track_template = env.get_template(
+                name=os.path.join("common", "build.yaml.j2")
+            )
+
         render = track_template.render(
             data={"name": name, "with_build": with_build_container}
         )
+
         with open(
             file=(p := os.path.join(ansible_directory, "build.yaml")),
             mode="w",
