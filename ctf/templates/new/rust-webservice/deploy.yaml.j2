@@ -1,7 +1,7 @@
 # This is the main ansible script to deploy the challenge.
 
 # Example on how to run stuff on all hosts of the track
-- name: "Install rust and npm"
+- name: "Setup web server"
   hosts: all{% if data.with_build %},!build{% endif %}
   vars_files:
     - ../track.yaml
@@ -23,77 +23,13 @@
         install_recommends: false
         upgrade: full
 
-    - name: Install build dependencies
-      ansible.builtin.apt:
-        name:
-          - npm
-          - curl
-        state: present
-
-    - name: Check if cargo is installed
-      ansible.builtin.stat:
-        path: /root/.cargo/bin/cargo
-      register: cargo_exists
-
-    - name: Download Cargo Installer
-      ansible.builtin.get_url:
-        url: https://sh.rustup.rs
-        dest: /tmp/sh.rustup.rs
+    - name: Unarchive the content of the build
+      ansible.builtin.unarchive:
+        src: /tmp/nsec/{{ data.name }}.tar
+        dest: /opt/
+        owner: root
+        group: root
         mode: '0755'
-        force: true
-      when: not cargo_exists.stat.exists
-      tags:
-        - rust
-
-    - name: Install Cargo
-      when: not cargo_exists.stat.exists
-      ansible.builtin.command: /tmp/sh.rustup.rs -y
-      register: my_output
-      changed_when: my_output.rc != 0
-      tags:
-        - rust
-
-    - name: Copy the challenge sources
-      ansible.builtin.copy:
-        src: challenge/
-        dest: /tmp/{{ data.name }}
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: NPM install
-      community.general.npm:
-        path: /tmp/slot-machine/client/
-      environment:
-        NODE_OPTIONS: "--dns-result-order=ipv4first"
-
-    - name: Build
-      ansible.builtin.command:
-        cmd: /root/.cargo/bin/cargo build --release
-        chdir: /tmp/{{ data.name }}/
-      register: my_output
-      changed_when: my_output.rc != 0
-
-    - name: Copy server binary
-      ansible.builtin.copy:
-        src: /tmp/{{ data.name }}/target/release/{{ data.name }}
-        dest: /opt/{{ data.name }}/{{ data.name }}
-        owner: root
-        group: root
-        mode: '0744'
-
-    - name: Copy client
-      ansible.builtin.copy:
-        src: /tmp/{{ data.name }}/dist
-        dest: /opt/{{ data.name }}/dist
-        owner: root
-        group: root
-        mode: '0644'
-
-    - name: Remove Build
-      ansible.builtin.file:
-        path: /tmp/{{ data.name }}/
-        state: absent
 
     - name: Create systemd service
       ansible.builtin.copy:
@@ -116,26 +52,9 @@
           [Install]
           WantedBy=default.target
 
-    - name: Remove curl and npm
-      ansible.builtin.apt:
-        name:
-          - npm
-          - curl
-        state: absent
-
     - name: Start service
       ansible.builtin.service:
         name: {{ data.name }}.service
         state: restarted
         enabled: true
         daemon_reload: true
-{% if data.with_build %}
-    # When using a build container, the unarchive module can be used to install the content on the remote.
-    - name: Unarchive the content of the build
-      ansible.builtin.unarchive:
-        src: /tmp/build.tar
-        dest: /tmp/
-        owner: root
-        group: root
-        mode: '0755'
-{% endif %}

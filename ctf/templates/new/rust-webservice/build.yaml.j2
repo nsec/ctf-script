@@ -1,0 +1,111 @@
+# This Ansible script is used to compile your challenge, create an archive and extract that archive on to the local host.
+# This script only shows a proof of concept of building a C program. Change it as per your needs.
+- name: "Build container"
+  hosts: "build-container"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+
+    - name: Initial System Upgrade
+      ansible.builtin.apt:
+        update_cache: true
+        install_recommends: false
+        upgrade: full
+
+    # Install the tools required to compile your code such as npm, nodejs, gcc...
+    - name: Install dependencies to build the track
+      ansible.builtin.apt:
+        name:
+          - npm
+          - curl
+        state: present
+
+    - name: Check if cargo is installed
+      ansible.builtin.stat:
+        path: /root/.cargo/bin/cargo
+      register: cargo_exists
+
+    - name: Download Cargo Installer
+      ansible.builtin.get_url:
+        url: https://sh.rustup.rs
+        dest: /tmp/sh.rustup.rs
+        mode: '0755'
+        force: true
+      when: not cargo_exists.stat.exists
+      tags:
+        - rust
+
+    - name: Install Cargo
+      when: not cargo_exists.stat.exists
+      ansible.builtin.command: /tmp/sh.rustup.rs -y
+      register: my_output
+      changed_when: my_output.rc != 0
+      tags:
+        - rust
+
+    - name: Copy the challenge sources
+      ansible.builtin.copy:
+        src: challenge/
+        dest: /tmp/{{ data.name }}
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: NPM install
+      community.general.npm:
+        path: /tmp/{{ data.name }}/client/
+      environment:
+        NODE_OPTIONS: "--dns-result-order=ipv4first"
+
+    - name: Build
+      ansible.builtin.command:
+        cmd: /root/.cargo/bin/cargo build --release
+        chdir: /tmp/{{ data.name }}/
+      register: my_output
+      changed_when: my_output.rc != 0
+
+    - name: Create dist directory
+      ansible.builtin.file:
+        path: /tmp/dist/{{ data.name }}
+        state: directory
+        mode: '0755'
+
+    - name: Copy server binary
+      ansible.builtin.copy:
+        remote_src: true
+        src: /tmp/{{ data.name }}/target/release/{{ data.name }}
+        dest: /tmp/dist/{{ data.name }}/{{ data.name }}
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Copy client
+      ansible.builtin.copy:
+        remote_src: true
+        src: /tmp/{{ data.name }}/dist
+        dest: /tmp/dist/{{ data.name }}/
+        owner: root
+        group: root
+        mode: '0644'
+
+    # Create a TAR archive with the compiled program
+    - name: Create archive of build
+      community.general.archive:
+        path: /tmp/dist/{{ data.name }}
+        dest: /tmp/build.tar
+        format: tar
+        mode: '0644'
+
+    # Extract the archive from the build container and save it on the local host
+    - name: Fetch archive
+      ansible.builtin.fetch:
+        src: /tmp/build.tar
+        dest: /tmp/nsec/{{ data.name }}.tar
+        flat: true
