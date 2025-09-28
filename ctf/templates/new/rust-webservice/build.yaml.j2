@@ -1,5 +1,5 @@
 # This Ansible script is used to compile your challenge, create an archive and extract that archive on to the local host.
-# This script only shows a proof of concept of building a C program. Change it as per your needs.
+# This script builds a frontend using NPM and a Rust program. Change it as per your needs.
 - name: "Build container"
   hosts: "build-container"
   vars_files:
@@ -12,6 +12,11 @@
         value: "{{ '{{ item.flag }}' }}"
       ansible.builtin.set_fact:
         track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+
+    - name: Check if IPv4 address is set
+      ansible.builtin.debug:
+        msg: IPv4 address is set
+      when: ansible_all_ipv4_addresses | length > 0
 
     - name: Initial System Upgrade
       ansible.builtin.apt:
@@ -58,11 +63,17 @@
         group: root
         mode: '0644'
 
-    - name: NPM install
+    - name: NPM install (if IPv4)
       community.general.npm:
         path: /tmp/{{ data.name }}/client/
       environment:
         NODE_OPTIONS: "--dns-result-order=ipv4first"
+      when: ansible_all_ipv4_addresses | length > 0
+
+    - name: NPM install (if IPv6)
+      community.general.npm:
+        path: /tmp/{{ data.name }}/client/
+      when: ansible_all_ipv4_addresses | length == 0
 
     - name: Build
       ansible.builtin.command:
