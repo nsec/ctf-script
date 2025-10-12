@@ -96,7 +96,7 @@ resource "incus_instance" "this" {
 resource "incus_network_zone_record" "this" {
   for_each = local.instances
 
-  zone = "ctf"
+  zone = var.ctf_dns_network_zone
 
   name        = each.value["record"]
   description = each.value["description"]

@@ -106,7 +106,9 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
                       build_container = {{ 'true' if track.require_build_container else 'false' }}
                       {% if track.production %}deploy = "production"{% endif %}
                       {% if track.remote %}incus_remote = "{{ track.remote }}"{% endif %}
-                      depends_on = [module.common]
+                      {% for ov in output_variables %}
+                      {{ ov }} = module.common.{{ ov }}
+                      {% endfor %}
                     }
                     {% endfor %}
                     """
@@ -115,6 +117,7 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
         fd.write(
             template.render(
                 tracks=tracks - get_terraform_tracks_from_modules(),
+                output_variables=get_common_modules_output_variables(),
             )
         )
 
@@ -136,6 +139,84 @@ def create_terraform_modules_file(remote: str, production: bool = False):
             )
         )
         fd.write(template.render(production=production, remote=remote))
+
+
+def get_common_modules_output_variables() -> set[str]:
+    output_variables: set[str] = set()
+    output_variable_regex: re.Pattern = re.compile(
+        r'^output\s*"([a-zA-Z_\-]+)"\s*{', re.MULTILINE
+    )
+    variable_regex: re.Pattern = re.compile(
+        r'^variable\s*"([a-zA-Z_\-]+)"\s*{', re.MULTILINE
+    )
+
+    variables: set[str] = set()
+
+    for file in os.listdir(
+        path := os.path.join(find_ctf_root_directory(), ".deploy", "common")
+    ):
+        if file == "versions.tf":
+            continue
+
+        with open(os.path.join(path, file), "r") as f:
+            match file:
+                case "variables.tf":
+                    for i in variable_regex.findall(f.read()):
+                        variables.add(i)
+                case _:
+                    for i in output_variable_regex.findall(f.read()):
+                        output_variables.add(i)
+
+    for variable in output_variables - variables:
+        LOG.error(
+            msg
+            := f'Variable "{variable}" could not be found in "variables.tf". This could cause an issue when creating/destroying an environment.'
+        )
+
+        if (
+            input(f'Do you want to add "{variable}" to "variables.tf"? [y/N] ').lower()
+            or "n"
+        ) == "n":
+            raise Exception(msg)
+
+        try:
+            print("Do CTRL+C to cancel...")
+            while not (default := input("What is the default value? ")):
+                print("Do CTRL+C to cancel...")
+
+            var_type = input("What is the type? [string] ") or "string"
+
+            with open(os.path.join(path, "variables.tf"), "a") as f:
+                f.write("\n")
+                template = jinja2.Environment().from_string(
+                    source=textwrap.dedent(
+                        text="""\
+                        variable "{{variable}}" {
+                            default = "{{default}}"
+                            type = {{type}}
+                        }
+                        """
+                    )
+                )
+                f.write(
+                    template.render(variable=variable, default=default, type=var_type)
+                )
+            variables.add(variable)
+        except KeyboardInterrupt:
+            LOG.warning(
+                f'Cancelling the addition of the "{variable}" to "variables.tf".'
+            )
+
+            raise Exception(msg)
+
+    if len(output_variables - variables) != 0:
+        LOG.critical(
+            msg
+            := f'Some output variables were not found in "variables.tf": {", ".join(output_variables - variables)}'
+        )
+        raise Exception(msg)
+
+    return output_variables & variables
 
 
 def get_terraform_tracks_from_modules() -> set[Track]:
