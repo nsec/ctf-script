@@ -24,8 +24,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Git LFS Pull for deployment
+      - name: Update APT cache
         run: |
+          sudo apt-get update
+
+      - name: Git LFS Pull for deployment
+        run: |  
           echo "Pulling all Git LFS"
           git lfs pull -I **/challenges/**/ansible/**/*
 
@@ -77,7 +81,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install --no-install-recommends --yes zfsutils-linux
 
       - name: Setup squid

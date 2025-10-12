@@ -13,6 +13,10 @@ variable "build_container" {
   type    = bool
 }
 
+variable "ctf_dns_network_zone" {
+  default = "ctf"
+  type = string
+}
 
 locals {
   track = yamldecode(file("${path.module}/../track.yaml"))
