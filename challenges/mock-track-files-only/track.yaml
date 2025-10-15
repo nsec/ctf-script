@@ -10,9 +10,10 @@ contacts:
     - user_support
 flags:
   - flag: FLAG-32c335e18b6c0eb6ddbd6366ade11069
-    value: 5
+    value: 7
     description: Free flag in downloadable content
     return_string: '[mock-track-files-only] 1/1 Good job! Track completed.'
+    cfss: "CFSS:0.3/TS:L/E:H/HSFC:Y=7-11"
     tags:
       discourse: mock_track_files_only_flag_1
 services: []
