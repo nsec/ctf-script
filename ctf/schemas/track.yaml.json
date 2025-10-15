@@ -131,6 +131,11 @@
               "description": "The text the participants see AFTER they submit the flag. Example: [mytrackname] 1/1 Good job! Track completed.",
               "minLength": 1
             },
+            "cfss": {
+              "type": "string",
+              "description": "The CFSS string based on https://github.com/res260/cfss",
+              "pattern": "^CFSS:[0-9]\\.[0-9][0-9]?/TS:[LBIA]/E:[LMH]/HSFC:[NY]=[0-9][0-9]?-[0-9][0-9]?$"
+            },
             "tags": {
               "type": "object",
               "description": "Askgod tags for this flag. Use tag `discourse: sometriggername` to define triggers for posts in the posts/ directory.",

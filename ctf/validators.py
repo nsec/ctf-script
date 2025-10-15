@@ -449,13 +449,69 @@ class OrphanServicesValidator(Validator):
         return errors
 
 
+class CFSSStringValidator(Validator):
+    """Validate the CFSS string of each flag in the track.yaml."""
+
+    CFSS_VALUE_REGEX = re.compile(
+        r"^CFSS:[0-9]\.[0-9][0-9]?/TS:[LBIA]/E:[LMH]/HSFC:[NY]=([0-9][0-9]?-[0-9][0-9]?)$"
+    )
+
+    def validate(self, track_name: str) -> list[ValidationError]:
+        errors: list[ValidationError] = []
+
+        track_yaml = parse_track_yaml(track_name=track_name)
+        for flag in track_yaml["flags"]:
+            if "cfss" not in flag:
+                errors.append(
+                    ValidationError(
+                        error_name="CFSS string not found",
+                        error_description="CFSS string was not present in the track.yaml.",
+                        track_name=track_name,
+                        details={
+                            "CFSS string": "Not found",
+                            "Flag value": str(flag.get("value")),
+                        },
+                    )
+                )
+                continue
+
+            cfss: str = flag.get("cfss")
+            value: int = flag.get("value")
+
+            # Should never happen since schemas/track.yaml.json is validated first.
+            if not (m := self.CFSS_VALUE_REGEX.match(cfss)):
+                errors.append(
+                    ValidationError(
+                        error_name="CFSS string did not match REGEX",
+                        error_description='CFSS string did not match "^CFSS:[0-9]\\.[0-9][0-9]?/TS:[LBIA]/E:[LMH]/HSFC:[NY]=([0-9][0-9]?-[0-9][0-9]?)$".',
+                        track_name=track_name,
+                        details={"CFSS string": cfss, "Flag value": str(value)},
+                    )
+                )
+                continue
+
+            low, high = m.group(1).split("-")
+            if value < int(low) or value > int(high):
+                errors.append(
+                    ValidationError(
+                        error_name="Flag value not in CFSS range",
+                        error_description="Flag value did not correspond to CFSS string's value.",
+                        track_name=track_name,
+                        details={"CFSS string": cfss, "Flag value": str(value)},
+                    )
+                )
+                continue
+        return errors
+
+
 validators_list = [
-    FilesValidator,
-    FlagsValidator,
-    FireworksAskGodTagValidator,
-    DiscoursePostsAskGodTagValidator,
-    PlaceholderValuesValidator,
+    CFSSStringValidator,
     DiscourseFileNamesValidator,
-    ServicesValidator,
+    DiscoursePostsAskGodTagValidator,
+    FilesValidator,
+    FireworksAskGodTagValidator,
+    FlagsValidator,
     OrphanServicesValidator,
+    PlaceholderValuesValidator,
+    ServicesValidator,
 ]

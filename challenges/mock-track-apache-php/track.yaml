@@ -13,6 +13,7 @@ flags:
     value: 5
     description: Free flag in source of index.php
     return_string: '[mock-track-apache-php] 1/1 Good job! Track completed.'
+    cfss: "CFSS:0.3/TS:B/E:M/HSFC:N=4-7"
     tags:
       discourse: mock_track_apache_php_flag_1
 services:
