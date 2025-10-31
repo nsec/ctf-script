@@ -26,6 +26,8 @@ flags:
     description: Free flag in source of index.php CHANGE_ME
     # The text the participants see AFTER they submit the flag.
     return_string: '[{{ data.name }}] 1/1 Good job! Track completed. CHANGE_ME'
+    # CFSS string based on https://github.com/res260/cfss
+    cfss: "CFSS:0.3/TS:B/E:M/HSFC:N=4-7"
     tags:
       # Name of the discourse trigger for this flag. If a discourse post in the posts/ directory has this trigger, it will be posted when this flag is submitted.
       # This value can also be used to reference flags in Ansible playbooks. See the "Load Flags" task in deploy.yaml.

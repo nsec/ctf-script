@@ -13,12 +13,14 @@ flags:
     value: 2
     description: Free flag in source of web application
     return_string: '[mock-track-python-service] 1/2 Great!'
+    cfss: "CFSS:0.3/TS:L/E:L/HSFC:N=1-2"
     tags:
       discourse: mock_track_python_service_flag_1
   - flag: FLAG-20f645f09e6989741a39759209aa047d
     value: 10
     description: RCE!!
     return_string: '[mock-track-python-service] 2/2 Good job! Track completed.'
+    cfss: "CFSS:0.3/TS:I/E:M/HSFC:Y=7-12"
     tags:
       discourse: mock_track_python_service_flag_2
 services:
