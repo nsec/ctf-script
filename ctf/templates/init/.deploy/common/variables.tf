@@ -15,7 +15,7 @@ variable "build_container" {
 
 variable "ctf_dns_network_zone" {
   default = "ctf"
-  type = string
+  type    = string
 }
 
 locals {

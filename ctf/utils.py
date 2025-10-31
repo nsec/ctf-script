@@ -193,7 +193,7 @@ def get_common_modules_output_variables() -> set[str]:
                         text="""\
                         variable "{{variable}}" {
                             default = "{{default}}"
-                            type = {{type}}
+                            type    = {{type}}
                         }
                         """
                     )
