@@ -299,7 +299,7 @@ def get_ctf_script_templates_directory() -> str:
 
 
 def get_ctf_script_schemas_directory() -> str:
-    return os.path.join(get_ctf_script_root_directory(), "schemas")
+    return os.path.join(find_ctf_root_directory(), "schemas")
 
 
 def remove_ctf_script_root_directory_from_path(path: str) -> str:
