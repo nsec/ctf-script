@@ -1,5 +1,5 @@
 - name: Pre-deployment system cleanup
-  hosts: all,!build
+  hosts: all,!build,!windows
   order: shuffle
   gather_facts: false
   any_errors_fatal: true

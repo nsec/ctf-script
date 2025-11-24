@@ -1,0 +1,55 @@
+# This is the main ansible script to deploy the challenge.
+
+# Example on how to run stuff on all hosts of the track
+- name: "Windows deployment"
+  hosts: all{% if data.with_build %},!build{% endif %}
+  vars_files:
+    - ../track.yaml
+  tasks:
+    # This is a helper task that loads the tracks' `track.yaml` file and loads the flags as
+    # ansible facts (like variables) to use in subsequent steps. The key is the `discourse` tag
+    # of the flag. See the index.php file for an example on how to use/print the flags.
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
+    
+    - name: "Running free form: directly with the executable (PowerShell)"
+      ansible.builtin.raw: |
+          powershell -c $systeminfo = Get-ComputerInfo
+          Write-Host "$systeminfo"
+
+    - name: "Running free form: path to cmd.exe"
+      ansible.builtin.raw: C:\windows\system32\cmd.exe /c whoami && systeminfo
+
+    - name: "Running win_shell: PowerShell"
+      ansible.windows.win_shell: |
+          $systeminfo = Get-ComputerInfo
+          Write-Host "$systeminfo"
+
+    - name: Create temp directory
+      ansible.windows.win_file:
+        dest: "C:\\temp"
+        state: directory
+
+    # Example on how to use flags that were loaded in the "Load Flags" task earlier in the file.
+    - name: Create flag file
+      ansible.windows.win_copy:
+        dest: "C:\\temp\\flag-rce.txt"
+        content: |
+          {{ '{{' }} track_flags.{{ data.name | replace("-","_") }}_flag_1 {{ '}}' }} (2/2)
+          {{ '{{ "" }}' }}
+
+{% if data.with_build %}
+    # When using a build container, the unarchive module can be used to install the content on the remote.
+    - name: Unarchive the content of the build
+      ansible.builtin.unarchive:
+        src: /tmp/build.tar
+        dest: /tmp/
+        owner: root
+        group: root
+        mode: '0755'
+{% endif %}

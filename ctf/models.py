@@ -16,6 +16,7 @@ class Track(BaseModel):
     remote: str = "local"
     production: bool = False
     require_build_container: bool = False
+    has_virtual_machine: bool = False
 
     def __eq__(self, other: Any) -> bool:
         match other:
@@ -31,7 +32,7 @@ class Track(BaseModel):
         return self.name.__hash__()
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(name="{self.name}", remote="{self.remote}", production={self.production}, require_build_container={self.require_build_container})'
+        return f'{self.__class__.__name__}(name="{self.name}", remote="{self.remote}", production={self.production}, require_build_container={self.require_build_container}, has_virtual_machine={self.has_virtual_machine})'
 
     def __str__(self) -> str:
         return self.name

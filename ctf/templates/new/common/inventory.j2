@@ -1,10 +1,15 @@
 # This YAML file defines all machines that Ansible needs to know about to run playbooks and configure machines.
 all:
-  hosts:
+  hosts:{% if not data.is_windows %}
     # The following line defines how this machine will be referred to in Ansible scripts.
     {{ data.name }}:
       # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
       ansible_incus_host: {{ data.name }}
+  {% else %}
+    # If you also need Linux containers, add them here.
+    # linux-incus-container:
+    #   ansible_incus_host: linux-incus-container
+  {% endif %}
   # You can set variables here to use in your Ansible playbooks. For example, you can set the flags here to set them dynamically when setting up the challenge.
   vars:
     # Do not change these.
@@ -24,4 +29,16 @@ build:
     build-container:
       # The name must be the same as the previous line.
       ansible_incus_host: build-container
+{% endif %}{% if data.is_windows %}
+# This section is needed if you need Windows virtual machines. It's a group of hosts regrouped under the name "windows" which MUST remain the same.
+# The group "windows" is removed from the "cleanup.yaml" and "common.yaml", which is why you should not change it.
+windows:
+  hosts:
+    # The following line defines how this machine will be referred to in Ansible scripts.
+    {{ data.name }}:
+      # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
+      ansible_incus_host: {{ data.name }}
+  vars:
+    # This variable is used to tell Ansible that the hosts are Windows hosts and require a PowerShell shell.
+    ansible_shell_type: powershell
 {% endif %}
