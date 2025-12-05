@@ -20,6 +20,7 @@ class Template(StrEnum):
     FILES_ONLY = "files-only"
     TRACK_YAML_ONLY = "track-yaml-only"
     RUST_WEBSERVICE = "rust-webservice"
+    WINDOWS_VM = "windows-vm"
 
 
 @app.command(help="Create a new CTF track with a given name")
@@ -205,6 +206,7 @@ def new(
             "ipv6_subnet": ipv6_subnet,
             "full_ipv6_address": full_ipv6_address,
             "with_build": with_build_container,
+            "is_windows": template == Template.WINDOWS_VM,
         }
     )
     with open(
@@ -278,7 +280,11 @@ def new(
 
     track_template = env.get_template(name=os.path.join("common", "inventory.j2"))
     render = track_template.render(
-        data={"name": name, "with_build": with_build_container}
+        data={
+            "name": name,
+            "with_build": with_build_container,
+            "is_windows": template == Template.WINDOWS_VM,
+        }
     )
     with open(
         file=(p := os.path.join(ansible_directory, "inventory")),

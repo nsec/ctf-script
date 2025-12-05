@@ -2,6 +2,7 @@
 
 Opinionated command line interface (CLI) tool to manage Capture The Flag (CTF) challenges.
 It uses:
+
 - YAML files to describe a challenge and forum posts
 - OpenTofu (terraform fork) to describe the infrastructure
 - Incus (LXD fork) to run the challenges in containers
@@ -10,7 +11,7 @@ It uses:
 ![Demo GIF](./doc/images/demo.gif)
 
 This tool is used by the NorthSec CTF team to manage their challenges since 2025.
-[NorthSec](https://nsec.io/) is one of the largest on-site cybersecurity CTF in the world, held annually in Montreal, Canada, 
+[NorthSec](https://nsec.io/) is one of the largest on-site cybersecurity CTF in the world, held annually in Montreal, Canada,
 where 700+ participants compete in a 48-hour long CTF competition.
 
 ## Features and Usage
@@ -28,7 +29,7 @@ tree until it finds `challenges/` and `.deploy` directories, which is the root o
 
 ## Structure of a CTF repository
 
-```
+```raw
 my-ctf/
 ├── challenges/                   # Directory containing all the tracks
 │   ├── track1/                   # Directory for a specific track that contains N flags. 
@@ -78,6 +79,10 @@ pip install git+https://github.com/nsec/ctf-script.git
 echo 'eval "$(register-python-argcomplete ctf)"' >> ~/.bashrc && source ~/.bashrc # If using bash
 echo 'eval "$(register-python-argcomplete ctf)"' >> ~/.zshrc && source ~/.zshrc   # If using zsh
 ```
+
+## Create a Windows Image in Incus
+
+To create a Windows Image, you can use [incus-windows](https://github.com/antifob/incus-windows) that will build a Windows image with the Incus agent already installed as a service. And then, use the imported image for the `main.tf` OpenTOFU/Terraform in your track. Simply put the name of the image (alias) or the fingerprint of the image in the appriopriate field in `main.tf`.
 
 ## Development
 

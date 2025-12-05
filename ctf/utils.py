@@ -61,6 +61,20 @@ def does_track_require_build_container(track: Track) -> bool:
     ) and bool(load_yaml_file(build_yaml_file_path))
 
 
+def track_has_virtual_machine(track: str | Track) -> bool:
+    with open(
+        os.path.join(
+            find_ctf_root_directory(),
+            "challenges",
+            track.name if isinstance(track, Track) else track,
+            "terraform",
+            "main.tf",
+        ),
+        "r",
+    ) as f:
+        return re.search(r'type\s*=\s*"virtual-machine"', f.read()) is not None
+
+
 def validate_track_can_be_deployed(track: Track) -> bool:
     return (
         os.path.exists(
@@ -249,6 +263,7 @@ def get_terraform_tracks_from_modules() -> set[Track]:
                     remote=remote,
                     production=production,
                     require_build_container=require_build_container,
+                    has_virtual_machine=track_has_virtual_machine(track=name),
                 )
             )
             name = ""

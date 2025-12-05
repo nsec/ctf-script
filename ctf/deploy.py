@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import textwrap
+import time
 
 import typer
 from typing_extensions import Annotated
@@ -107,7 +108,16 @@ def deploy(
         destroy(tracks=tracks, production=production, remote=remote, force=True)
         exit(code=0)
 
-    for track in distinct_tracks:
+    # Starting a timer for tracks with a virtual machine in them.
+    start_timer: float = time.time()
+
+    for track in sorted(
+        distinct_tracks,
+        key=lambda t: (
+            t.has_virtual_machine,
+            t.name,
+        ),  # Running ansible on containers first then virtual machines
+    ):
         if track.require_build_container:
             run_ansible_playbook(
                 remote=remote,
@@ -177,6 +187,70 @@ def deploy(
         ):
             continue
 
+        if track.has_virtual_machine:
+            incus_list = json.loads(
+                s=subprocess.run(
+                    args=["incus", "list", f"--project={track}", "--format", "json"],
+                    check=True,
+                    capture_output=True,
+                    env=ENV,
+                ).stdout.decode()
+            )
+
+            # Waiting for virtual machine to be up and running
+            # Starting with a minute
+            if start_timer > time.time() - (seconds := 60.0):
+                LOG.info(
+                    f"Waiting for the virtual machine to be ready. Remaining {(seconds - (time.time() - start_timer)):.1f} seconds..."
+                )
+
+                for machine in incus_list:
+                    if machine["type"] != "virtual-machine":
+                        continue
+
+                    rebooting: bool = False
+                    cmd: str = "whoami"  # Should works on most OS
+                    while start_timer > time.time() - seconds:
+                        # Avoid spamming too much, sleeping for a second between each request.
+                        time.sleep(1)
+
+                        s = subprocess.run(
+                            args=[
+                                "incus",
+                                "exec",
+                                f"--project={track}",
+                                "-T",
+                                machine["name"],
+                                "--",
+                                cmd,
+                            ],
+                            capture_output=True,
+                            env=ENV,
+                        )
+
+                        match s.returncode:
+                            case 127:
+                                # If "whoami" is not found by the OS, change the command to sleep as it is most likely Linux.
+                                LOG.debug(
+                                    f'Command not found, changing it to "{(cmd := "sleep 0")}".'
+                                )
+                                start_timer = time.time()
+                            case 0:
+                                if not rebooting:
+                                    LOG.debug(
+                                        f"Remaining {(seconds - (time.time() - start_timer)):.1f} seconds..."
+                                    )
+                                else:
+                                    LOG.info("Agent is up and running!")
+                                    break
+                            case _:
+                                # Once the virtual machine rebooted once, set the timer to 30 minutes.
+                                if not rebooting:
+                                    LOG.info(
+                                        "Virtual machine is most likely rebooting. Once the agent is back up, let's move on."
+                                    )
+                                    rebooting = True
+
         run_ansible_playbook(
             remote=remote, production=production, track=track.name, path=path
         )
@@ -192,6 +266,8 @@ def deploy(
             )
             ipv6_to_container_name = {}
             for machine in incus_list:
+                if machine["type"] == "virtual-machine":
+                    continue
                 addresses = machine["state"]["network"]["eth0"]["addresses"]
                 ipv6_address = list(
                     filter(lambda address: address["family"] == "inet6", addresses)
@@ -205,7 +281,17 @@ def deploy(
                 track_yaml = parse_track_yaml(track_name=track.name)
 
                 for service in track_yaml["services"]:
-                    if service.get("dev_port_mapping"):
+                    if (
+                        service.get("dev_port_mapping")
+                        and (
+                            service["address"]
+                            .replace(":0", ":")
+                            .replace(":0", ":")
+                            .replace(":0", ":")
+                            .replace(":0", ":")
+                        )
+                        in ipv6_to_container_name
+                    ):
                         LOG.debug(
                             f"Adding incus proxy for service {track}-{service['name']}-port-{service['port']}"
                         )
@@ -308,11 +394,7 @@ def run_ansible_playbook(
         "-i",
         "inventory",
     ] + extra_args
-    subprocess.run(
-        args=ansible_args,
-        cwd=path,
-        check=True,
-    )
+    subprocess.run(args=ansible_args, cwd=path, check=True)
 
     artifacts_path = os.path.join(path, "artifacts")
     if os.path.exists(path=artifacts_path):

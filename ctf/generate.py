@@ -15,6 +15,7 @@ from ctf.utils import (
     get_all_available_tracks,
     get_terraform_tracks_from_modules,
     terraform_binary,
+    track_has_virtual_machine,
     validate_track_can_be_deployed,
 )
 
@@ -70,6 +71,7 @@ def generate(
                     remote=remote,
                     production=production,
                     require_build_container=does_track_require_build_container(track),
+                    has_virtual_machine=track_has_virtual_machine(track),
                 )
             )
         distinct_tracks = tmp_tracks
