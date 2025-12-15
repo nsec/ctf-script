@@ -28,8 +28,8 @@ def new(
     name: Annotated[
         str,
         typer.Option(
-            help="Track name. No space, use underscores if needed.",
-            prompt="Track name. No space, use underscores if needed.",
+            help="Track name. No space, use dashes if needed.",
+            prompt="Track name. No space, use dashes if needed.",
         ),
     ],
     template: Annotated[
