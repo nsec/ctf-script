@@ -131,7 +131,6 @@ def stats(
             qa.add(qa_member.lower())
         if not qa - track_designers:
             stats["qa_not_done"].append(track)
-        
 
         if os.path.exists(
             path=(files_directory := os.path.join(challenges_directory, track, "files"))
