@@ -55,17 +55,16 @@ my-ctf/
 
 ## Installation
 
-Install with pipx 
-*(recommended for Ubuntu 24.04 in WSL2)*:
-
-```bash
-pipx install git+https://github.com/nsec/ctf-script.git
-```
-
-Install with [uv](https://docs.astral.sh/uv/guides/tools/):
+Install with [uv](https://docs.astral.sh/uv/guides/tools/) (to install `uv` [following this link](https://docs.astral.sh/uv/getting-started/installation/#installation-methods).):
 
 ```bash
 uv tool install git+https://github.com/nsec/ctf-script.git
+```
+
+Install with pipx:
+
+```bash
+pipx install git+https://github.com/nsec/ctf-script.git
 ```
 
 Install with pip:
