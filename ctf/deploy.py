@@ -199,16 +199,11 @@ def deploy(
 
             # Waiting for virtual machine to be up and running
             # Starting with a minute
-            if start_timer > time.time() - (seconds := 60.0):
-                LOG.info(
-                    f"Waiting for the virtual machine to be ready. Remaining {(seconds - (time.time() - start_timer)):.1f} seconds..."
-                )
-
+            if start_timer > time.time() - (seconds := 30):
                 for machine in incus_list:
                     if machine["type"] != "virtual-machine":
                         continue
 
-                    rebooting: bool = False
                     cmd: str = "whoami"  # Should works on most OS
                     while start_timer > time.time() - seconds:
                         # Avoid spamming too much, sleeping for a second between each request.
@@ -236,20 +231,12 @@ def deploy(
                                 )
                                 start_timer = time.time()
                             case 0:
-                                if not rebooting:
-                                    LOG.debug(
-                                        f"Remaining {(seconds - (time.time() - start_timer)):.1f} seconds..."
-                                    )
-                                else:
-                                    LOG.info("Agent is up and running!")
-                                    break
+                                LOG.info("Agent is up and running!")
+                                break
                             case _:
-                                # Once the virtual machine rebooted once, set the timer to 30 minutes.
-                                if not rebooting:
-                                    LOG.info(
-                                        "Virtual machine is most likely rebooting. Once the agent is back up, let's move on."
-                                    )
-                                    rebooting = True
+                                LOG.info(
+                                    f"Waiting for the virtual machine to be ready. Remaining {(seconds - (time.time() - start_timer)):.1f} seconds..."
+                                )
 
         run_ansible_playbook(
             remote=remote, production=production, track=track.name, path=path
