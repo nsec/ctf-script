@@ -93,6 +93,7 @@ def stats(
     stats["number_of_flags_per_track"] = {}
     stats["number_of_points_per_track"] = {}
     stats["not_integrated_with_scenario"] = []
+    stats["qa_not_done"] = []
     challenge_designers = set()
     flags = []
     for track in distinct_tracks:
@@ -121,8 +122,15 @@ def stats(
             if service["port"] not in stats["number_of_services_per_port"]:
                 stats["number_of_services_per_port"][service["port"]] = 0
             stats["number_of_services_per_port"][service["port"]] += 1
+        track_designers = set()
         for challenge_designer in track_yaml["contacts"]["dev"]:
             challenge_designers.add(challenge_designer.lower())
+            track_designers.add(challenge_designer)
+        qa = set()
+        for qa_member in track_yaml["contacts"].get("qa", []):
+            qa.add(qa_member.lower())
+        if not qa - track_designers:
+            stats["qa_not_done"].append(track)
 
         if os.path.exists(
             path=(files_directory := os.path.join(challenges_directory, track, "files"))
@@ -199,6 +207,15 @@ def stats(
             pybadges.badge(  # type: ignore
                 left_text="Integrated with scenario",
                 right_text=str(stats["number_of_tracks_integrated_with_scenario"])
+                + "/"
+                + str(stats["number_of_tracks"]),
+            ),
+        )
+        write_badge(
+            "qa_done",
+            pybadges.badge(  # type: ignore
+                left_text="QA Done",
+                right_text=str(stats["number_of_tracks"] - len(stats["qa_not_done"]))
                 + "/"
                 + str(stats["number_of_tracks"]),
             ),
