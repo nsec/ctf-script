@@ -55,7 +55,7 @@ my-ctf/
 
 ## Installation
 
-Install with [uv](https://docs.astral.sh/uv/guides/tools/):
+Install with [uv](https://docs.astral.sh/uv/guides/tools/) (to install `uv` [following this link](https://docs.astral.sh/uv/getting-started/installation/#installation-methods).):
 
 ```bash
 uv tool install git+https://github.com/nsec/ctf-script.git
