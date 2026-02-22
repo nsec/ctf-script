@@ -3,6 +3,7 @@ import os
 import subprocess
 
 import typer
+from pydantic import ValidationError
 from typing_extensions import Annotated
 
 from ctf import ENV
@@ -138,17 +139,19 @@ def destroy(
         )
     }
 
-    networks = {
-        Track(name=network["name"])
-        for network in json.loads(
-            s=subprocess.run(
-                args=["incus", "network", "list", "--format=json"],
-                check=False,
-                capture_output=True,
-                env=ENV,
-            ).stdout.decode()
-        )
-    }
+    networks = set()
+    for network in json.loads(
+        s=subprocess.run(
+            args=["incus", "network", "list", "--format=json"],
+            check=False,
+            capture_output=True,
+            env=ENV,
+        ).stdout.decode()
+    ):
+        try:
+            networks.add(Track(name=network["name"]))
+        except ValidationError:
+            pass
 
     network_acls = {
         Track(name=network_acl["name"])
