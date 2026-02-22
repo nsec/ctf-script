@@ -19,7 +19,7 @@ dependencies = [
     "typer==0.16.0",
     "pydantic"
 ]
-version = "4.2.0"
+version = "4.2.1"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
