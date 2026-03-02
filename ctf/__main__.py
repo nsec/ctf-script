@@ -2,6 +2,7 @@
 import logging
 import os
 
+import rich
 import typer
 from typer import Typer
 from typing_extensions import Annotated
@@ -59,6 +60,9 @@ def global_options(
 
 
 def main():
+    # Set console width to 150 if it's smaller to avoid "…" in output
+    console = rich.get_console()
+    console.width = 150 if console.width < 150 else console.width
     app()
 
 
