@@ -157,11 +157,14 @@ def deploy(
                     )
 
                     if (
-                        input("Do you want to clean and start over? [Y/n] ").lower() or "y"
+                        input("Do you want to clean and start over? [Y/n] ").lower()
+                        or "y"
                     ) != "y":
                         exit(code=1)
 
-                    destroy(tracks=tracks, production=production, remote=remote, force=True)
+                    destroy(
+                        tracks=tracks, production=production, remote=remote, force=True
+                    )
 
                     distinct_tracks = generate(
                         tracks=tracks, production=production, remote=remote
@@ -176,7 +179,9 @@ def deploy(
                     LOG.warning(
                         "CTRL+C was detected during Terraform deployment. Destroying everything..."
                     )
-                    destroy(tracks=tracks, production=production, remote=remote, force=True)
+                    destroy(
+                        tracks=tracks, production=production, remote=remote, force=True
+                    )
                     exit(code=0)
 
         if not os.path.exists(
