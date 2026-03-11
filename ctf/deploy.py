@@ -130,53 +130,54 @@ def deploy(
                 execute_common=False,
             )
 
-            remove_tracks_from_terraform_modules(
-                {track}, remote=remote, production=production
-            )
-            add_tracks_to_terraform_modules(
-                {
-                    Track(
-                        name=track.name,
-                        remote=track.remote,
-                        production=track.production,
-                        require_build_container=False,
+            if production:
+                remove_tracks_from_terraform_modules(
+                    {track}, remote=remote, production=production
+                )
+                add_tracks_to_terraform_modules(
+                    {
+                        Track(
+                            name=track.name,
+                            remote=track.remote,
+                            production=track.production,
+                            require_build_container=False,
+                        )
+                    }
+                )
+
+                try:
+                    subprocess.run(
+                        args=[terraform_binary(), "apply", "-auto-approve"],
+                        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+                        check=True,
                     )
-                }
-            )
+                except subprocess.CalledProcessError:
+                    LOG.warning(
+                        f"The project could not deploy due to instable state. It is often due to CTRL+C while deploying as {os.path.basename(terraform_binary())} was not able to save the state of each object created."
+                    )
 
-            try:
-                subprocess.run(
-                    args=[terraform_binary(), "apply", "-auto-approve"],
-                    cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
-                    check=True,
-                )
-            except subprocess.CalledProcessError:
-                LOG.warning(
-                    f"The project could not deploy due to instable state. It is often due to CTRL+C while deploying as {os.path.basename(terraform_binary())} was not able to save the state of each object created."
-                )
+                    if (
+                        input("Do you want to clean and start over? [Y/n] ").lower() or "y"
+                    ) != "y":
+                        exit(code=1)
 
-                if (
-                    input("Do you want to clean and start over? [Y/n] ").lower() or "y"
-                ) != "y":
-                    exit(code=1)
+                    destroy(tracks=tracks, production=production, remote=remote, force=True)
 
-                destroy(tracks=tracks, production=production, remote=remote, force=True)
+                    distinct_tracks = generate(
+                        tracks=tracks, production=production, remote=remote
+                    )
 
-                distinct_tracks = generate(
-                    tracks=tracks, production=production, remote=remote
-                )
-
-                subprocess.run(
-                    args=[terraform_binary(), "apply", "-auto-approve"],
-                    cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
-                    check=True,
-                )
-            except KeyboardInterrupt:
-                LOG.warning(
-                    "CTRL+C was detected during Terraform deployment. Destroying everything..."
-                )
-                destroy(tracks=tracks, production=production, remote=remote, force=True)
-                exit(code=0)
+                    subprocess.run(
+                        args=[terraform_binary(), "apply", "-auto-approve"],
+                        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+                        check=True,
+                    )
+                except KeyboardInterrupt:
+                    LOG.warning(
+                        "CTRL+C was detected during Terraform deployment. Destroying everything..."
+                    )
+                    destroy(tracks=tracks, production=production, remote=remote, force=True)
+                    exit(code=0)
 
         if not os.path.exists(
             path=(
