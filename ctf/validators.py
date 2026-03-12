@@ -3,7 +3,7 @@ import glob
 import os
 import re
 
-from ctf.models import ValidationError
+from ctf.models import TrackYaml, ValidationError
 from ctf.utils import (
     find_ctf_root_directory,
     get_all_file_paths_recursively,
@@ -381,15 +381,30 @@ class ServicesValidator(Validator):
     """Validate that each service in a given track has a unique name within its instance and that it only contains letters, numbers and dashes."""
 
     def validate(self, track_name: str) -> list[ValidationError]:
-        track_yaml = parse_track_yaml(track_name=track_name)
+        track_yaml: TrackYaml = TrackYaml.model_validate(
+            parse_track_yaml(track_name=track_name)
+        )
         errors: list[ValidationError] = []
-        services = set()
-        for service in track_yaml["services"]:
-            service_name = service.get("name")
-            instance_name = service.get("instance")
-            service = f"{instance_name}/{service_name}"
+        found_services = set()
 
-            if service in services:
+        services: list[dict[str, str]] = []
+
+        # Combining both service lists until we remove entirely the deprecated services list at the root.
+        if track_yaml.services:
+            for service in track_yaml.services:
+                services.append({"name": service.name, "instance": service.instance})
+
+        if track_yaml.instances:
+            for k, v in track_yaml.instances.root.items():
+                for service in v.services:
+                    services.append({"name": service.name, "instance": k})
+
+        for service in services:
+            service_name: str = service["name"]
+            instance_name: str = service["instance"]
+            fmt_service: str = f"{instance_name}/{service_name}"
+
+            if fmt_service in found_services:
                 errors.append(
                     ValidationError(
                         error_name="Service name collision",
@@ -399,7 +414,7 @@ class ServicesValidator(Validator):
                     )
                 )
             else:
-                services.add(service)
+                found_services.add(fmt_service)
 
             # Validate that the service name only contains lowercase letters, numbers and dashes
             if not re.match(r"^[a-zA-Z0-9\-]+$", service_name):
@@ -419,9 +434,23 @@ class OrphanServicesValidator(Validator):
     """Validate that if there is a service in the track.yaml, there is a terraform directory."""
 
     def validate(self, track_name: str) -> list[ValidationError]:
-        track_yaml = parse_track_yaml(track_name=track_name)
+        track_yaml: TrackYaml = TrackYaml.model_validate(
+            parse_track_yaml(track_name=track_name)
+        )
         errors: list[ValidationError] = []
-        if track_yaml.get("services"):
+        services: list[str] = []
+
+        # Combining both service lists until we remove entirely the deprecated services list at the root.
+        if track_yaml.services:
+            for service in track_yaml.services:
+                services.append(service.name)
+
+        if track_yaml.instances:
+            for k, v in track_yaml.instances.root.items():
+                for service in v.services:
+                    services.append(service.name)
+
+        if services:
             if not os.path.exists(
                 path=os.path.join(
                     find_ctf_root_directory(),
@@ -437,10 +466,7 @@ class OrphanServicesValidator(Validator):
                         track_name=track_name,
                         details={
                             "Service Name": "\n".join(
-                                [
-                                    service.get("name")
-                                    for service in track_yaml["services"]
-                                ]
+                                [service for service in services]
                             ),
                         },
                     )

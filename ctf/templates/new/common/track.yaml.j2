@@ -16,7 +16,66 @@ contacts:
   support:
     - CHANGE_ME
     - CHANGE_ME2
-
+{% if data.template == "files-only" %}
+instances: {}
+{% else %}
+instances:
+  {{ data.name }}:
+    image: {% if data.is_windows %}"CHANGE_ME" # Change to the Windows image location. Refer to the ctf-script README to know how to create an image in Incus.{% else %}"images:ubuntu/24.04"{% endif %}
+    profiles:{% if not data.is_windows %}
+      - "default"{% endif %}
+      - {% if data.is_windows %}"windows-vm"{% else %}"containers"{% endif %}
+    type: {% if data.is_windows %}"virtual-machine"{% else %}"container"{% endif %}
+    description: "CHANGE_MEMain apache + PHP website"
+    # This second half of a MAC address was automatically generated. The first half is just below
+    hwaddr: "{{ data.hardware_address }}"
+    # This is the subdomain value for this machine. Do NOT include .ctf, it will be automatically added.
+    # For example, if the value of the record is a.b.c, a DNS record will be created for a.b.c.ctf
+    record: "{{ data.name }}"
+    # This second half of the IPv6 is derived from the hwaddr.
+    ipv6: "{{ data.full_ipv6_address }}"
+    config: {% if data.is_windows %}
+      security.secureboot: "false"{% else %}{}{% endif %}
+    devices: {% if data.is_windows %}
+      - name: "incusagent"
+        type: "disk"
+        properties:
+          source: "agent:config"{% else %}[]{% endif %}{% if data.is_windows %}
+    wait_for:
+      type: "agent"{% endif %}
+    services:
+      # List of network services running for the track.
+      # Each service name must be unique for a given instance (container/VM).
+      - name: {% if data.template == "python-service" %}HTTP-5000{% else %}HTTP{% endif %}
+        # On what port does the service listens to
+        port: {% if data.template == "python-service" %}5000{% else %}80{% endif %}
+        # For automated checks during the CTF. This alerts us if something is wrong with the service.
+        check: http
+        # During development, this service will be accessible from http://localhost:800. This allows to access the services outside the host (for example from the Windows Host if using WSL or from your host machine if using GitHub Codespaces).
+        # This is not required, but provides a very helpful shortcut when using Codespaces or WSL.
+        dev_port_mapping: 800{% if data.with_build %}
+  build-container:
+    is_build_container: true
+    image: "images:ubuntu/24.04"
+    profiles:
+      - "default"
+    type: "container"
+    description: "Building container"
+    hwaddr:
+    record:
+    ipv6:
+    config: {}
+    devices:
+      - name: "root"
+        type: "disk"
+        properties:
+          pool: "default"
+          path: "/"
+          size: "3GiB"
+    services: []
+  {% endif %}
+  # You can add more machines here.
+{% endif %}
 flags:
     # The flag string
   - flag: FLAG-CHANGE_ME
@@ -33,7 +92,7 @@ flags:
       # This value can also be used to reference flags in Ansible playbooks. See the "Load Flags" task in deploy.yaml.
       discourse: {{ data.name | replace("-","_") }}_flag_1
 
-{% if data.template == "files-only" %}
+# DEPRECATED AFTER NORTHSEC 2026{% if data.template == "files-only" %}
 services: []
 {% else %}
 services:

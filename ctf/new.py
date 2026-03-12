@@ -126,8 +126,10 @@ def new(
         data={
             "name": name,
             "full_ipv6_address": full_ipv6_address,
-            "ipv6_subnet": ipv6_subnet,
+            "hardware_address": hardware_address,
+            "is_windows": template == Template.WINDOWS_VM,
             "template": template.value,
+            "with_build": with_build_container,
         }
     )
     with open(
@@ -201,8 +203,6 @@ def new(
     render = track_template.render(
         data={
             "name": name,
-            "hardware_address": hardware_address,
-            "ipv6": ipv6_address,
             "ipv6_subnet": ipv6_subnet,
             "full_ipv6_address": full_ipv6_address,
             "with_build": with_build_container,
