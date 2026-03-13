@@ -62,8 +62,8 @@ resource "incus_instance" "this" {
   project = incus_project.this.name
 
   for_each = {
-    for k, v in local.track.instances : k => v
-    if try(trimspace(v.record), "") != ""
+    for k, v in try(local.track.instances, {}) : k => v
+    if !can(v.is_build_container) || v.is_build_container == var.build_container
   }
 
   name        = each.key
@@ -71,11 +71,14 @@ resource "incus_instance" "this" {
 
   type = each.value["type"]
 
-  image    = each.value["image"]
-  profiles = each.value["profiles"]
+  image = each.value["image"]
+  profiles = [
+    for profile in coalesce(try(each.value["profiles"], []), []) :
+    profile == incus_profile.this.name ? incus_profile.this.name : profile
+  ]
 
   config = merge(
-    coalesce(each.value["config"], {}),
+    coalesce(try(each.value["config"], {}), {}),
     {
       "environment.http_proxy"  = var.deploy == "production" ? "http://proxy.ctf-int.internal.nsec.io:3128" : null
       "environment.https_proxy" = var.deploy == "production" ? "http://proxy.ctf-int.internal.nsec.io:3128" : null
@@ -83,7 +86,7 @@ resource "incus_instance" "this" {
   )
 
   dynamic "device" {
-    for_each = coalesce(each.value["devices"], [])
+    for_each = coalesce(try(each.value["devices"], []), [])
     content {
       name = device.value.name
       type = device.value.type
@@ -111,7 +114,7 @@ resource "incus_instance" "this" {
   }
 
   dynamic "wait_for" {
-    for_each = coalesce(each.value["wait_for"], [])
+    for_each = coalesce(try(each.value["wait_for"], []), [])
     content {
       type = wait_for.value.type
     }
