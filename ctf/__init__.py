@@ -21,20 +21,21 @@ for k, v in os.environ.items():
 
 
 def check_tool_version() -> None:
-    with urllib.request.urlopen(
-        url="https://api.github.com/repos/nsec/ctf-script/releases/latest"
-    ) as r:
-        if r.getcode() != 200:
-            LOG.debug(r.read().decode())
+    try:
+        r_context = urllib.request.urlopen(
+            url="https://api.github.com/repos/nsec/ctf-script/releases/latest"
+        )
+    except Exception as e:
+        LOG.debug(e)
+        LOG.warning("Could not verify the latest release.")
+        return
+    with r_context as r:
+        try:
+            latest_version = json.loads(s=r.read().decode())["tag_name"]
+        except Exception as e:
+            LOG.debug(e)
             LOG.error("Could not verify the latest release.")
             return
-        else:
-            try:
-                latest_version = json.loads(s=r.read().decode())["tag_name"]
-            except Exception as e:
-                LOG.debug(e)
-                LOG.error("Could not verify the latest release.")
-                return
 
         compare = 0
         for current_part, latest_part in zip(
