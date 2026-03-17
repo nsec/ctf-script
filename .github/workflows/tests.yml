@@ -45,9 +45,9 @@ jobs:
           ruff format --check ./ctf
           ruff check ./ctf
 
-      - name: ctf init
+      - name: CTF init
         run: |
-          ctf init test-ctf
+          ctf --no-update-check init test-ctf
 
       - name: Copy CTF files
         run: |
@@ -56,22 +56,22 @@ jobs:
           ls -al test-ctf/
           ls -al test-ctf/challenges
 
-      - name: ctf version
+      - name: CTF version
         working-directory: test-ctf
         run: |
-          ctf version
+          ctf --no-update-check version
 
       - name: CTF stats
         # Run this in the test-ctf directory
         working-directory: test-ctf
         run: |
-          ctf stats
+          ctf --no-update-check stats
 
       - name: CTF list
         # Run this in the test-ctf directory
         working-directory: test-ctf
         run: |
-          ctf list
+          ctf --no-update-check list
 
       - name: Remove docker
         run: |
@@ -148,17 +148,17 @@ jobs:
         # Run this in the test-ctf directory
         working-directory: test-ctf
         run: |
-          ctf validate
+          ctf --no-update-check validate
 
       - name: Deployment check
         working-directory: test-ctf
         run: |
-          ctf check
+          ctf --no-update-check check
 
       - name: File generation
         working-directory: test-ctf
         run: |
-          ctf generate
+          ctf --no-update-check generate
 
       - name: Test deployment looping through tracks
         working-directory: test-ctf
@@ -169,33 +169,33 @@ jobs:
 
           for track in "${tracks[@]}"
           do
-              ctf deploy --production --tracks "$track"
+              ctf --no-update-check deploy --production --tracks "$track"
               incus --project="$track" info "$track"
           done
 
-          ctf destroy --force
+          ctf --no-update-check destroy --force
 
       - name: Test full deployment
         working-directory: test-ctf
         run: |
-          ctf deploy --production
+          ctf --no-update-check deploy --production
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
-          ctf destroy --force
+          ctf --no-update-check destroy --force
 
       - name: Test redeployment of Mock Track Apache PHP
         working-directory: test-ctf
         run: |
-          ctf deploy --production
+          ctf --no-update-check deploy --production
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
-          ctf redeploy --production --tracks mock-track-apache-php
+          ctf --no-update-check redeploy --production --tracks mock-track-apache-php
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
-          ctf destroy --force
+          ctf --no-update-check destroy --force
 
       - name: Test deployment of a track not deployed without destroying the rest
         working-directory: test-ctf
         run: |
-          ctf deploy --production --tracks mock-track-apache-php
+          ctf --no-update-check deploy --production --tracks mock-track-apache-php
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 1 ] || exit 1
-          ctf redeploy --production --tracks mock-track-python-service
+          ctf --no-update-check redeploy --production --tracks mock-track-python-service
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
-          ctf destroy --force
+          ctf --no-update-check destroy --force
