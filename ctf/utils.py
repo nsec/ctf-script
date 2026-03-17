@@ -1,3 +1,4 @@
+import importlib.metadata
 import os
 import re
 import shutil
@@ -6,6 +7,7 @@ import textwrap
 from typing import Any, Generator
 
 import jinja2
+import typer
 import yaml
 
 from ctf import ENV
@@ -390,6 +392,17 @@ def is_ctf_dir(path):
     if "challenges" not in dir:
         ctf_dir = False
     return ctf_dir
+
+
+def get_version() -> str:
+    return importlib.metadata.version("ctf-script")
+
+
+def show_version(value: bool) -> None:
+    # If --version option is present, show the version and exit
+    if value:
+        typer.echo(f"ctf-script v{get_version()}")
+        raise typer.Exit()
 
 
 def terraform_binary() -> str:

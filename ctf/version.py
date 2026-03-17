@@ -1,11 +1,10 @@
 import typer
 
-from ctf import VERSION
+from ctf.utils import show_version
 
 app = typer.Typer()
 
 
 @app.command(help="Print the tool's version.")
 def version():
-    print(VERSION)
-    exit(0)
+    show_version(True)

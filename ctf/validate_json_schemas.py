@@ -14,7 +14,7 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from ctf import LOG
+from ctf.logger import LOG
 
 
 def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
