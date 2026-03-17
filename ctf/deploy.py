@@ -12,7 +12,7 @@ from ctf import ENV, STATE
 from ctf.destroy import destroy
 from ctf.generate import generate
 from ctf.logger import LOG
-from ctf.models import Track
+from ctf.models import Track, TrackYaml
 from ctf.utils import (
     add_tracks_to_terraform_modules,
     check_git_lfs,
@@ -271,13 +271,31 @@ def deploy(
 
             if remote == "local":
                 LOG.debug(msg=f"Parsing track.yaml for track {track}")
-                track_yaml = parse_track_yaml(track_name=track.name)
+                track_yaml: TrackYaml = TrackYaml.model_validate(
+                    parse_track_yaml(track_name=track.name)
+                )
 
-                for service in track_yaml["services"]:
+                services: list[dict[str, str | int | None]] = []
+
+                # Combining both service lists until we remove entirely the deprecated services list at the root.
+                if track_yaml.services:
+                    for service in track_yaml.services:
+                        if not service.dev_port_mapping:
+                            continue
+                        services.append(service.model_dump())
+
+                if track_yaml.instances:
+                    for k, v in track_yaml.instances.root.items():
+                        for service in v.services:
+                            if not service.dev_port_mapping:
+                                continue
+                            services.append({**service.model_dump(), "address": v.ipv6})
+
+                for service in services:
                     if (
                         service.get("dev_port_mapping")
                         and (
-                            service["address"]
+                            str(service["address"])
                             .replace(":0", ":")
                             .replace(":0", ":")
                             .replace(":0", ":")
@@ -289,7 +307,7 @@ def deploy(
                             f"Adding incus proxy for service {track}-{service['name']}-port-{service['port']}"
                         )
                         machine_name = ipv6_to_container_name[
-                            service["address"]
+                            str(service["address"])
                             .replace(":0", ":")
                             .replace(":0", ":")
                             .replace(":0", ":")
