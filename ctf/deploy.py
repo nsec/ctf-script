@@ -275,23 +275,26 @@ def deploy(
                     parse_track_yaml(track_name=track.name)
                 )
 
-                services: list[dict[str, str | int | None]] = []
+                services: dict[str, dict[str, str | int | None]] = {}
 
                 # Combining both service lists until we remove entirely the deprecated services list at the root.
                 if track_yaml.services:
                     for service in track_yaml.services:
                         if not service.dev_port_mapping:
                             continue
-                        services.append(service.model_dump())
+                        services[service.name] = service.model_dump()
 
                 if track_yaml.instances:
                     for k, v in track_yaml.instances.root.items():
                         for service in v.services:
                             if not service.dev_port_mapping:
                                 continue
-                            services.append({**service.model_dump(), "address": v.ipv6})
+                            services[service.name] = {
+                                **service.model_dump(),
+                                "address": v.ipv6,
+                            }
 
-                for service in services:
+                for service_name, service in services.items():
                     if (
                         service.get("dev_port_mapping")
                         and (
@@ -304,7 +307,7 @@ def deploy(
                         in ipv6_to_container_name
                     ):
                         LOG.debug(
-                            f"Adding incus proxy for service {track}-{service['name']}-port-{service['port']}"
+                            f"Adding incus proxy for service {track}-{service_name}-port-{service['port']}"
                         )
                         machine_name = ipv6_to_container_name[
                             str(service["address"])
@@ -316,6 +319,7 @@ def deploy(
                         subprocess.run(
                             args=[
                                 "incus",
+                                f"--project={track.name}",
                                 "config",
                                 "device",
                                 "add",
@@ -324,8 +328,6 @@ def deploy(
                                 "proxy",
                                 f"listen=tcp:0.0.0.0:{service['dev_port_mapping']}",
                                 f"connect=tcp:127.0.0.1:{service['port']}",
-                                "--project",
-                                track.name,
                             ],
                             cwd=path,
                             check=True,
