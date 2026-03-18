@@ -8,6 +8,7 @@ import urllib.request
 import rich
 import typer
 from rich.console import Console
+from rich.prompt import Prompt
 from typer import Typer
 from typing_extensions import Annotated
 
@@ -59,7 +60,7 @@ def check_tool_version() -> None:
             return
         with r_context as r:
             try:
-                latest_version = json.loads(s=r.read().decode())["tag_name"]
+                latest_version: str = json.loads(s=r.read().decode())["tag_name"]
             except Exception as e:
                 LOG.debug(e)
                 LOG.error("Could not verify the latest release.")
@@ -77,15 +78,24 @@ def check_tool_version() -> None:
                     compare = 1
                     break
 
-            match compare:
-                case 0 | 1:
-                    LOG.debug("Script is up to date.")
-                case -1:
-                    LOG.warning(
-                        f"Script is outdated (current: {current_version}, upstream: {latest_version}). Please update to the latest release before continuing."
-                    )
-                    if (input("Do you want to continue? [y/N] ").lower() or "n") == "n":
-                        exit(code=0)
+    match compare:
+        case 0 | 1:
+            LOG.debug("Script is up to date.")
+        case -1:
+            LOG.warning(
+                f"Script is outdated (current: {current_version}, upstream: {latest_version}). Please update to the latest release before continuing."
+            )
+            if (
+                Prompt.ask(
+                    "Do you want to continue?",
+                    choices=["y", "N"],
+                    case_sensitive=False,
+                    show_default=False,
+                    default="N",
+                ).lower()
+                == "n"
+            ):
+                raise typer.Exit()
 
 
 @app.callback()
