@@ -25,7 +25,10 @@
           "description": "Type of trigger: use `flag` to post after a given flag is submitted (the value of the flag should be set in the `tag` property.)",
           "type": "string",
           "enum": [
-            "flag"
+            "flag",
+            "multiFlag",
+            "score",
+            "timer"
           ]
         },
         "tag": {
@@ -35,9 +38,95 @@
         }
       },
       "required": [
-        "type",
-        "tag"
-      ]
+        "type"
+      ],
+      "if": {
+        "properties": {
+          "type": {
+            "const": "flag"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tag": {
+            "description": "Discourse tag of the flag to trigger on.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "type",
+          "tag"
+        ]
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "type": {
+              "const": "multiFlag"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "tags": {
+              "description": "List of discourse tags of relevant flags.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "threshold": {
+              "description": "Number of relevant flags required for the multiFlag trigger. Ex: If this is set to 2, the trigger will only fire if 2 or more of the tags in the `tags` list are present.",
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "tags"
+          ]
+        },
+        "else": {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "score"
+              }
+            }
+          },
+          "then": {
+            "value": {
+              "description": "Value of the score trigger. Ex: If this is set to 10, the trigger will only fire if the user's score is 10 or more.",
+              "type": "number"
+            },
+            "required": [
+              "type",
+              "value"
+            ]
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timer"
+                }
+              }
+            },
+            "then": {
+              "after": {
+                "description": "Time at which to trigger. The layout of this string is \"2006/01/02 15:04\"",
+                "type": "string"
+              },
+              "required": [
+                "type",
+                "after"
+              ]
+            }
+          }
+        }
+      }
     },
     "api": {
       "type": "object",
