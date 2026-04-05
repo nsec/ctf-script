@@ -1,8 +1,9 @@
 import json
+from datetime import datetime, timezone
+
 import requests
 import rich
 import typer
-from datetime import datetime, timezone
 from typing_extensions import Annotated
 
 from ctf.logger import LOG
