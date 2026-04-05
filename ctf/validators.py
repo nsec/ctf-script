@@ -487,6 +487,9 @@ class CFSSStringValidator(Validator):
 
         track_yaml = parse_track_yaml(track_name=track_name)
         for flag in track_yaml["flags"]:
+            # We don't need a CVSS if the flag value is 0
+            if flag.get("value") == 0:
+                continue
             if "cfss" not in flag:
                 errors.append(
                     ValidationError(
