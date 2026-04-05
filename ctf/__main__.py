@@ -13,6 +13,7 @@ from typer import Typer
 from typing_extensions import Annotated
 
 from ctf import ENV, STATE
+from ctf.askgod import app as askgod_app
 from ctf.check import app as check_app
 from ctf.deploy import app as deploy_app
 from ctf.destroy import app as destroy_app
@@ -33,18 +34,23 @@ app = Typer(
     help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.",
     no_args_is_help=True,
 )
-app.add_typer(validate_app)
-app.add_typer(init_app)
-app.add_typer(new_app)
+app.add_typer(
+    askgod_app,
+    name="askgod",
+    help="Commands for interacting with a live askgod server (github.com/nsec/askgod).",
+)
+app.add_typer(check_app)
+app.add_typer(deploy_app)
 app.add_typer(destroy_app)
 app.add_typer(flags_app)
-app.add_typer(services_app)
 app.add_typer(generate_app)
-app.add_typer(deploy_app)
-app.add_typer(redeploy_app)
-app.add_typer(check_app)
-app.add_typer(stats_app)
+app.add_typer(init_app)
 app.add_typer(list_app)
+app.add_typer(new_app)
+app.add_typer(redeploy_app)
+app.add_typer(services_app)
+app.add_typer(stats_app)
+app.add_typer(validate_app)
 app.add_typer(version_app)
 
 
