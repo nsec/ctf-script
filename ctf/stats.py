@@ -312,7 +312,6 @@ def stats(
         plt.clf()
 
         if historical:
-
             with rich.progress.Progress(
                 "[progress.description]{task.description}",
                 rich.progress.BarColumn(),
@@ -335,8 +334,13 @@ def stats(
                     hash, date = commit.split(" ", 1)
                     parsed_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
                     commit_list_with_date.append((parsed_datetime, hash))
-                commit_list_with_date = sorted(commit_list_with_date, key=lambda x: x[0])
-                task = progress.add_task(description="Processing commits...", total=len(commit_list_with_date))
+                commit_list_with_date = sorted(
+                    commit_list_with_date, key=lambda x: x[0]
+                )
+                task = progress.add_task(
+                    description="Processing commits...",
+                    total=len(commit_list_with_date),
+                )
                 with tempfile.TemporaryDirectory(prefix="ctf-historical-") as tmpdir:
                     worktree_path = os.path.join(tmpdir, "worktree")
                     subprocess.run(
@@ -381,7 +385,9 @@ def stats(
                                         "total_flags": total_flags,
                                     }
                                 else:
-                                    LOG.warning(f"Failed to get stats for commit {hash} ({parsed_date}). Error: {result[0].stderr[:100]}")
+                                    LOG.warning(
+                                        f"Failed to get stats for commit {hash} ({parsed_date}). Error: {result[0].stderr[:100]}"
+                                    )
                             progress.update(task, advance=1)
                     finally:
                         subprocess.run(
@@ -394,7 +400,9 @@ def stats(
                 all_points = [data["total_points"] for data in historical_data.values()]
                 n = len(all_dates)
                 step = max(1, (n - 1) // 9) if n > 1 else 1
-                label_indices = sorted(set(list(range(0, n, step)) + [n - 1])) if n else []
+                label_indices = (
+                    sorted(set(list(range(0, n, step)) + [n - 1])) if n else []
+                )
 
                 plt.plot(all_dates, all_points, label="Total Points")
                 plt.grid(True, linestyle="--", alpha=0.3)
@@ -411,7 +419,6 @@ def stats(
                 plt.subplot().set_ylim(0, max(all_points) + 10 if all_points else 10)
                 plt.savefig(os.path.join(".charts", "points_over_time.png"))
                 plt.clf()
-
 
     LOG.debug(msg="Done...")
 
