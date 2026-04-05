@@ -108,7 +108,11 @@ def stats(
             stats["most_flags_in_a_track"] = number_of_flags
         stats["number_of_flags"] += number_of_flags
         instances = track_yaml.get("instances", {}).values()
-        services = track_yaml.get("services", []) + [service for instance in instances for service in instance.get("services", [])]
+        services = track_yaml.get("services", []) + [
+            service
+            for instance in instances
+            for service in instance.get("services", [])
+        ]
         stats["number_of_services"] += len(services)
         stats["number_of_points_per_track"][track] = 0
         for flag in track_yaml["flags"]:
