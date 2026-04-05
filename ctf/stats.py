@@ -3,6 +3,7 @@ import logging
 import os
 import statistics
 import subprocess
+import tempfile
 from datetime import datetime
 
 import rich
@@ -59,7 +60,7 @@ def stats(
         bool,
         typer.Option(
             "--historical",
-            help="Use in conjunction with --charts to generate historical data. ONLY USE THIS IF YOU KNOW WHAT YOU ARE DOING. THIS IS BAD CODE THAT WILL FUCK YOUR REPO IN UNEXPECTED WAYS.",
+            help="Use in conjunction with --charts to generate historical data over all merge commits.",
         ),
     ] = False,
 ) -> None:
@@ -311,79 +312,106 @@ def stats(
         plt.clf()
 
         if historical:
-            # Number of points and flags over time
-            historical_data = {}
-            commit_list = (
-                subprocess.check_output(
-                    ["git", "log", "--pretty=format:%H %ad", "--date=iso"]
-                )
-                .decode()
-                .splitlines()[::-1]
-            )
-            commit_list_with_date = []
-            for commit in commit_list:
-                hash, date = commit.split(" ", 1)
-                parsed_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
-                commit_list_with_date.append((parsed_datetime, hash))
-            commit_list_with_date = sorted(commit_list_with_date, key=lambda x: x[0])
-            subprocess.run(["git", "stash"], check=True)
-            for i, commit in list(enumerate(commit_list_with_date))[0:]:
-                parsed_datetime, hash = commit
-                # Check if the commit message has "Merge pull request" in it
-                commit_message = subprocess.run(
-                    ["git", "show", "-s", "--pretty=%B", hash],
-                    check=True,
-                    capture_output=True,
-                )
-                if "Merge pull request" in commit_message.stdout.decode():
-                    LOG.debug(
-                        f"{i + 1}/{len(commit_list_with_date)} Checking out commit: {commit}"
-                    )
-                    parsed_date = parsed_datetime.date()
-                    subprocess.run(
-                        ["git", "checkout", hash], check=True, capture_output=True
-                    )
 
-                    # Execute your command here (replace with what you need)
-                    result = (
+            with rich.progress.Progress(
+                "[progress.description]{task.description}",
+                rich.progress.BarColumn(),
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                "({task.completed}/{task.total} commits)",
+                transient=True,
+            ) as progress:
+                LOG.info("Collecting commits...")
+                # Number of points and flags over time
+                historical_data = {}
+                commit_list = (
+                    subprocess.check_output(
+                        ["git", "log", "--pretty=format:%H %ad", "--date=iso"]
+                    )
+                    .decode()
+                    .splitlines()[::-1]
+                )
+                commit_list_with_date = []
+                for commit in commit_list:
+                    hash, date = commit.split(" ", 1)
+                    parsed_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
+                    commit_list_with_date.append((parsed_datetime, hash))
+                commit_list_with_date = sorted(commit_list_with_date, key=lambda x: x[0])
+                task = progress.add_task(description="Processing commits...", total=len(commit_list_with_date))
+                with tempfile.TemporaryDirectory(prefix="ctf-historical-") as tmpdir:
+                    worktree_path = os.path.join(tmpdir, "worktree")
+                    subprocess.run(
+                        ["git", "worktree", "add", "--detach", worktree_path],
+                        check=True,
+                        capture_output=True,
+                    )
+                    try:
+                        for i, commit in list(enumerate(commit_list_with_date))[0:]:
+                            parsed_datetime, hash = commit
+                            # Check if the commit message has "Merge pull request" in it
+                            commit_message = subprocess.run(
+                                ["git", "show", "-s", "--pretty=%B", hash],
+                                check=True,
+                                capture_output=True,
+                            )
+                            if "Merge pull request" in commit_message.stdout.decode():
+                                LOG.debug(
+                                    f"{i + 1}/{len(commit_list_with_date)} Checking out commit: {commit}"
+                                )
+                                parsed_date = parsed_datetime.date()
+                                subprocess.run(
+                                    ["git", "-C", worktree_path, "checkout", hash],
+                                    check=True,
+                                    capture_output=True,
+                                )
+                                result = (
+                                    subprocess.run(
+                                        ["ctf", "--no-update-check", "stats"],
+                                        check=False,
+                                        capture_output=True,
+                                        text=True,
+                                        cwd=worktree_path,
+                                    ),
+                                )
+                                if result[0].returncode == 0:
+                                    stats = json.loads(result[0].stdout)
+                                    total_points = stats["total_flags_value"]
+                                    total_flags = stats["number_of_flags"]
+                                    historical_data[parsed_date] = {
+                                        "total_points": total_points,
+                                        "total_flags": total_flags,
+                                    }
+                                else:
+                                    LOG.warning(f"Failed to get stats for commit {hash} ({parsed_date}). Error: {result[0].stderr[:100]}")
+                            progress.update(task, advance=1)
+                    finally:
                         subprocess.run(
-                            ["ctf", "stats"],
+                            ["git", "worktree", "remove", "--force", worktree_path],
                             check=False,
                             capture_output=True,
-                            text=True,
-                        ),
-                    )
-                    if result[0].returncode == 0:
-                        stats = json.loads(result[0].stdout)
-                        total_points = stats["total_flags_value"]
-                        total_flags = stats["number_of_flags"]
-                        print(total_flags)
-                        historical_data[parsed_date] = {
-                            "total_points": total_points,
-                            "total_flags": total_flags,
-                        }
-            subprocess.run(["git", "checkout", "main"], check=True, capture_output=True)
-            subprocess.run(["git", "stash", "pop"], check=True)
+                        )
 
-            plt.plot(
-                historical_data.keys(),
-                [data["total_points"] for data in historical_data.values()],
-                label="Total Points",
-            )
-            # plt.plot(historical_data.keys(), [data["total_flags"] for data in historical_data.values()], label="Total Flags")
-            # plt.xticks(ticks=list(stats["number_of_points_per_track"].keys()), rotation=90)
-            plt.grid(True, linestyle="--", alpha=0.3)
-            plt.subplots_adjust(bottom=0.1)
-            plt.xlabel("Time")
-            plt.ylabel("Total points")
-            plt.title("Total points over time")
-            plt.xticks(rotation=90)
-            plt.subplots_adjust(bottom=0.2)
-            plt.subplot().set_ylim(
-                0, max([data["total_points"] for data in historical_data.values()]) + 10
-            )
-            plt.savefig(os.path.join(".charts", "points_over_time.png"))
-            plt.clf()
+                all_dates = list(historical_data.keys())
+                all_points = [data["total_points"] for data in historical_data.values()]
+                n = len(all_dates)
+                step = max(1, (n - 1) // 9) if n > 1 else 1
+                label_indices = sorted(set(list(range(0, n, step)) + [n - 1])) if n else []
+
+                plt.plot(all_dates, all_points, label="Total Points")
+                plt.grid(True, linestyle="--", alpha=0.3)
+                plt.subplots_adjust(bottom=0.1)
+                plt.xlabel("Time")
+                plt.ylabel("Total points")
+                plt.title("Total points over time")
+                plt.xticks(
+                    ticks=[all_dates[i] for i in label_indices],
+                    labels=[str(all_dates[i]) for i in label_indices],
+                    rotation=90,
+                )
+                plt.subplots_adjust(bottom=0.2)
+                plt.subplot().set_ylim(0, max(all_points) + 10 if all_points else 10)
+                plt.savefig(os.path.join(".charts", "points_over_time.png"))
+                plt.clf()
+
 
     LOG.debug(msg="Done...")
 
