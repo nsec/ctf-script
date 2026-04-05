@@ -239,7 +239,19 @@
         "items": {
           "description": "A flag definition.",
           "type": "object",
-          "required": ["flag", "value", "return_string"],
+          "if": {
+            "properties": {
+              "value": {
+                "const": 0
+              }
+            }
+          },
+          "then": {
+            "required": ["flag", "value", "return_string"]
+          },
+          "else": {
+            "required": ["flag", "value", "return_string", "cfss"]
+          },
           "additionalProperties": false,
           "properties": {
             "flag": {
