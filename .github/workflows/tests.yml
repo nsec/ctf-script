@@ -38,7 +38,7 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          pip install -e .
+          pip install -e .[workflow]
 
       - name: ruff
         run: |
