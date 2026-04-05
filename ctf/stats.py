@@ -107,7 +107,13 @@ def stats(
         if number_of_flags > stats["most_flags_in_a_track"]:
             stats["most_flags_in_a_track"] = number_of_flags
         stats["number_of_flags"] += number_of_flags
-        stats["number_of_services"] += len(track_yaml["services"])
+        instances = track_yaml.get("instances", {}).values()
+        services = track_yaml.get("services", []) + [
+            service
+            for instance in instances
+            for service in instance.get("services", [])
+        ]
+        stats["number_of_services"] += len(services)
         stats["number_of_points_per_track"][track] = 0
         for flag in track_yaml["flags"]:
             flags.append(flag["value"])
@@ -118,7 +124,7 @@ def stats(
             if flag["value"] not in stats["flag_count_per_value"]:
                 stats["flag_count_per_value"][flag["value"]] = 0
             stats["flag_count_per_value"][flag["value"]] += 1
-        for service in track_yaml["services"]:
+        for service in services:
             if service["port"] not in stats["number_of_services_per_port"]:
                 stats["number_of_services_per_port"][service["port"]] = 0
             stats["number_of_services_per_port"][service["port"]] += 1

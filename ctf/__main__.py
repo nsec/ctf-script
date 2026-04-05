@@ -30,7 +30,8 @@ from ctf.validate import app as validate_app
 from ctf.version import app as version_app
 
 app = Typer(
-    help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool."
+    help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.",
+    no_args_is_help=True,
 )
 app.add_typer(validate_app)
 app.add_typer(init_app)

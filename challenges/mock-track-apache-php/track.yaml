@@ -16,9 +16,24 @@ flags:
     cfss: "CFSS:0.3/TS:B/E:M/HSFC:N=4-7"
     tags:
       discourse: mock_track_apache_php_flag_1
-services:
-  - name: HTTP-80
-    instance: mock-track-apache-php
-    address: '9000:d37e:c40b:c5e8:216:3eff:fed5:1ca1'
-    port: 80
-    check: http
+instances:
+  mock-track-apache-php:
+    image: "images:ubuntu/24.04"
+    profiles:
+      - "default"
+      - "containers"
+    type: "container"
+    description: "Mock Apache + PHP track"
+    # This second half of a MAC address was automatically generated. The first half is just below
+    hwaddr: "00:16:3e:6c:c3:c0"
+    # This is the subdomain value for this machine. Do NOT include .ctf, it will be automatically added.
+    # For example, if the value of the record is a.b.c, a DNS record will be created for a.b.c.ctf
+    record: "mock.track"
+    # This second half of the IPv6 is derived from the hwaddr.
+    ipv6: "9000:d37e:c40b:aa70:216:3eff:fe6c:c3c0"
+    config: {}
+    devices: []
+    services:
+      - name: HTTP-80
+        port: 80
+        check: http
