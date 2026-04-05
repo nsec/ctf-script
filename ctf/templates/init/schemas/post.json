@@ -26,15 +26,9 @@
           "type": "string",
           "enum": [
             "flag",
-            "multiFlag",
             "score",
             "timer"
           ]
-        },
-        "tag": {
-          "description": "Value of the trigger. For a flag trigger, this is the flag value.",
-          "type": "string",
-          "minLength": 1
         }
       },
       "required": [
@@ -50,9 +44,17 @@
       "then": {
         "properties": {
           "tag": {
-            "description": "Discourse tag of the flag to trigger on.",
-            "type": "string",
+            "description": "Discourse tags of the flags to trigger on.",
+            "type": ["string", "array"],
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
             "minLength": 1
+          },
+          "threshold": {
+            "description": "Number of relevant flags required for the multiFlag trigger. Ex: If this is set to 2, the trigger will only fire if 2 or more of the tags in the `tags` list are present.",
+            "type": "number"
           }
         },
         "required": [
@@ -64,66 +66,37 @@
         "if": {
           "properties": {
             "type": {
-              "const": "multiFlag"
+              "const": "score"
             }
           }
         },
         "then": {
-          "properties": {
-            "tags": {
-              "description": "List of discourse tags of relevant flags.",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "threshold": {
-              "description": "Number of relevant flags required for the multiFlag trigger. Ex: If this is set to 2, the trigger will only fire if 2 or more of the tags in the `tags` list are present.",
-              "type": "number"
-            }
+          "value": {
+            "description": "Value of the score trigger. Ex: If this is set to 10, the trigger will only fire if the user's score is 10 or more.",
+            "type": "number"
           },
           "required": [
             "type",
-            "tags"
+            "value"
           ]
         },
         "else": {
           "if": {
             "properties": {
               "type": {
-                "const": "score"
+                "const": "timer"
               }
             }
           },
           "then": {
-            "value": {
-              "description": "Value of the score trigger. Ex: If this is set to 10, the trigger will only fire if the user's score is 10 or more.",
-              "type": "number"
+            "after": {
+              "description": "Time at which to trigger. The layout of this string is \"2006/01/02 15:04\"",
+              "type": "string"
             },
             "required": [
               "type",
-              "value"
+              "after"
             ]
-          },
-          "else": {
-            "if": {
-              "properties": {
-                "type": {
-                  "const": "timer"
-                }
-              }
-            },
-            "then": {
-              "after": {
-                "description": "Time at which to trigger. The layout of this string is \"2006/01/02 15:04\"",
-                "type": "string"
-              },
-              "required": [
-                "type",
-                "after"
-              ]
-            }
           }
         }
       }
