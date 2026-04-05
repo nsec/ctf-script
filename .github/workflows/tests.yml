@@ -38,7 +38,7 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          pip install -e .
+          pip install -e .[workflow]
 
       - name: ruff
         run: |
@@ -65,7 +65,7 @@ jobs:
         # Run this in the test-ctf directory
         working-directory: test-ctf
         run: |
-          ctf --no-update-check stats
+          ctf --no-update-check stats --charts --generate-badges
 
       - name: CTF list
         # Run this in the test-ctf directory
