@@ -35,6 +35,5 @@ instances:
     devices: []
     services:
       - name: HTTP-80
-        address: '9000:d37e:c40b:c5e8:216:3eff:fed5:1ca1'
         port: 80
         check: http
