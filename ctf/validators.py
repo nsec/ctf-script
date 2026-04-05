@@ -182,7 +182,7 @@ class DiscoursePostsAskGodTagValidator(Validator):
         errors: list[ValidationError] = []
         discourse_posts = parse_post_yamls(track_name=track_name)
         for discourse_post in discourse_posts:
-            if discourse_post.get("trigger", {}).get("type", "") == "flag":
+            if discourse_post.get("type", "") == "post":
                 self.discourse_posts.append((track_name, discourse_post))
                 if not os.path.exists(
                     os.path.join(
