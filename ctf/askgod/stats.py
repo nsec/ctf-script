@@ -29,7 +29,7 @@ def stats(
     scores = get(session, "/scores")
     scoreboard = get(session, "/scoreboard")
     # rich.print(flags)
-    #rich.print(scores)
+    # rich.print(scores)
     # rich.print(scoreboard)
 
     # Join the flags and scores data together based on flag's `id` and score's `flag_id` by modifying the `scores` list in place
@@ -44,7 +44,7 @@ def stats(
                 f"Could not find flag for score with flag_id {score['flag_id']}"
             )
     LOG.info(f"Analyzing {len(scores)} scores...")
-    ai_agent_scores = [s for s in scores if s["ai_agent"] == True]
+    ai_agent_scores = [s for s in scores if s["ai_agent"]]
     stats["total_scores"] = len(scores)
     stats["ai_agent_scores"] = len(ai_agent_scores)
     stats["ai_agent_score_percentage"] = (
@@ -142,9 +142,7 @@ def stats(
     stats["flags_with_ai_agent_solves"] = flags_with_ai_solves
     stats["total_flags_solved"] = total_flags_solved
     stats["percentage_of_flags_with_ai_agent_solves"] = (
-        round(flags_with_ai_solves / total_flags_solved * 100)
-        if scores
-        else 0
+        round(flags_with_ai_solves / total_flags_solved * 100) if scores else 0
     )
 
     # Bucket submissions into 4-second intervals and compute AI% per bucket
@@ -161,7 +159,9 @@ def stats(
             buckets[bucket_key]["ai_count"] += 1
     stats["ai_agent_percentage_over_time"] = [
         {
-            "bucket_start": datetime.fromtimestamp(k, tz=timezone.utc).strftime("%a %H:%M:%S"),
+            "bucket_start": datetime.fromtimestamp(k, tz=timezone.utc).strftime(
+                "%a %H:%M:%S"
+            ),
             "ai_count": v["ai_count"],
             "total_count": v["total_count"],
             "ai_percentage": round(v["ai_count"] / v["total_count"] * 100),
@@ -184,26 +184,38 @@ def generate_html(stats: dict) -> str:
     quintile_labels = ["Bottom 20%", "20-40%", "40-60%", "60-80%", "Top 20%"]
 
     points_ai_pct = [
-        stats["ai_agent_points_per_quintile"][f"quintile_{i}"]["ai_agent_points_percentage"]
+        stats["ai_agent_points_per_quintile"][f"quintile_{i}"][
+            "ai_agent_points_percentage"
+        ]
         for i in range(1, 6)
     ]
     points_human_pct = [
-        100 - stats["ai_agent_points_per_quintile"][f"quintile_{i}"]["ai_agent_points_percentage"]
+        100
+        - stats["ai_agent_points_per_quintile"][f"quintile_{i}"][
+            "ai_agent_points_percentage"
+        ]
         for i in range(1, 6)
     ]
 
     scores_ai_pct = [
-        stats["ai_agent_scores_per_quintile"][f"quintile_{i}"]["ai_agent_scores_percentage"]
+        stats["ai_agent_scores_per_quintile"][f"quintile_{i}"][
+            "ai_agent_scores_percentage"
+        ]
         for i in range(1, 6)
     ]
     scores_human_pct = [
-        100 - stats["ai_agent_scores_per_quintile"][f"quintile_{i}"]["ai_agent_scores_percentage"]
+        100
+        - stats["ai_agent_scores_per_quintile"][f"quintile_{i}"][
+            "ai_agent_scores_percentage"
+        ]
         for i in range(1, 6)
     ]
 
     per_point = stats["ai_agent_solve_per_point"]
     point_labels = [str(k) for k in per_point if k > 0]
-    point_ai_pct = [per_point[k]["ai_agent_solve_percentage"] for k in per_point if k > 0]
+    point_ai_pct = [
+        per_point[k]["ai_agent_solve_percentage"] for k in per_point if k > 0
+    ]
     point_human_pct = [100 - v for v in point_ai_pct]
 
     over_time = stats["ai_agent_percentage_over_time"]
@@ -288,10 +300,10 @@ def generate_html(stats: dict) -> str:
 <p class="subtitle">Generated {timestamp}</p>
 
 <div class="cards">
-  <div class="card"><div class="value">{stats['ai_agent_score_percentage']}%</div><div class="label">Valid Flags submitted by an AI agent</div><div class="secondary">{stats['ai_agent_scores']} / {stats['total_scores']}</div></div>
-  <div class="card"><div class="value">{stats['ai_agent_points_percentage']}%</div><div class="label">Points scored by AI Agents</div><div class="secondary">{stats['ai_agent_points']} / {stats['total_points']}</div></div>
-  <div class="card"><div class="value">{stats['teams_with_ai_agent_scores_percentage']}%</div><div class="label">Teams Using AI Agents</div><div class="secondary">{stats['teams_with_ai_agent_scores']} / {stats['total_teams']}</div></div>
-  <div class="card"><div class="value">{stats['percentage_of_flags_with_ai_agent_solves']}%</div><div class="label">Solved Flags w/ at least one agent Solve</div><div class="secondary">{stats['flags_with_ai_agent_solves']} / {stats['total_flags_solved']}</div></div>
+  <div class="card"><div class="value">{stats["ai_agent_score_percentage"]}%</div><div class="label">Valid Flags submitted by an AI agent</div><div class="secondary">{stats["ai_agent_scores"]} / {stats["total_scores"]}</div></div>
+  <div class="card"><div class="value">{stats["ai_agent_points_percentage"]}%</div><div class="label">Points scored by AI Agents</div><div class="secondary">{stats["ai_agent_points"]} / {stats["total_points"]}</div></div>
+  <div class="card"><div class="value">{stats["teams_with_ai_agent_scores_percentage"]}%</div><div class="label">Teams Using AI Agents</div><div class="secondary">{stats["teams_with_ai_agent_scores"]} / {stats["total_teams"]}</div></div>
+  <div class="card"><div class="value">{stats["percentage_of_flags_with_ai_agent_solves"]}%</div><div class="label">Solved Flags w/ at least one agent Solve</div><div class="secondary">{stats["flags_with_ai_agent_solves"]} / {stats["total_flags_solved"]}</div></div>
 </div>
 
 <div class="charts-row">
