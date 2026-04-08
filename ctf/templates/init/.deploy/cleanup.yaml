@@ -65,11 +65,6 @@
             systemd-hibernate-resume.service \
             systemd-initctl.service \
             systemd-initctl.socket \
-            systemd-journal-catalog-update.service \
-            systemd-journal-flush.service \
-            systemd-journald-dev-log.socket \
-            systemd-journald.service \
-            systemd-journald.socket \
             systemd-pcrextend.socket \
             systemd-pcrlock-file-system.service \
             systemd-pcrlock-firmware-code.service \
@@ -110,6 +105,11 @@
     - name: Mask network systemd units
       ansible.builtin.shell: |
         for i in \
+            systemd-journal-catalog-update.service \
+            systemd-journal-flush.service \
+            systemd-journald-dev-log.socket \
+            systemd-journald.service \
+            systemd-journald.socket \
             networkd-dispatcher.service \
             systemd-network-generator.service \
             systemd-networkd-wait-online.service \
