@@ -54,7 +54,10 @@ def deploy(
     ] = False,
     skip_build: Annotated[
         bool,
-        typer.Option("--skip-build", help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)")
+        typer.Option(
+            "--skip-build",
+            help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
+        ),
     ] = False,
 ):
     ENV["INCUS_REMOTE"] = remote
