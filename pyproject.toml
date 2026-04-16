@@ -10,15 +10,15 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "black",
-    "jinja2==3.1.5",
-    "jsonschema==4.23.0",
+    "jinja2==3.1.6",
+    "jsonschema==4.26.0",
     "pyyaml<7",
     "requests",
-    "rich==14.1.0",
-    "ruff==0.12.8",
+    "rich==15.0.0",
+    "ruff==0.15.10",
     "setuptools",
-    "typer==0.16.0",
-    "pydantic"
+    "typer==0.24.1",
+    "pydantic",
 ]
 version = "4.3.6"
 classifiers = [

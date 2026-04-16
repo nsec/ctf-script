@@ -9,7 +9,6 @@ import rich
 import typer
 from rich.console import Console
 from rich.prompt import Prompt
-from typer import Typer
 from typing_extensions import Annotated
 
 from ctf import ENV, STATE
@@ -30,7 +29,7 @@ from ctf.utils import find_ctf_root_directory, get_version, show_version
 from ctf.validate import app as validate_app
 from ctf.version import app as version_app
 
-app = Typer(
+app = typer.Typer(
     help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.",
     no_args_is_help=True,
 )
@@ -108,16 +107,30 @@ def check_tool_version() -> None:
 @app.callback()
 def global_options(
     location: Annotated[
-        str, typer.Option("--location", help="CTF root directory location.")
+        str,
+        typer.Option(
+            "--location",
+            help="CTF root directory location.",
+            rich_help_panel="Global options",
+        ),
     ] = "",
     no_update_check: Annotated[
         bool,
         typer.Option(
-            "--no-update-check", help="Do not check for update.", is_flag=True
+            "--no-update-check",
+            help="Do not check for update.",
+            is_flag=True,
+            rich_help_panel="Global options",
         ),
     ] = False,
     verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Enable DEBUG logging.")
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable DEBUG logging.",
+            rich_help_panel="Global options",
+        ),
     ] = False,
     version: Annotated[
         bool | None,
@@ -127,6 +140,7 @@ def global_options(
             is_eager=True,
             callback=show_version,
             help="Show version",
+            rich_help_panel="Global options",
         ),
     ] = None,
 ):
