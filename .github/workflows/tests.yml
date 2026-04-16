@@ -29,7 +29,7 @@ jobs:
           sudo apt-get update
 
       - name: Git LFS Pull for deployment
-        run: |  
+        run: |
           echo "Pulling all Git LFS"
           git lfs pull -I **/challenges/**/ansible/**/*
 

@@ -32,7 +32,7 @@ tree until it finds `challenges/` and `.deploy` directories, which is the root o
 ```raw
 my-ctf/
 ├── challenges/                   # Directory containing all the tracks
-│   ├── track1/                   # Directory for a specific track that contains N flags. 
+│   ├── track1/                   # Directory for a specific track that contains N flags.
 │   │   ├── track.yaml            # Main file that describes the track
 │   │   ├── files/                # Directory that contains all the files available for download in the track
 │   │   │   ├── somefile.zip

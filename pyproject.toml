@@ -27,7 +27,13 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-workflow = ["pybadges", "matplotlib", "standard-imghdr ; python_version >= \"3.13\""]
+dev = ["pre-commit", "ruff"]
+workflow = [
+    "pybadges",
+    "matplotlib",
+    "standard-imghdr ; python_version >= \"3.13\"",
+    "ctf-script[dev]"
+]
 
 [project.scripts]
 ctf = "ctf.__main__:main"
