@@ -35,9 +35,21 @@ def redeploy(
             help="If there are artefacts remaining, delete them without asking.",
         ),
     ] = False,
+    skip_build: Annotated[
+        bool,
+        typer.Option(
+            "--skip-build",
+            help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
+        ),
+    ] = False,
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
     destroy(tracks=tracks, production=production, remote=remote, force=force)
     deploy(
-        tracks=tracks, production=production, remote=remote, force=force, redeploy=True
+        tracks=tracks,
+        production=production,
+        remote=remote,
+        redeploy=True,
+        force=force,
+        skip_build=skip_build,
     )
