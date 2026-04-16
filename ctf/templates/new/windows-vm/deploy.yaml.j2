@@ -16,7 +16,7 @@
         value: "{{ '{{ item.flag }}' }}"
       ansible.builtin.set_fact:
         track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"
-    
+
     - name: "Running free form: directly with the executable (PowerShell)"
       ansible.builtin.raw: |
           powershell -c $systeminfo = Get-ComputerInfo
