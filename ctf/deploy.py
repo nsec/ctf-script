@@ -52,6 +52,10 @@ def deploy(
         bool,
         typer.Option("--force", help="Force the deployment even if there are errors."),
     ] = False,
+    skip_build: Annotated[
+        bool,
+        typer.Option("--skip-build", help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)")
+    ] = False,
 ):
     ENV["INCUS_REMOTE"] = remote
     # Run generate first.
@@ -118,7 +122,7 @@ def deploy(
             t.name,
         ),  # Running ansible on containers first then virtual machines
     ):
-        if track.require_build_container:
+        if not skip_build and track.require_build_container:
             run_ansible_playbook(
                 remote=remote,
                 production=production,
