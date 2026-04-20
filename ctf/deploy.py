@@ -6,6 +6,7 @@ import textwrap
 import time
 
 import typer
+from rich.prompt import IntPrompt
 from typing_extensions import Annotated
 
 from ctf import ENV, STATE
@@ -85,35 +86,10 @@ def deploy(
         check=True,
     )
 
-    try:
-        subprocess.run(
-            args=[terraform_binary(), "apply", "-auto-approve"],
-            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
-            check=True,
-        )
-    except subprocess.CalledProcessError:
-        LOG.warning(
-            f"The project could not deploy due to instable state. It is often due to CTRL+C while deploying as {os.path.basename(terraform_binary())} was not able to save the state of each object created."
-        )
-
-        if (input("Do you want to clean and start over? [Y/n] ").lower() or "y") != "y":
-            exit(code=1)
-
-        destroy(tracks=tracks, production=production, remote=remote, force=True)
-
-        distinct_tracks = generate(tracks=tracks, production=production, remote=remote)
-
-        subprocess.run(
-            args=[terraform_binary(), "apply", "-auto-approve"],
-            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
-            check=True,
-        )
-    except KeyboardInterrupt:
-        LOG.warning(
-            "CTRL+C was detected during Terraform deployment. Destroying everything..."
-        )
-        destroy(tracks=tracks, production=production, remote=remote, force=True)
-        exit(code=0)
+    if regenerated_tracks := terraform_apply(
+        tracks=tracks, production=production, remote=remote
+    ):
+        distinct_tracks = regenerated_tracks
 
     # Starting a timer for tracks with a virtual machine in them.
     start_timer: float = time.time()
@@ -152,44 +128,10 @@ def deploy(
                     }
                 )
 
-                try:
-                    subprocess.run(
-                        args=[terraform_binary(), "apply", "-auto-approve"],
-                        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
-                        check=True,
-                    )
-                except subprocess.CalledProcessError:
-                    LOG.warning(
-                        f"The project could not deploy due to instable state. It is often due to CTRL+C while deploying as {os.path.basename(terraform_binary())} was not able to save the state of each object created."
-                    )
-
-                    if (
-                        input("Do you want to clean and start over? [Y/n] ").lower()
-                        or "y"
-                    ) != "y":
-                        exit(code=1)
-
-                    destroy(
-                        tracks=tracks, production=production, remote=remote, force=True
-                    )
-
-                    distinct_tracks = generate(
-                        tracks=tracks, production=production, remote=remote
-                    )
-
-                    subprocess.run(
-                        args=[terraform_binary(), "apply", "-auto-approve"],
-                        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
-                        check=True,
-                    )
-                except KeyboardInterrupt:
-                    LOG.warning(
-                        "CTRL+C was detected during Terraform deployment. Destroying everything..."
-                    )
-                    destroy(
-                        tracks=tracks, production=production, remote=remote, force=True
-                    )
-                    exit(code=0)
+                if regenerated_tracks := terraform_apply(
+                    tracks=tracks, production=production, remote=remote
+                ):
+                    distinct_tracks = regenerated_tracks
 
         if not os.path.exists(
             path=(
@@ -345,6 +287,21 @@ def deploy(
                 args=["incus", f"--project={track}", "list"], check=True, env=ENV
             )
 
+    if distinct_tracks:
+        LOG.info(msg="Applying post-deploy Terraform resources...")
+        try:
+            terraform_apply(
+                tracks=tracks,
+                production=production,
+                remote=remote,
+                post_deploy_phase=True,
+            )
+        except subprocess.CalledProcessError:
+            LOG.critical(
+                "Could not apply post-deploy Terraform resources. Fix the Terraform configuration and rerun `ctf deploy`."
+            )
+            exit(code=1)
+
     if not production and distinct_tracks:
         tracks_list = list(distinct_tracks)
         track_index = input(
@@ -374,6 +331,66 @@ def deploy(
             LOG.warning(
                 msg=f"Could not switch project, unrecognized input: {track_index}."
             )
+
+
+def terraform_apply(
+    tracks: list[str],
+    production: bool,
+    remote: str,
+    *,
+    post_deploy_phase: bool = False,
+) -> set[Track]:
+    args = [
+        terraform_binary(),
+        "apply",
+        "-auto-approve",
+        f"-var=post_deploy_phase={str(post_deploy_phase).lower()}",
+    ]
+
+    try:
+        subprocess.run(
+            args=args,
+            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        LOG.warning(
+            f"The project could not deploy due to instable state. It is often due to CTRL+C while deploying as {os.path.basename(terraform_binary())} was not able to save the state of each object created."
+        )
+
+        match IntPrompt.ask(
+            "Do you want to start over (1), clean up (2) or quit (3)?",
+            choices=["1", "2", "3"],
+            default=1,
+        ):
+            case 1:
+                destroy(tracks=tracks, production=production, remote=remote, force=True)
+
+                distinct_tracks = generate(
+                    tracks=tracks, production=production, remote=remote
+                )
+
+                subprocess.run(
+                    args=args,
+                    cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+                    check=True,
+                )
+
+                return distinct_tracks
+            case 2:
+                destroy(tracks=tracks, production=production, remote=remote, force=True)
+                exit(0)
+            case 3:
+                exit(1)
+
+    except KeyboardInterrupt:
+        LOG.warning(
+            "CTRL+C was detected during Terraform deployment. Destroying everything..."
+        )
+        destroy(tracks=tracks, production=production, remote=remote, force=True)
+        exit(code=0)
+
+    return set()
 
 
 def run_ansible_playbook(

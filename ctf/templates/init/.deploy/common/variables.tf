@@ -13,6 +13,11 @@ variable "build_container" {
   type    = bool
 }
 
+variable "post_deploy_phase" {
+  default = false
+  type    = bool
+}
+
 variable "ctf_dns_network_zone" {
   default = "ctf"
   type    = string

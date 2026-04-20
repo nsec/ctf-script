@@ -120,6 +120,7 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
                     module "track-{{ track.name }}" {
                       source = "../challenges/{{ track.name }}/terraform"
                       build_container = {{ 'true' if track.require_build_container else 'false' }}
+                      post_deploy_phase = var.post_deploy_phase
                       {% if track.production %}deploy = "production"{% endif %}
                       {% if track.remote %}incus_remote = "{{ track.remote }}"{% endif %}
                       {% for ov in output_variables %}
@@ -145,6 +146,11 @@ def create_terraform_modules_file(remote: str, production: bool = False):
         template = jinja2.Environment().from_string(
             source=textwrap.dedent(
                 text="""\
+                    variable "post_deploy_phase" {
+                      default = false
+                      type    = bool
+                    }
+
                     module "common" {
                       source = "./common"
                       {% if production %}deploy = "production"{% endif %}
