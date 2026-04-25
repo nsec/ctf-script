@@ -12,7 +12,7 @@ import yaml
 
 from ctf import ENV
 from ctf.logger import LOG
-from ctf.models import Track
+from ctf.models import Track, TrackYaml
 
 __CTF_ROOT_DIRECTORY = ""
 
@@ -64,6 +64,9 @@ def does_track_require_build_container(track: Track) -> bool:
 
 
 def track_has_virtual_machine(track: str | Track) -> bool:
+    track_yaml: TrackYaml = TrackYaml.model_validate(
+        parse_track_yaml(track_name=track.name if isinstance(track, Track) else track)
+    )
     with open(
         os.path.join(
             find_ctf_root_directory(),
@@ -74,7 +77,19 @@ def track_has_virtual_machine(track: str | Track) -> bool:
         ),
         "r",
     ) as f:
-        return re.search(r'type\s*=\s*"virtual-machine"', f.read()) is not None
+        return (
+            track_yaml.instances
+            and any(
+                instance.type == "virtual-machine"
+                for instance in track_yaml.instances.root.values()
+            )
+        ) or (
+            re.search(
+                r'(type\s*=\s*"virtual-machine"|type"\s*:\s*"virtual-machine")',
+                f.read(),
+            )
+            is not None
+        )
 
 
 def validate_track_can_be_deployed(track: Track) -> bool:
