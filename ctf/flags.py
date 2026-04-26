@@ -63,7 +63,10 @@ def flags(
             LOG.debug(msg=f"No flag in track {track.name}. Skipping...")
             continue
 
-        flags.extend(track_yaml["flags"])
+        track_flags = track_yaml["flags"]
+        for track_flag in track_flags:
+            track_flag["return_string"] = f"{track_flag["return_string"]} [{track_flag.get('cfss')}]"
+        flags.extend(track_flags)
 
     if not flags:
         LOG.warning(msg="No flag found...")
