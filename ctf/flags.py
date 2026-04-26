@@ -65,7 +65,9 @@ def flags(
 
         track_flags = track_yaml["flags"]
         for track_flag in track_flags:
-            track_flag["return_string"] = f"{track_flag["return_string"]} [{track_flag.get('cfss')}]"
+            track_flag["return_string"] = (
+                f"{track_flag['return_string']} [{track_flag.get('cfss')}]"
+            )
         flags.extend(track_flags)
 
     if not flags:
