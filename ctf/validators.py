@@ -533,6 +533,28 @@ class CFSSStringValidator(Validator):
         return errors
 
 
+class HasAtLeastOneDiscoursePostValidator(Validator):
+    """Validate that each track has at least one discourse post."""
+
+    def validate(self, track_name: str) -> list[ValidationError]:
+        errors: list[ValidationError] = []
+        discourse_posts = parse_post_yamls(track_name=track_name)
+        if len(discourse_posts) == 0:
+            errors.append(
+                ValidationError(
+                    error_name="No discourse post found",
+                    error_description="At least one discourse post should be defined for the track.",
+                    track_name=track_name,
+                    details={
+                        "Posts directory": os.path.join(
+                            find_ctf_root_directory(), "challenges", track_name, "posts"
+                        )
+                    },
+                )
+            )
+        return errors
+
+
 validators_list = [
     CFSSStringValidator,
     DiscourseFileNamesValidator,
@@ -543,4 +565,5 @@ validators_list = [
     OrphanServicesValidator,
     PlaceholderValuesValidator,
     ServicesValidator,
+    HasAtLeastOneDiscoursePostValidator,
 ]
