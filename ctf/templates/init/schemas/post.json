@@ -107,7 +107,7 @@
         "user": {
           "description": "The discourse user this post is posted by.",
           "type": "string",
-          "enum": ["nsec","system","theChief","theMuscle","theFace","theFixer","theMechanic"]
+          "enum": ["nsec","system"]
         }
       },
       "required": [

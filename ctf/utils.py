@@ -135,7 +135,7 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
                     module "track-{{ track.name }}" {
                       source = "../challenges/{{ track.name }}/terraform"
                       build_container = {{ 'true' if track.require_build_container else 'false' }}
-                      post_deploy_phase = var.post_deploy_phase
+                      already_deployed = {{ 'true' if track.already_deployed else 'false' }}
                       {% if track.production %}deploy = "production"{% endif %}
                       {% if track.remote %}incus_remote = "{{ track.remote }}"{% endif %}
                       {% for ov in output_variables %}
@@ -161,11 +161,6 @@ def create_terraform_modules_file(remote: str, production: bool = False):
         template = jinja2.Environment().from_string(
             source=textwrap.dedent(
                 text="""\
-                    variable "post_deploy_phase" {
-                      default = false
-                      type    = bool
-                    }
-
                     module "common" {
                       source = "./common"
                       {% if production %}deploy = "production"{% endif %}
@@ -268,12 +263,14 @@ def get_terraform_tracks_from_modules() -> set[Track]:
     production_line_regex = re.compile(r"^deploy\s*=\s*\"production\"$")
     remote_line_regex = re.compile(r"^incus_remote\s*=\s*\"([^\"]+)\"$")
     build_container_line_regex = re.compile(r"^build_container\s*=\s*true$")
+    already_deployed_line_regex = re.compile(r"^already_deployed\s*=\s*true$")
 
     tracks: set[Track] = set()
     name: str = ""
     remote: str = "local"
     production: bool = False
     require_build_container: bool = False
+    already_deployed: bool = False
 
     for line in modules_tf.splitlines():
         if not (line := line.strip()):
@@ -287,12 +284,14 @@ def get_terraform_tracks_from_modules() -> set[Track]:
                     production=production,
                     require_build_container=require_build_container,
                     has_virtual_machine=track_has_virtual_machine(track=name),
+                    already_deployed=already_deployed,
                 )
             )
             name = ""
             remote = "local"
             production = False
             require_build_container = False
+            already_deployed = False
             continue
 
         if m := module_line_regex.match(line):
@@ -306,6 +305,9 @@ def get_terraform_tracks_from_modules() -> set[Track]:
 
         if build_container_line_regex.match(line):
             require_build_container = True
+
+        if already_deployed_line_regex.match(line):
+            already_deployed = True
 
     return tracks
 

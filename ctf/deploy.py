@@ -197,6 +197,8 @@ def deploy(
             remote=remote, production=production, track=track.name, path=path
         )
 
+        track.already_deployed = True
+
         if not production:
             incus_list = json.loads(
                 s=subprocess.run(
@@ -294,7 +296,6 @@ def deploy(
                 tracks=tracks,
                 production=production,
                 remote=remote,
-                post_deploy_phase=True,
             )
         except subprocess.CalledProcessError:
             LOG.critical(
@@ -337,14 +338,11 @@ def terraform_apply(
     tracks: list[str],
     production: bool,
     remote: str,
-    *,
-    post_deploy_phase: bool = False,
 ) -> set[Track]:
     args = [
         terraform_binary(),
         "apply",
         "-auto-approve",
-        f"-var=post_deploy_phase={str(post_deploy_phase).lower()}",
     ]
 
     try:
