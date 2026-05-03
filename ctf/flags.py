@@ -75,12 +75,12 @@ def flags(
         return
 
     if format == OutputFormat.JSON:
-        rich.print(json.dumps(obj=flags, indent=2))
+        rich.print(rich.markup.escape(json.dumps(obj=flags, indent=2)))
     elif format == OutputFormat.CSV:
         output = io.StringIO()
         writer = csv.DictWriter(f=output, fieldnames=flags[0].keys())
         writer.writeheader()
         writer.writerows(rowdicts=flags)
-        rich.print(output.getvalue())
+        rich.print(rich.markup.escape(output.getvalue()))
     elif format == OutputFormat.YAML:
-        rich.print(yaml.safe_dump(data=flags))
+        rich.print(rich.markup.escape(yaml.safe_dump(data=flags)))
