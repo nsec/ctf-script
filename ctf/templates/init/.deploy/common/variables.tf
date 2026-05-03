@@ -13,7 +13,7 @@ variable "build_container" {
   type    = bool
 }
 
-variable "post_deploy_phase" {
+variable "already_deployed" {
   default = false
   type    = bool
 }
