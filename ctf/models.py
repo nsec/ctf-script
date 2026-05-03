@@ -22,6 +22,7 @@ class Track(BaseModel):
     production: bool = False
     require_build_container: bool = False
     has_virtual_machine: bool = False
+    already_deployed: bool = False
 
     def __eq__(self, other: Any) -> bool:
         match other:
