@@ -198,6 +198,10 @@ def deploy(
         )
 
         track.already_deployed = True
+        remove_tracks_from_terraform_modules(
+            {track}, remote=remote, production=production
+        )
+        add_tracks_to_terraform_modules({track})
 
         if not production:
             incus_list = json.loads(
