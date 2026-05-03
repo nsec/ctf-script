@@ -82,6 +82,7 @@ resource "incus_instance" "this" {
     {
       "environment.http_proxy"  = var.deploy == "production" ? "http://proxy.ctf-int.internal.nsec.io:3128" : null
       "environment.https_proxy" = var.deploy == "production" ? "http://proxy.ctf-int.internal.nsec.io:3128" : null
+      "environment.no_proxy" = var.deploy == "production" ? "127.0.0.1,::1,localhost" : null
     }
   )
 
