@@ -58,7 +58,6 @@ def destroy(
     ] = [],
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
-    LOG.info(msg="tofu destroy...")
 
     if not os.path.exists(
         path=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf")
@@ -66,7 +65,8 @@ def destroy(
         LOG.critical(msg="Nothing to destroy.")
         exit(code=1)
 
-    terraform_tracks = get_terraform_tracks_from_modules()
+    terraform_tracks: set[Track] = get_terraform_tracks_from_modules()
+    terraform_tracks -= {Track(name=x) for x in exclude_tracks}
 
     total_deployed_tracks = len(terraform_tracks)
 
@@ -86,9 +86,10 @@ def destroy(
     )
     if tmp_tracks and tmp_tracks != terraform_tracks:
         terraform_tracks &= tmp_tracks
-        if not terraform_tracks:
-            LOG.warning("No track to destroy.")
-            return
+
+    if not terraform_tracks:
+        LOG.warning("No track to destroy.")
+        return
 
     if current_project in terraform_tracks:
         projects: set[Track] = {
