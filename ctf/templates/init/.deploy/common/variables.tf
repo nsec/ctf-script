@@ -1,5 +1,5 @@
 variable "incus_remote" {
-  default = var.incus_remote
+  default = "local"
   type    = string
 }
 
