@@ -81,7 +81,9 @@ def destroy(
         .strip()
     )
 
-    tmp_tracks: set[Track] = set(Track(name=x) for x in tracks if x not in exclude_tracks)
+    tmp_tracks: set[Track] = set(
+        Track(name=x) for x in tracks if x not in exclude_tracks
+    )
     if tmp_tracks and tmp_tracks != terraform_tracks:
         terraform_tracks &= tmp_tracks
         if not terraform_tracks:
