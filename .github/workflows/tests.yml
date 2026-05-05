@@ -163,7 +163,7 @@ jobs:
       - name: Test deployment looping through tracks
         working-directory: test-ctf
         run: |
-          IFS=" " read -r -a tracks <<< "$(python3 -c 'from ctf.utils import get_all_available_tracks,validate_track_can_be_deployed;print(str([t.name for t in get_all_available_tracks() if validate_track_can_be_deployed(t)]).strip("[]\x27").replace("\x27, \x27"," "))')"
+          IFS=" " read -r -a tracks <<< "$(python3 -c 'from ctf.utils import get_all_available_tracks,track_has_virtual_machine,validate_track_can_be_deployed;print(str([t.name for t in get_all_available_tracks() if validate_track_can_be_deployed(t) and not track_has_virtual_machine(t)]).strip("[]\x27").replace("\x27, \x27"," "))')"
 
           [ "${#tracks[@]}" -eq 0 ] && exit 1
 
@@ -179,16 +179,16 @@ jobs:
         working-directory: test-ctf
         run: |
           ctf --no-update-check deploy --production
-          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 3 ] || exit 1
           ctf --no-update-check destroy --force
 
       - name: Test redeployment of Mock Track Apache PHP
         working-directory: test-ctf
         run: |
           ctf --no-update-check deploy --production
-          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 3 ] || exit 1
           ctf --no-update-check redeploy --production --tracks mock-track-apache-php
-          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 3 ] || exit 1
           ctf --no-update-check destroy --force
 
       - name: Test deployment of a track not deployed without destroying the rest

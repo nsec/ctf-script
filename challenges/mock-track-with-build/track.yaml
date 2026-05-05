@@ -1,0 +1,54 @@
+name: mock-track-with-build
+description: "Mock track with a build container"
+integrated_with_scenario: false
+contacts:
+  dev:
+    - user_dev
+  qa:
+    - user_qa
+  support:
+    - user_support
+instances:
+  mock-track-with-build:
+    image: "images:ubuntu/24.04"
+    profiles:
+      - "default"
+      - "containers"
+    type: "container"
+    description: "Mock track"
+    hwaddr: "00:16:3e:6d:5c:b6"
+    record: "mock-track-with-build"
+    ipv6: "9000:d37e:c40b:a9fb:216:3eff:fe6d:5cb6"
+    config: {}
+    devices: []
+    services:
+      - name: HTTP
+        port: 80
+        check: http
+  build-container:
+    is_build_container: true
+    image: "images:ubuntu/24.04"
+    profiles:
+      - "default"
+    type: "container"
+    description: "Building container"
+    hwaddr:
+    record:
+    ipv6:
+    config: {}
+    devices:
+      - name: "root"
+        type: "disk"
+        properties:
+          pool: "default"
+          path: "/"
+          size: "3GiB"
+    services: []
+flags:
+  - flag: FLAG-d41d8cd98f00b204e9800998ecf8427e
+    value: 5
+    description: Free flag in source of index.php
+    return_string: '[mock-track-with-build] 1/1 Good job! Track completed.'
+    cfss: "CFSS:0.3/TS:B/E:M/HSFC:N=4-7"
+    tags:
+      discourse: mock_track_with_build_flag_1

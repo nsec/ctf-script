@@ -1,5 +1,5 @@
-- name: "Install Apache2 and PHP on each host"
-  hosts: "*"
+- name: "Mock track with build container"
+  hosts: all,!build
   vars_files:
     - ../track.yaml
   tasks:
@@ -11,10 +11,10 @@
       ansible.builtin.set_fact:
         track_flags: "{{ track_flags | default({}) | combine({key: value}) }}"
 
-    - name: Copy the main site file (index.php)
-      ansible.builtin.template:
-        src: challenge/index.php
-        dest: /var/www/html/
+    - name: Unarchive the content of the build
+      ansible.builtin.unarchive:
+        src: /tmp/build.tar
+        dest: /tmp/
         owner: root
         group: root
-        mode: '0644'
+        mode: '0755'

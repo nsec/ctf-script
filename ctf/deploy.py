@@ -122,19 +122,11 @@ def deploy(
             )
 
             if production:
+                track.require_build_container = False
                 remove_tracks_from_terraform_modules(
                     {track}, remote=remote, production=production
                 )
-                add_tracks_to_terraform_modules(
-                    {
-                        Track(
-                            name=track.name,
-                            remote=track.remote,
-                            production=track.production,
-                            require_build_container=False,
-                        )
-                    }
-                )
+                add_tracks_to_terraform_modules({track})
 
                 if regenerated_tracks := terraform_apply(
                     tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote
