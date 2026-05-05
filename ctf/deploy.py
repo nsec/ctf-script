@@ -100,11 +100,7 @@ def deploy(
     )
 
     if regenerated_tracks := terraform_apply(
-        tracks=tracks,
-        production=production,
-        remote=remote,
-        vm_remote=vm_remote,
-        vm_project=vm_project,
+        tracks=tracks, production=production, remote=remote
     ):
         distinct_tracks = regenerated_tracks
 
@@ -138,11 +134,7 @@ def deploy(
                 add_tracks_to_terraform_modules({track})
 
                 if regenerated_tracks := terraform_apply(
-                    tracks=tracks,
-                    production=production,
-                    remote=remote,
-                    vm_remote=vm_remote,
-                    vm_project=vm_project,
+                    tracks=tracks, production=production, remote=remote
                 ):
                     distinct_tracks = regenerated_tracks
 
@@ -309,13 +301,7 @@ def deploy(
     if distinct_tracks:
         LOG.info(msg="Applying post-deploy Terraform resources...")
         try:
-            terraform_apply(
-                tracks=tracks,
-                production=production,
-                remote=remote,
-                vm_remote=vm_remote,
-                vm_project=vm_project,
-            )
+            terraform_apply(tracks=tracks, production=production, remote=remote)
         except subprocess.CalledProcessError:
             LOG.critical(
                 "Could not apply post-deploy Terraform resources. Fix the Terraform configuration and rerun `ctf deploy`."
@@ -357,8 +343,6 @@ def terraform_apply(
     tracks: list[str],
     production: bool,
     remote: str,
-    vm_remote: str | None = None,
-    vm_project: str | None = None,
 ) -> set[Track]:
     args = [terraform_binary(), "apply", "-auto-approve"]
 

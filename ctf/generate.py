@@ -80,10 +80,10 @@ def generate(
                     production=production,
                     require_build_container=does_track_require_build_container(track),
                     has_virtual_machine=track_has_virtual_machine(track),
+                    vm_project=vm_project,
+                    vm_remote=vm_remote,
                 )
             )
-            track.vm_project = vm_project
-            track.vm_remote = vm_remote
         distinct_tracks = tmp_tracks
 
         add_tracks_to_terraform_modules(
