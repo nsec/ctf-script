@@ -48,6 +48,14 @@ def destroy(
             help="If there are artefacts remaining, delete them without asking.",
         ),
     ] = False,
+    exclude_tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Exclude the list of provided tracks from destruction.",
+        ),
+    ] = [],
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
     LOG.info(msg="tofu destroy...")
@@ -73,7 +81,7 @@ def destroy(
         .strip()
     )
 
-    tmp_tracks: set[Track] = set(Track(name=x) for x in tracks)
+    tmp_tracks: set[Track] = set(Track(name=x) for x in tracks if x not in exclude_tracks)
     if tmp_tracks and tmp_tracks != terraform_tracks:
         terraform_tracks &= tmp_tracks
         if not terraform_tracks:

@@ -60,11 +60,19 @@ def deploy(
             help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
         ),
     ] = False,
+    exclude_tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Exclude the list of provided tracks from deployment.",
+        ),
+    ] = [],
 ):
     ENV["INCUS_REMOTE"] = remote
     # Run generate first.
     distinct_tracks = generate(
-        tracks=tracks, production=production, remote=remote, redeploy=redeploy
+        tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote, redeploy=redeploy
     )
 
     # Check if Git LFS is installed on the system as it is required for deployment.
@@ -87,7 +95,7 @@ def deploy(
     )
 
     if regenerated_tracks := terraform_apply(
-        tracks=tracks, production=production, remote=remote
+        tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote
     ):
         distinct_tracks = regenerated_tracks
 
@@ -129,7 +137,7 @@ def deploy(
                 )
 
                 if regenerated_tracks := terraform_apply(
-                    tracks=tracks, production=production, remote=remote
+                    tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote
                 ):
                     distinct_tracks = regenerated_tracks
 
@@ -298,6 +306,7 @@ def deploy(
         try:
             terraform_apply(
                 tracks=tracks,
+                exclude_tracks=exclude_tracks,
                 production=production,
                 remote=remote,
             )
@@ -340,6 +349,7 @@ def deploy(
 
 def terraform_apply(
     tracks: list[str],
+    exclude_tracks: list[str],
     production: bool,
     remote: str,
 ) -> set[Track]:
@@ -366,10 +376,10 @@ def terraform_apply(
             default=1,
         ):
             case 1:
-                destroy(tracks=tracks, production=production, remote=remote, force=True)
+                destroy(tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote, force=True)
 
                 distinct_tracks = generate(
-                    tracks=tracks, production=production, remote=remote
+                    tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote
                 )
 
                 subprocess.run(
@@ -380,7 +390,7 @@ def terraform_apply(
 
                 return distinct_tracks
             case 2:
-                destroy(tracks=tracks, production=production, remote=remote, force=True)
+                destroy(tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote, force=True)
                 exit(0)
             case 3:
                 exit(1)
@@ -389,7 +399,7 @@ def terraform_apply(
         LOG.warning(
             "CTRL+C was detected during Terraform deployment. Destroying everything..."
         )
-        destroy(tracks=tracks, production=production, remote=remote, force=True)
+        destroy(tracks=tracks, exclude_tracks=exclude_tracks, production=production, remote=remote, force=True)
         exit(code=0)
 
     return set()

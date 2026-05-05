@@ -47,6 +47,14 @@ def generate(
     redeploy: Annotated[
         bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
     ] = False,
+    exclude_tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Exclude the list of provided tracks from generation.",
+        ),
+    ] = [],
 ) -> set[Track]:
     ENV["INCUS_REMOTE"] = remote
     # Get the list of tracks.
@@ -55,6 +63,7 @@ def generate(
         for track in get_all_available_tracks()
         if validate_track_can_be_deployed(track=track)
         and (not tracks or track.name in tracks)
+        and not track in exclude_tracks
     )
 
     if distinct_tracks:
