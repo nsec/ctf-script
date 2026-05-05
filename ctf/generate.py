@@ -83,7 +83,7 @@ def generate(
         tmp_tracks: set[Track] = set()
         for track in distinct_tracks:
             tmp_tracks.add(
-                track := Track(
+                Track(
                     name=track.name,
                     remote=remote,
                     production=production,
