@@ -68,6 +68,14 @@ def deploy(
             help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
         ),
     ] = False,
+    exclude_tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Exclude the list of provided tracks from deployment.",
+        ),
+    ] = [],
 ):
     ENV["INCUS_REMOTE"] = remote
     # Run generate first.
@@ -77,6 +85,7 @@ def deploy(
         remote=remote,
         vm_remote=vm_remote,
         vm_project=vm_project,
+        exclude_tracks=exclude_tracks,
         redeploy=redeploy,
     )
 
@@ -100,7 +109,10 @@ def deploy(
     )
 
     if regenerated_tracks := terraform_apply(
-        tracks=tracks, production=production, remote=remote
+        tracks=tracks,
+        exclude_tracks=exclude_tracks,
+        production=production,
+        remote=remote,
     ):
         distinct_tracks = regenerated_tracks
 
@@ -134,7 +146,10 @@ def deploy(
                 add_tracks_to_terraform_modules({track})
 
                 if regenerated_tracks := terraform_apply(
-                    tracks=tracks, production=production, remote=remote
+                    tracks=tracks,
+                    exclude_tracks=exclude_tracks,
+                    production=production,
+                    remote=remote,
                 ):
                     distinct_tracks = regenerated_tracks
 
@@ -301,7 +316,12 @@ def deploy(
     if distinct_tracks:
         LOG.info(msg="Applying post-deploy Terraform resources...")
         try:
-            terraform_apply(tracks=tracks, production=production, remote=remote)
+            terraform_apply(
+                tracks=tracks,
+                exclude_tracks=exclude_tracks,
+                production=production,
+                remote=remote,
+            )
         except subprocess.CalledProcessError:
             LOG.critical(
                 "Could not apply post-deploy Terraform resources. Fix the Terraform configuration and rerun `ctf deploy`."
@@ -341,6 +361,7 @@ def deploy(
 
 def terraform_apply(
     tracks: list[str],
+    exclude_tracks: list[str],
     production: bool,
     remote: str,
 ) -> set[Track]:
@@ -363,10 +384,19 @@ def terraform_apply(
             default=1,
         ):
             case 1:
-                destroy(tracks=tracks, production=production, remote=remote, force=True)
+                destroy(
+                    tracks=tracks,
+                    exclude_tracks=exclude_tracks,
+                    production=production,
+                    remote=remote,
+                    force=True,
+                )
 
                 distinct_tracks = generate(
-                    tracks=tracks, production=production, remote=remote
+                    tracks=tracks,
+                    exclude_tracks=exclude_tracks,
+                    production=production,
+                    remote=remote,
                 )
 
                 subprocess.run(
@@ -377,7 +407,13 @@ def terraform_apply(
 
                 return distinct_tracks
             case 2:
-                destroy(tracks=tracks, production=production, remote=remote, force=True)
+                destroy(
+                    tracks=tracks,
+                    exclude_tracks=exclude_tracks,
+                    production=production,
+                    remote=remote,
+                    force=True,
+                )
                 exit(0)
             case 3:
                 exit(1)
@@ -386,7 +422,13 @@ def terraform_apply(
         LOG.warning(
             "CTRL+C was detected during Terraform deployment. Destroying everything..."
         )
-        destroy(tracks=tracks, production=production, remote=remote, force=True)
+        destroy(
+            tracks=tracks,
+            exclude_tracks=exclude_tracks,
+            production=production,
+            remote=remote,
+            force=True,
+        )
         exit(code=0)
 
     return set()

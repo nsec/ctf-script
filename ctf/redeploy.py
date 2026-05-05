@@ -50,9 +50,23 @@ def redeploy(
             help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
         ),
     ] = False,
+    exclude_tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Exclude the list of provided tracks from redeployment.",
+        ),
+    ] = [],
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
-    destroy(tracks=tracks, production=production, remote=remote, force=force)
+    destroy(
+        tracks=tracks,
+        production=production,
+        remote=remote,
+        force=force,
+        exclude_tracks=exclude_tracks,
+    )
     deploy(
         tracks=tracks,
         production=production,
@@ -62,4 +76,5 @@ def redeploy(
         redeploy=True,
         force=force,
         skip_build=skip_build,
+        exclude_tracks=exclude_tracks,
     )

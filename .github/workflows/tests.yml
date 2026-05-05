@@ -199,3 +199,14 @@ jobs:
           ctf --no-update-check redeploy --production --tracks mock-track-python-service
           [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
           ctf --no-update-check destroy --force
+
+      - name: Test deployment of a tracks by excluding one track and then destroying with exclusion
+        working-directory: test-ctf
+        run: |
+          ctf --no-update-check deploy --production --exclude mock-track-apache-php
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          ctf --no-update-check destroy --production --exclude mock-track-python-service
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 1 ] || exit 1
+          ctf --no-update-check redeploy --production --exclude mock-track-apache-php
+          [ "$(incus list --all-projects -cn -fcsv | wc -l)" -eq 2 ] || exit 1
+          ctf --no-update-check destroy --force

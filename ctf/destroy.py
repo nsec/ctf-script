@@ -48,9 +48,16 @@ def destroy(
             help="If there are artefacts remaining, delete them without asking.",
         ),
     ] = False,
+    exclude_tracks: Annotated[
+        list[str],
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Exclude the list of provided tracks from destruction.",
+        ),
+    ] = [],
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
-    LOG.info(msg="tofu destroy...")
 
     if not os.path.exists(
         path=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf")
@@ -58,9 +65,11 @@ def destroy(
         LOG.critical(msg="Nothing to destroy.")
         exit(code=1)
 
-    terraform_tracks = get_terraform_tracks_from_modules()
+    terraform_tracks: set[Track] = get_terraform_tracks_from_modules()
 
     total_deployed_tracks = len(terraform_tracks)
+
+    terraform_tracks -= {Track(name=x) for x in exclude_tracks}
 
     current_project = Track(
         name=subprocess.run(
@@ -73,12 +82,13 @@ def destroy(
         .strip()
     )
 
-    tmp_tracks: set[Track] = set(Track(name=x) for x in tracks)
+    tmp_tracks: set[Track] = {Track(name=x) for x in tracks}
     if tmp_tracks and tmp_tracks != terraform_tracks:
         terraform_tracks &= tmp_tracks
-        if not terraform_tracks:
-            LOG.warning("No track to destroy.")
-            return
+
+    if not terraform_tracks:
+        LOG.warning("No track to destroy.")
+        return
 
     if current_project in terraform_tracks:
         projects: set[Track] = {
