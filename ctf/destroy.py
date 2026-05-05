@@ -66,9 +66,10 @@ def destroy(
         exit(code=1)
 
     terraform_tracks: set[Track] = get_terraform_tracks_from_modules()
-    terraform_tracks -= {Track(name=x) for x in exclude_tracks}
 
     total_deployed_tracks = len(terraform_tracks)
+
+    terraform_tracks -= {Track(name=x) for x in exclude_tracks}
 
     current_project = Track(
         name=subprocess.run(
@@ -81,9 +82,7 @@ def destroy(
         .strip()
     )
 
-    tmp_tracks: set[Track] = set(
-        Track(name=x) for x in tracks if x not in exclude_tracks
-    )
+    tmp_tracks: set[Track] = {Track(name=x) for x in tracks}
     if tmp_tracks and tmp_tracks != terraform_tracks:
         terraform_tracks &= tmp_tracks
 
