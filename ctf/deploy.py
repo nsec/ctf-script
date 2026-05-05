@@ -81,11 +81,11 @@ def deploy(
     # Run generate first.
     distinct_tracks = generate(
         tracks=tracks,
+        exclude_tracks=exclude_tracks,
         production=production,
         remote=remote,
         vm_remote=vm_remote,
         vm_project=vm_project,
-        exclude_tracks=exclude_tracks,
         redeploy=redeploy,
     )
 
