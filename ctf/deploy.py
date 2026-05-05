@@ -46,6 +46,14 @@ def deploy(
     remote: Annotated[
         str, typer.Option("--remote", help="Incus remote to deploy to")
     ] = "local",
+    vm_remote: Annotated[
+        str | None,
+        typer.Option("--vm-remote", help="Incus remote for VM to be deployed to"),
+    ] = None,
+    vm_project: Annotated[
+        str | None,
+        typer.Option("--vm-project", help="Incus project for VM to be deployed to"),
+    ] = None,
     redeploy: Annotated[
         bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
     ] = False,
@@ -76,6 +84,8 @@ def deploy(
         exclude_tracks=exclude_tracks,
         production=production,
         remote=remote,
+        vm_remote=vm_remote,
+        vm_project=vm_project,
         redeploy=redeploy,
     )
 
@@ -355,11 +365,7 @@ def terraform_apply(
     production: bool,
     remote: str,
 ) -> set[Track]:
-    args = [
-        terraform_binary(),
-        "apply",
-        "-auto-approve",
-    ]
+    args = [terraform_binary(), "apply", "-auto-approve"]
 
     try:
         subprocess.run(

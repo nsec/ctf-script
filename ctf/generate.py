@@ -44,6 +44,14 @@ def generate(
     remote: Annotated[
         str, typer.Option("--remote", help="Incus remote to deploy to")
     ] = "local",
+    vm_remote: Annotated[
+        str | None,
+        typer.Option("--vm-remote", help="Incus remote for VM to be deployed to"),
+    ] = None,
+    vm_project: Annotated[
+        str | None,
+        typer.Option("--vm-project", help="Incus project for VM to be deployed to"),
+    ] = None,
     redeploy: Annotated[
         bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
     ] = False,
@@ -81,6 +89,8 @@ def generate(
                     production=production,
                     require_build_container=does_track_require_build_container(track),
                     has_virtual_machine=track_has_virtual_machine(track),
+                    vm_project=vm_project,
+                    vm_remote=vm_remote,
                 )
             )
         distinct_tracks = tmp_tracks

@@ -19,6 +19,8 @@ class Track(BaseModel):
     # Every object is unique on it's name
     name: IncusStr
     remote: str = "local"
+    vm_remote: str | None = None
+    vm_project: str | None = None
     production: bool = False
     require_build_container: bool = False
     has_virtual_machine: bool = False
