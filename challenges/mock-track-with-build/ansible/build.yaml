@@ -1,0 +1,34 @@
+- name: "Build container"
+  hosts: "build-container"
+  vars_files:
+    - ../track.yaml
+  tasks:
+    - name: "Load flags"
+      loop: "{{ flags }}"
+      vars:
+        key: "{{ (item.tags).discourse }}"
+        value: "{{ item.flag }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ track_flags | default({}) | combine({key: value}) }}"
+
+    - name: Create main
+      ansible.builtin.copy:
+        dest: /tmp/main
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          TEST
+
+    - name: Create archive of build
+      community.general.archive:
+        path: /tmp/main
+        dest: /tmp/build.tar
+        format: tar
+        mode: '0644'
+
+    - name: Fetch archive
+      ansible.builtin.fetch:
+        src: /tmp/build.tar
+        dest: /tmp/
+        flat: true
