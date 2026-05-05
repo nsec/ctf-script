@@ -46,6 +46,14 @@ def deploy(
     remote: Annotated[
         str, typer.Option("--remote", help="Incus remote to deploy to")
     ] = "local",
+    vm_remote: Annotated[
+        str | None,
+        typer.Option("--vm-remote", help="Incus remote for VM to be deployed to"),
+    ] = None,
+    vm_project: Annotated[
+        str | None,
+        typer.Option("--vm-project", help="Incus project for VM to be deployed to"),
+    ] = None,
     redeploy: Annotated[
         bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
     ] = False,
@@ -64,7 +72,12 @@ def deploy(
     ENV["INCUS_REMOTE"] = remote
     # Run generate first.
     distinct_tracks = generate(
-        tracks=tracks, production=production, remote=remote, redeploy=redeploy
+        tracks=tracks,
+        production=production,
+        remote=remote,
+        vm_remote=vm_remote,
+        vm_project=vm_project,
+        redeploy=redeploy,
     )
 
     # Check if Git LFS is installed on the system as it is required for deployment.
@@ -87,7 +100,11 @@ def deploy(
     )
 
     if regenerated_tracks := terraform_apply(
-        tracks=tracks, production=production, remote=remote
+        tracks=tracks,
+        production=production,
+        remote=remote,
+        vm_remote=vm_remote,
+        vm_project=vm_project,
     ):
         distinct_tracks = regenerated_tracks
 
@@ -121,7 +138,11 @@ def deploy(
                 add_tracks_to_terraform_modules({track})
 
                 if regenerated_tracks := terraform_apply(
-                    tracks=tracks, production=production, remote=remote
+                    tracks=tracks,
+                    production=production,
+                    remote=remote,
+                    vm_remote=vm_remote,
+                    vm_project=vm_project,
                 ):
                     distinct_tracks = regenerated_tracks
 
@@ -292,6 +313,8 @@ def deploy(
                 tracks=tracks,
                 production=production,
                 remote=remote,
+                vm_remote=vm_remote,
+                vm_project=vm_project,
             )
         except subprocess.CalledProcessError:
             LOG.critical(
@@ -334,12 +357,10 @@ def terraform_apply(
     tracks: list[str],
     production: bool,
     remote: str,
+    vm_remote: str | None = None,
+    vm_project: str | None = None,
 ) -> set[Track]:
-    args = [
-        terraform_binary(),
-        "apply",
-        "-auto-approve",
-    ]
+    args = [terraform_binary(), "apply", "-auto-approve"]
 
     try:
         subprocess.run(

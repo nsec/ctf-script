@@ -28,6 +28,14 @@ def redeploy(
     remote: Annotated[
         str, typer.Option("--remote", help="Incus remote to deploy to")
     ] = "local",
+    vm_remote: Annotated[
+        str | None,
+        typer.Option("--vm-remote", help="Incus remote for VM to be deployed to"),
+    ] = None,
+    vm_project: Annotated[
+        str | None,
+        typer.Option("--vm-project", help="Incus project for VM to be deployed to"),
+    ] = None,
     force: Annotated[
         bool,
         typer.Option(
@@ -49,6 +57,8 @@ def redeploy(
         tracks=tracks,
         production=production,
         remote=remote,
+        vm_remote=vm_remote,
+        vm_project=vm_project,
         redeploy=True,
         force=force,
         skip_build=skip_build,
