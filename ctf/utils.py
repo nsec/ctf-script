@@ -138,6 +138,8 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
                       already_deployed = {{ 'true' if track.already_deployed else 'false' }}
                       {% if track.production %}deploy = "production"{% endif %}
                       {% if track.remote %}incus_remote = "{{ track.remote }}"{% endif %}
+                      {% if track.vm_remote %}incus_vm_remote = "{{ track.vm_remote }}"{% endif %}
+                      {% if track.vm_project %}incus_vm_project = "{{ track.vm_project }}"{% endif %}
                       {% for ov in output_variables %}
                       {{ ov }} = module.common.{{ ov }}
                       {% endfor %}
@@ -154,7 +156,12 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
         )
 
 
-def create_terraform_modules_file(remote: str, production: bool = False):
+def create_terraform_modules_file(
+    remote: str,
+    vm_remote: str | None = None,
+    vm_project: str | None = None,
+    production: bool = False,
+):
     with open(
         file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="w+"
     ) as fd:
@@ -165,12 +172,21 @@ def create_terraform_modules_file(remote: str, production: bool = False):
                       source = "./common"
                       {% if production %}deploy = "production"{% endif %}
                       {% if remote %}incus_remote = "{{ remote }}"{% endif %}
+                      {% if vm_remote %}incus_vm_remote = "{{ vm_remote }}"{% endif %}
+                      {% if vm_project %}incus_vm_project = "{{ track.vm_project }}"{% endif %}
                     }
 
                     """
             )
         )
-        fd.write(template.render(production=production, remote=remote))
+        fd.write(
+            template.render(
+                production=production,
+                remote=remote,
+                vm_remote=vm_remote,
+                vm_project=vm_project,
+            )
+        )
 
 
 def get_common_modules_output_variables() -> set[str]:

@@ -1,5 +1,15 @@
 variable "incus_remote" {
-  default = "local"
+  default = var.incus_remote
+  type    = string
+}
+
+variable "incus_vm_remote" {
+  default = null
+  type    = string
+}
+
+variable "incus_vm_project" {
+  default = null
   type    = string
 }
 
