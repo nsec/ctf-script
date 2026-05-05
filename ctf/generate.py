@@ -63,7 +63,7 @@ def generate(
         for track in get_all_available_tracks()
         if validate_track_can_be_deployed(track=track)
         and (not tracks or track.name in tracks)
-        and not track in exclude_tracks
+        and track not in exclude_tracks
     )
 
     if distinct_tracks:
