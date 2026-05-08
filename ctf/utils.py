@@ -158,10 +158,8 @@ def add_tracks_to_terraform_modules(tracks: set[Track]):
 
 def create_terraform_modules_file(
     remote: str,
-    vm_remote: str | None = None,
-    vm_project: str | None = None,
     production: bool = False,
-):
+) -> None:
     with open(
         file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="w+"
     ) as fd:
@@ -172,8 +170,6 @@ def create_terraform_modules_file(
                       source = "./common"
                       {% if production %}deploy = "production"{% endif %}
                       {% if remote %}incus_remote = "{{ remote }}"{% endif %}
-                      {% if vm_remote %}incus_vm_remote = "{{ vm_remote }}"{% endif %}
-                      {% if vm_project %}incus_vm_project = "{{ track.vm_project }}"{% endif %}
                     }
 
                     """
@@ -183,8 +179,6 @@ def create_terraform_modules_file(
             template.render(
                 production=production,
                 remote=remote,
-                vm_remote=vm_remote,
-                vm_project=vm_project,
             )
         )
 
@@ -329,7 +323,10 @@ def get_terraform_tracks_from_modules() -> set[Track]:
 
 
 def remove_tracks_from_terraform_modules(
-    tracks: set[Track], remote: str, production: bool = False
+    tracks: set[Track],
+    remote: str,
+    *,
+    production: bool = False,
 ):
     current_tracks = get_terraform_tracks_from_modules()
 

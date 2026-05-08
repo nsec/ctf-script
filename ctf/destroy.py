@@ -36,7 +36,7 @@ def destroy(
         typer.Option(
             "--production",
             envvar="CTF_PRODUCTION",
-            help="Do a production deployment. Only use this if you know what you're doing.",
+            help="Do a production destruction. Only use this if you know what you're doing.",
         ),
     ] = False,
     remote: Annotated[
@@ -44,7 +44,7 @@ def destroy(
         typer.Option(
             "--remote",
             envvar="CTF_REMOTE",
-            help="Incus remote to deploy to",
+            help="Incus remote from where to destroy",
         ),
     ] = "local",
     force: Annotated[
@@ -233,4 +233,9 @@ def destroy(
         remote=remote,
         production=production,
     )
-    LOG.info(msg="Successfully destroyed every track")
+    if total_deployed_tracks == len(terraform_tracks):
+        LOG.info(msg="Successfully destroyed every track")
+    else:
+        LOG.info(
+            f"Successfully destroyed: {', '.join([track.name for track in terraform_tracks])}"
+        )

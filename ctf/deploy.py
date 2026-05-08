@@ -149,6 +149,8 @@ def deploy(
                     find_ctf_root_directory(), "challenges", track.name, "ansible"
                 ),
                 playbook="build.yaml",
+                vm_remote=vm_remote,
+                vm_project=vm_project,
                 execute_common=False,
             )
 
@@ -228,7 +230,12 @@ def deploy(
                                 )
 
         run_ansible_playbook(
-            remote=remote, production=production, track=track.name, path=path
+            remote=remote,
+            production=production,
+            track=track.name,
+            path=path,
+            vm_remote=vm_remote,
+            vm_project=vm_project,
         )
 
         track.already_deployed = True
@@ -454,13 +461,27 @@ def run_ansible_playbook(
     track: str,
     path: str,
     playbook: str = "deploy.yaml",
+    vm_remote: str | None = None,
+    vm_project: str | None = None,
     execute_common: bool = True,
 ) -> None:
     extra_args = []
     if STATE["verbose"]:
         extra_args.append("-vvv")
-    if remote:
-        extra_args += ["-e", f"ansible_incus_remote={remote}"]
+
+    extra_args += [
+        "-e",
+        f"ansible_incus_remote={remote}",
+        "-e",
+        f"ansible_incus_vm_remote={remote}",
+        "-e",
+        f"ansible_incus_vm_project={track}",
+    ]
+
+    if vm_remote:
+        extra_args += ["-e", f"ansible_incus_vm_remote={vm_remote}"]
+    if vm_project:
+        extra_args += ["-e", f"ansible_incus_vm_project={vm_project}"]
 
     if production:
         extra_args += ["-e", "nsec_production=true"]
