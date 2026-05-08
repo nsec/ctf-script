@@ -22,19 +22,33 @@ def redeploy(
         bool,
         typer.Option(
             "--production",
+            envvar="CTF_PRODUCTION",
             help="Do a production deployment. Only use this if you know what you're doing.",
         ),
     ] = False,
     remote: Annotated[
-        str, typer.Option("--remote", help="Incus remote to deploy to")
+        str,
+        typer.Option(
+            "--remote",
+            envvar="CTF_REMOTE",
+            help="Incus remote to deploy to",
+        ),
     ] = "local",
     vm_remote: Annotated[
         str | None,
-        typer.Option("--vm-remote", help="Incus remote for VM to be deployed to"),
+        typer.Option(
+            "--vm-remote",
+            envvar="CTF_VM_REMOTE",
+            help="Incus remote for VM to be deployed to",
+        ),
     ] = None,
     vm_project: Annotated[
         str | None,
-        typer.Option("--vm-project", help="Incus project for VM to be deployed to"),
+        typer.Option(
+            "--vm-project",
+            envvar="CTF_VM_PROJECT",
+            help="Incus project for VM to be deployed to",
+        ),
     ] = None,
     force: Annotated[
         bool,
