@@ -35,11 +35,17 @@ def destroy(
         bool,
         typer.Option(
             "--production",
+            envvar="CTF_PRODUCTION",
             help="Do a production deployment. Only use this if you know what you're doing.",
         ),
     ] = False,
     remote: Annotated[
-        str, typer.Option("--remote", help="Incus remote to deploy to")
+        str,
+        typer.Option(
+            "--remote",
+            envvar="CTF_REMOTE",
+            help="Incus remote to deploy to",
+        ),
     ] = "local",
     force: Annotated[
         bool,
