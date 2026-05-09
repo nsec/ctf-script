@@ -473,15 +473,10 @@ def run_ansible_playbook(
         "-e",
         f"ansible_incus_remote={remote}",
         "-e",
-        f"ansible_incus_vm_remote={remote}",
+        f"ansible_incus_vm_remote={vm_remote if vm_remote else remote}",
         "-e",
-        f"ansible_incus_vm_project={track}",
+        f"ansible_incus_vm_project={vm_project if vm_project else track}",
     ]
-
-    if vm_remote:
-        extra_args += ["-e", f"ansible_incus_vm_remote={vm_remote}"]
-    if vm_project:
-        extra_args += ["-e", f"ansible_incus_vm_project={vm_project}"]
 
     if production:
         extra_args += ["-e", "nsec_production=true"]
