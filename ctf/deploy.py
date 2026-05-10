@@ -127,6 +127,8 @@ def deploy(
         exclude_tracks=exclude_tracks,
         production=production,
         remote=remote,
+        vm_remote=vm_remote,
+        vm_project=vm_project,
     ):
         distinct_tracks = regenerated_tracks
 
@@ -166,6 +168,8 @@ def deploy(
                     exclude_tracks=exclude_tracks,
                     production=production,
                     remote=remote,
+                    vm_remote=vm_remote,
+                    vm_project=vm_project,
                 ):
                     distinct_tracks = regenerated_tracks
 
@@ -342,6 +346,8 @@ def deploy(
                 exclude_tracks=exclude_tracks,
                 production=production,
                 remote=remote,
+                vm_remote=vm_remote,
+                vm_project=vm_project,
             )
         except subprocess.CalledProcessError:
             LOG.critical(
@@ -385,6 +391,8 @@ def terraform_apply(
     exclude_tracks: list[str],
     production: bool,
     remote: str,
+    vm_remote: str | None = None,
+    vm_project: str | None = None,
 ) -> set[Track]:
     args = [terraform_binary(), "apply", "-auto-approve"]
 
@@ -418,6 +426,8 @@ def terraform_apply(
                     exclude_tracks=exclude_tracks,
                     production=production,
                     remote=remote,
+                    vm_remote=vm_remote,
+                    vm_project=vm_project,
                 )
 
                 subprocess.run(
