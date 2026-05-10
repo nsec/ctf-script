@@ -5,5 +5,5 @@ all:
   vars:
     ansible_connection: community.general.incus
     ansible_user: root
-    ansible_incus_remote: local
+    ansible_incus_remote: "{{ ansible_incus_container_remote if ansible_incus_container_remote else 'local' }}"
     ansible_incus_project: mock-track-apache-php
