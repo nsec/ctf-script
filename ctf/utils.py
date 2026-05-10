@@ -272,12 +272,16 @@ def get_terraform_tracks_from_modules() -> set[Track]:
     )
     production_line_regex = re.compile(r"^deploy\s*=\s*\"production\"$")
     remote_line_regex = re.compile(r"^incus_remote\s*=\s*\"([^\"]+)\"$")
+    vm_remote_line_regex = re.compile(r"^incus_vm_remote\s*=\s*\"([^\"]+)\"$")
+    vm_project_line_regex = re.compile(r"^incus_vm_project\s*=\s*\"([^\"]+)\"$")
     build_container_line_regex = re.compile(r"^build_container\s*=\s*true$")
     already_deployed_line_regex = re.compile(r"^already_deployed\s*=\s*true$")
 
     tracks: set[Track] = set()
     name: str = ""
     remote: str = "local"
+    vm_remote: str | None = None
+    vm_project: str | None = None
     production: bool = False
     require_build_container: bool = False
     already_deployed: bool = False
@@ -291,6 +295,8 @@ def get_terraform_tracks_from_modules() -> set[Track]:
                 Track(
                     name=name,
                     remote=remote,
+                    vm_remote=vm_remote,
+                    vm_project=vm_project,
                     production=production,
                     require_build_container=require_build_container,
                     has_virtual_machine=track_has_virtual_machine(track=name),
@@ -299,6 +305,8 @@ def get_terraform_tracks_from_modules() -> set[Track]:
             )
             name = ""
             remote = "local"
+            vm_remote = None
+            vm_project = None
             production = False
             require_build_container = False
             already_deployed = False
@@ -312,6 +320,12 @@ def get_terraform_tracks_from_modules() -> set[Track]:
 
         if m := remote_line_regex.match(line):
             remote = m.group(1)
+
+        if m := vm_remote_line_regex.match(line):
+            vm_remote = m.group(1)
+
+        if m := vm_project_line_regex.match(line):
+            vm_project = m.group(1)
 
         if build_container_line_regex.match(line):
             require_build_container = True
