@@ -471,7 +471,7 @@ def run_ansible_playbook(
 
     extra_args += [
         "-e",
-        f"ansible_incus_remote={remote}",
+        f"ansible_incus_container_remote={remote}",
         "-e",
         f"ansible_incus_vm_remote={vm_remote if vm_remote else remote}",
         "-e",
