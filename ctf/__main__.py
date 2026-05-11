@@ -2,7 +2,9 @@
 import json
 import logging
 import os
+import pathlib
 import sys
+import time
 import urllib.request
 
 import rich
@@ -54,6 +56,11 @@ app.add_typer(version_app)
 
 
 def check_tool_version() -> None:
+
+    # Check at most once per day
+    stamp = pathlib.Path.home() / ".cache" / "ctf-script" / "last_update_check"
+    if stamp.exists() and time.time() - stamp.stat().st_mtime < 24 * 60 * 60:
+        return
     with Console().status("Checking for updates..."):
         current_version = get_version()
         try:
@@ -72,6 +79,8 @@ def check_tool_version() -> None:
                 LOG.error("Could not verify the latest release.")
                 return
 
+            stamp.parent.mkdir(parents=True, exist_ok=True)
+            stamp.touch()
             compare = 0
             for current_part, latest_part in zip(
                 [int(part) for part in current_version.split(".")],
