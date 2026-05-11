@@ -58,7 +58,16 @@ app.add_typer(version_app)
 def check_tool_version() -> None:
 
     # Check at most once per day
-    stamp = pathlib.Path.home() / ".cache" / "ctf-script" / "last_update_check"
+    stamp = (
+        pathlib.Path(
+            os.environ.get(
+                "XDG_CACHE_HOME",
+                str(pathlib.Path(os.environ.get("HOME", "~")).expanduser() / ".cache"),
+            )
+        )
+        / "ctf-script"
+        / "last_update_check"
+    )
     if stamp.exists() and time.time() - stamp.stat().st_mtime < 24 * 60 * 60:
         return
     with Console().status("Checking for updates..."):
