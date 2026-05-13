@@ -87,7 +87,7 @@ def redeploy(
         remote=remote,
         vm_remote=vm_remote,
         vm_project=vm_project,
-        redeploy=True,
+        keep_already_deployed=True,
         force=force,
         skip_build=skip_build,
         exclude_tracks=exclude_tracks,
