@@ -142,7 +142,7 @@
               }
             },
             "wait_for": {
-              "type": "object",
+              "type": "array",
               "description": "Optional wait condition for instance startup.",
               "additionalProperties": true
             },

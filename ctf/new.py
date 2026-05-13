@@ -15,10 +15,11 @@ app = typer.Typer()
 
 
 class Template(StrEnum):
+    INFRA_SKELETON = "infra-skeleton"
+    TRACK_YAML_ONLY = "track-yaml-only"
+    FILES_ONLY = "files-only"
     APACHE_PHP = "apache-php"
     PYTHON_SERVICE = "python-service"
-    FILES_ONLY = "files-only"
-    TRACK_YAML_ONLY = "track-yaml-only"
     RUST_WEBSERVICE = "rust-webservice"
     WINDOWS_VM = "windows-vm"
 
@@ -40,7 +41,7 @@ def new(
             help="Template to use for the track.",
             prompt="Template to use for the track.",
         ),
-    ] = Template.APACHE_PHP,
+    ] = Template.INFRA_SKELETON,
     force: Annotated[
         bool,
         typer.Option(
@@ -53,6 +54,14 @@ def new(
         typer.Option(
             "--with-build",
             help="If a build container is required.",
+        ),
+    ] = False,
+    with_virtual_machine: Annotated[
+        bool,
+        typer.Option(
+            "--vm",
+            "--with-virtual-machine",
+            help="If a virtual machine is required.",
         ),
     ] = False,
 ) -> None:
@@ -130,6 +139,7 @@ def new(
             "is_windows": template == Template.WINDOWS_VM,
             "template": template.value,
             "with_build": with_build_container,
+            "with_virtual_machine": with_virtual_machine,
         }
     )
     with open(
@@ -206,6 +216,7 @@ def new(
             "ipv6_subnet": ipv6_subnet,
             "full_ipv6_address": full_ipv6_address,
             "with_build": with_build_container,
+            "with_virtual_machine": with_virtual_machine,
             "is_windows": template == Template.WINDOWS_VM,
         }
     )
@@ -245,7 +256,11 @@ def new(
 
     track_template = env.get_template(name=os.path.join(template, "deploy.yaml.j2"))
     render = track_template.render(
-        data={"name": name, "with_build": with_build_container}
+        data={
+            "name": name,
+            "with_build": with_build_container,
+            "with_virtual_machine": with_virtual_machine,
+        }
     )
     with open(
         file=(p := os.path.join(ansible_directory, "deploy.yaml")),
@@ -283,6 +298,7 @@ def new(
         data={
             "name": name,
             "with_build": with_build_container,
+            "with_virtual_machine": with_virtual_machine,
             "is_windows": template == Template.WINDOWS_VM,
         }
     )
