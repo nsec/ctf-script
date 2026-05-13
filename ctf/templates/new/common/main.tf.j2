@@ -62,8 +62,9 @@ resource "incus_network" "this" {
     */
     var.deploy == "production" ? {
       "ipv4.address" = "none"
-      "ipv6.nat"     = "false"{% if data.is_windows or data.with_virtual_machine %}
-      "bridge.external_interfaces" = "enp6s0" # This must be changed by the infra team near the CTF.{% endif %}
+      "ipv6.nat"     = "false"
+      # Uncomment only when using virtual machines.
+      {% if not data.is_windows and not data.with_virtual_machine %}# {% endif %}"bridge.external_interfaces" = "enp1s0" # This must be changed by the infra team near the CTF.
     }
     :
     {
