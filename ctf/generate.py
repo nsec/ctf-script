@@ -66,8 +66,8 @@ def generate(
             help="Incus project for VM to be deployed to",
         ),
     ] = None,
-    redeploy: Annotated[
-        bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
+    keep_already_deployed: Annotated[
+        bool, typer.Option("--keep", help="Keep already deployed tracks.")
     ] = False,
     exclude_tracks: Annotated[
         list[str],
@@ -91,7 +91,7 @@ def generate(
     if distinct_tracks:
         LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
         # Generate the Terraform modules file.
-        if not redeploy:
+        if not keep_already_deployed:
             create_terraform_modules_file(remote=remote, production=production)
 
         tmp_tracks: set[Track] = set()
@@ -111,7 +111,7 @@ def generate(
 
         add_tracks_to_terraform_modules(
             tracks=distinct_tracks - get_terraform_tracks_from_modules()
-            if redeploy
+            if keep_already_deployed
             else distinct_tracks
         )
 

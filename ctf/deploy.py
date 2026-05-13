@@ -68,8 +68,8 @@ def deploy(
             help="Incus project for VM to be deployed to",
         ),
     ] = None,
-    redeploy: Annotated[
-        bool, typer.Option("--redeploy", help="Do not use. Use `ctf redeploy` instead.")
+    keep_already_deployed: Annotated[
+        bool, typer.Option("--keep", help="Keep already deployed tracks.")
     ] = False,
     force: Annotated[
         bool,
@@ -100,7 +100,7 @@ def deploy(
         remote=remote,
         vm_remote=vm_remote,
         vm_project=vm_project,
-        redeploy=redeploy,
+        keep_already_deployed=keep_already_deployed,
     )
 
     # Check if Git LFS is installed on the system as it is required for deployment.
