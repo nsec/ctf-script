@@ -45,7 +45,7 @@ def stats(
                 f"Could not find flag for score with flag_id {score['flag_id']}"
             )
     LOG.info(f"Analyzing {len(scores)} scores...")
-    ai_agent_scores = [s for s in scores if s["ai_agent"]]
+    ai_agent_scores = [s for s in scores if "agent" in s["source"] or "mcp" in s["source"]]
     stats["total_scores"] = len(scores)
     stats["ai_agent_scores"] = len(ai_agent_scores)
     stats["ai_agent_score_percentage"] = (
@@ -125,7 +125,7 @@ def stats(
         }
     for score in scores:
         stats["ai_agent_solve_per_point"][score["value"]]["total_solves"] += 1
-        if score["ai_agent"]:
+        if "agent" in score["source"] or "mcp" in score["source"]:
             stats["ai_agent_solve_per_point"][score["value"]]["ai_agent_solves"] += 1
             stats["ai_agent_solve_per_point"][score["value"]][
                 "ai_agent_solve_percentage"
@@ -156,7 +156,7 @@ def stats(
         if bucket_key not in buckets:
             buckets[bucket_key] = {"ai_count": 0, "total_count": 0}
         buckets[bucket_key]["total_count"] += 1
-        if score["ai_agent"]:
+        if "agent" in score["source"] or "mcp" in score["source"]:
             buckets[bucket_key]["ai_count"] += 1
     stats["ai_agent_percentage_over_time"] = [
         {
@@ -418,7 +418,7 @@ new Chart(document.getElementById('overTimeChart'), {{
 
 def get(session: requests.Session, url: str) -> dict:
     try:
-        response = session.get(url=f"{session.base_url}{url}")
+        response = session.get(url=f"{session.base_url}{url}", verify=False)
         response.raise_for_status()
         return response.json()
     except requests.HTTPError as e:
