@@ -41,11 +41,16 @@ def services(
         LOG.debug(msg=f"Parsing track.yaml for track {track}")
         track_yaml = parse_track_yaml(track_name=track)
 
-        if len(track_yaml["services"]) == 0:
+        services = track_yaml.get("services", [])
+        for instance_name, instance in track_yaml.get("instances", {}).items():
+            services += [{"instance": instance_name, "address": instance.get("ipv6"), **service} for service in instance.get("services", [])]
+
+        if len(services) == 0:
             LOG.debug(msg=f"No service in track {track}. Skipping...")
             continue
 
-        for service in track_yaml["services"]:
+
+        for service in services:
             contact = ",".join(track_yaml["contacts"]["support"])
             name = service["name"]
             instance = service["instance"]
@@ -53,4 +58,4 @@ def services(
             check = service["check"]
             port = service["port"]
 
-            rich.print(f"{track}/{instance}/{name} {contact} {address} {check} {port}")
+            rich.print(f"{track}/{instance}/{name} {contact.replace(' ', '_')} {address} {check} {port}")
