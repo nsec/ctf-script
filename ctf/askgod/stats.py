@@ -45,7 +45,9 @@ def stats(
                 f"Could not find flag for score with flag_id {score['flag_id']}"
             )
     LOG.info(f"Analyzing {len(scores)} scores...")
-    ai_agent_scores = [s for s in scores if "agent" in s["source"] or "mcp" in s["source"]]
+    ai_agent_scores = [
+        s for s in scores if "agent" in s["source"] or "mcp" in s["source"]
+    ]
     stats["total_scores"] = len(scores)
     stats["ai_agent_scores"] = len(ai_agent_scores)
     stats["ai_agent_score_percentage"] = (
