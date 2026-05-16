@@ -72,7 +72,7 @@ def stats(
         if not _id.isnumeric():
             continue
 
-        if re.search(f"({'|'.join([str(i) for i in ids])})", _id):
+        if int(_id) in ids:
             if _id not in solves_per_flag:
                 solves_per_flag[_id] = 0
             solves_per_flag[_id] += 1
