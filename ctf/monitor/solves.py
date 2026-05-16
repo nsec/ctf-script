@@ -26,7 +26,7 @@ def solves(
         typer.Option(
             "-m",
             "--minimum-solves",
-            help="Displaying tracks that has a threshold equal or higher.",
+            help="Displaying tracks that has a threshold higher of this argument.",
         ),
     ] = 1,
 ) -> None:
@@ -47,7 +47,7 @@ def solves(
                         splitted_line = line.split("|")
                         key: tuple[str, str] = (
                             splitted_line[3].strip().replace("team", "").lstrip("0"),
-                            splitted_line[4],
+                            splitted_line[4].strip(),
                         )
                         if key not in solves_per_track[track]:
                             solves_per_track[track][key] = 0
@@ -59,6 +59,7 @@ def solves(
             table.add_column("Team ID")
             table.add_column("Team Name")
             table.add_column("Solves")
+
             for track, team_solves in sorted(
                 solves_per_track.items(),
                 key=lambda item: item[0],
