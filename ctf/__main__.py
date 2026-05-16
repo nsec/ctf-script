@@ -24,6 +24,7 @@ from ctf.init import app as init_app
 from ctf.list import app as list_app
 from ctf.logger import LOG
 from ctf.new import app as new_app
+from ctf.post import app as post_app
 from ctf.redeploy import app as redeploy_app
 from ctf.services import app as services_app
 from ctf.stats import app as stats_app
@@ -43,6 +44,12 @@ app.add_typer(generate_app)
 app.add_typer(init_app)
 app.add_typer(list_app)
 app.add_typer(new_app)
+app.add_typer(
+    post_app,
+    name="post",
+    help="Commands to manage discourse post files.",
+    rich_help_panel="Subcommands",
+)
 app.add_typer(redeploy_app)
 app.add_typer(services_app)
 app.add_typer(stats_app)
