@@ -39,15 +39,25 @@ def stats(
         .strip()
     )
 
+    ids_discourse: dict[int, str] = {}
+
     r: subprocess.CompletedProcess[bytes] = subprocess.run(
         ["askgod", "admin", "list-flags"],
         capture_output=True,
         check=True,
     )
-    for line in r.stdout.decode().strip().splitlines():
+    for line in r.stdout.decode().strip().splitlines()[2:]:
+        splitted_line = line.split("|")
         for track in tracks:
             if re.search(r"\|\s*.*" + track, line, re.IGNORECASE):
-                ids.append(int(line.split("|")[0]))
+                ids.append(int(splitted_line[0]))
+
+        if int(splitted_line[0]) in ids and int(splitted_line[0]) not in ids_discourse:
+            ids_discourse[int(splitted_line[0])] = (
+                [x for x in splitted_line[5].split(",") if "discourse:" in x][0]
+                .strip()
+                .replace("discourse:", "", 1)
+            )
 
     if not ids:
         if not tracks:
@@ -64,6 +74,9 @@ def stats(
 
     solves_per_flag = {}
     for line in r.stdout.decode().strip().splitlines():
+        if "submitted by" in line.lower():
+            continue
+
         try:
             _id = line.split("|")[2].strip()
         except Exception:
@@ -79,12 +92,18 @@ def stats(
 
     table = Table(show_lines=True)
     table.add_column("ID")
+    table.add_column("Flag")
     table.add_column("Amount")
     table.add_column("Percent")
 
     for _id, solves in sorted(
         solves_per_flag.items(), reverse=True, key=lambda item: item[1]
     ):
-        table.add_row(_id, str(solves), str(int((solves / amount_of_teams) * 100)))
+        table.add_row(
+            _id,
+            ids_discourse[int(_id)],
+            str(solves),
+            str(int((solves / amount_of_teams) * 100)),
+        )
 
     Console().print(table)
