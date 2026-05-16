@@ -9,7 +9,7 @@ from rich.table import Table
 app = typer.Typer()
 
 
-@app.command(help=".")
+@app.command(help="Show solves per flag with percentage.")
 def stats(
     tracks: Annotated[
         list[str],
