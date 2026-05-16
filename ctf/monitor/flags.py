@@ -42,10 +42,10 @@ def flags(
 
             print(f"Monitoring IDs: {'|'.join([str(i) for i in ids])}")
             print(
-                f"askgod admin monitor-flags | grep -E 'id=({'|'.join([str(i) for i in ids])})'"
+                f"askgod admin monitor-flags | grep -E 'id=\\(({'|'.join([str(i) for i in ids])})\\)'"
             )
             r: subprocess.CompletedProcess[bytes] = subprocess.run(
-                f"askgod admin monitor-flags | grep -E 'id=({'|'.join([str(i) for i in ids])})'",
+                f"askgod admin monitor-flags | grep -E 'id=\\(({'|'.join([str(i) for i in ids])})\\)'",
                 check=True,
                 shell=True,
             )
