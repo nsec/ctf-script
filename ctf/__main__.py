@@ -23,6 +23,7 @@ from ctf.generate import app as generate_app
 from ctf.init import app as init_app
 from ctf.list import app as list_app
 from ctf.logger import LOG
+from ctf.monitor import app as monitor_app
 from ctf.new import app as new_app
 from ctf.redeploy import app as redeploy_app
 from ctf.services import app as services_app
@@ -34,11 +35,6 @@ from ctf.version import app as version_app
 app = typer.Typer(
     help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.",
     no_args_is_help=True,
-)
-app.add_typer(
-    askgod_app,
-    name="askgod",
-    help="Commands for interacting with a live askgod server (github.com/nsec/askgod).",
 )
 app.add_typer(check_app)
 app.add_typer(deploy_app)
@@ -53,6 +49,19 @@ app.add_typer(services_app)
 app.add_typer(stats_app)
 app.add_typer(validate_app)
 app.add_typer(version_app)
+
+app.add_typer(
+    askgod_app,
+    name="askgod",
+    help="Commands for interacting with a live askgod server (github.com/nsec/askgod).",
+    rich_help_panel="Subcommands",
+)
+app.add_typer(
+    monitor_app,
+    name="monitor",
+    help="Monitor tracks subcommands.",
+    rich_help_panel="Subcommands",
+)
 
 
 def check_tool_version() -> None:
