@@ -226,6 +226,8 @@ class DiscoursePostsAskGodTagValidator(Validator):
                 )
 
         for track_name, discourse_post in self.discourse_posts:
+            if "trigger" not in discourse_post:
+                continue
             if discourse_post["trigger"]["tag"] not in self.discourse_triggers:
                 errors.append(
                     ValidationError(
