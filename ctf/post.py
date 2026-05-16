@@ -1,6 +1,5 @@
 import os
 import re
-import textwrap
 from enum import StrEnum
 
 import typer
@@ -92,29 +91,30 @@ def _render_post_yaml(
     trigger: TriggerType | None = None,
     tag: str | None = None,
 ) -> str:
-    trigger_block = ""
+    lines = [
+        "type: post",
+        f"topic: {track}",
+    ]
+
     if trigger == TriggerType.FLAG:
-        trigger_block = textwrap.dedent(
-            f"""\
-            trigger:
-              type: flag
-              tag: {tag}
-            """
+        lines.extend(
+            [
+                "trigger:",
+                "  type: flag",
+                f"  tag: {tag}",
+            ]
         )
 
-    return (
-        textwrap.dedent(
-            f"""\
-            type: post
-            topic: {track}
-            {trigger_block}api:
-              user: {user.value}
-            body: |-
-            {_format_yaml_block(body)}
-            """
-        ).rstrip()
-        + "\n"
+    lines.extend(
+        [
+            "api:",
+            f"  user: {user.value}",
+            "body: |-",
+            _format_yaml_block(body),
+        ]
     )
+
+    return "\n".join(lines) + "\n"
 
 
 @app.command("new", help="Create a new discourse post YAML file for a track.")
