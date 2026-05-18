@@ -1,0 +1,18 @@
+# This is the main ansible script to deploy the challenge.
+
+# Example on how to run stuff on all hosts of the track
+- name: "{{ data.name }} Deployment Playbook"
+  hosts: all{% if data.with_build %},!build{% endif %}
+  vars_files:
+    - ../track.yaml
+  tasks:
+    # This is a helper task that loads the tracks' `track.yaml` file and loads the flags as
+    # ansible facts (like variables) to use in subsequent steps. The key is the `discourse` tag
+    # of the flag. See the index.php file for an example on how to use/print the flags.
+    - name: "Load flags"
+      loop: "{{ '{{ flags }}' }}"
+      vars:
+        key: "{{ '{{ (item.tags).discourse }}' }}"
+        value: "{{ '{{ item.flag }}' }}"
+      ansible.builtin.set_fact:
+        track_flags: "{{ '{{ track_flags | default({}) | combine({key: value}) }}' }}"

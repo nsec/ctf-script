@@ -31,9 +31,9 @@
           - virtualenv
         state: present
 
-# Run this only on the `{{ data.name }}` host. Sets up apache2 and php.
-- name: Specific tasks for "{{ data.name }}"
-  hosts: "{{ data.name }}"
+# Run this only on the `{% if data.with_virtual_machine %}team-orig-{% endif %}{{ data.name }}` host. Sets up apache2 and php.
+- name: Specific tasks for "{% if data.with_virtual_machine %}team-orig-{% endif %}{{ data.name }}"
+  hosts: "{% if data.with_virtual_machine %}team-orig-{% endif %}{{ data.name }}"
   tasks:
     - name: Create service user
       ansible.builtin.user:

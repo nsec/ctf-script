@@ -20,29 +20,27 @@ contacts:
 instances: {}
 {% else %}
 instances:
-  {{ data.name }}:
+  {% if data.is_windows or data.with_virtual_machine %}team-orig-{% endif %}{{ data.name }}:
     image: {% if data.is_windows %}"CHANGE_ME" # Change to the Windows image location. Refer to the ctf-script README to know how to create an image in Incus.{% else %}"images:ubuntu/24.04"{% endif %}
-    profiles:{% if not data.is_windows %}
-      - "default"{% endif %}
-      - {% if data.is_windows %}"windows-vm"{% else %}"containers"{% endif %}
-    type: {% if data.is_windows %}"virtual-machine"{% else %}"container"{% endif %}
-    description: "CHANGE_MEMain apache + PHP website"
+    profiles:
+      - "{% if data.is_windows %}windows-vm{% elif data.with_virtual_machine %}linux-vm{% else %}containers{% endif %}"
+    type: {% if data.is_windows or data.with_virtual_machine %}"virtual-machine"{% else %}"container"{% endif %}
+    description: "CHANGE_ME"
     # This second half of a MAC address was automatically generated. The first half is just below
     hwaddr: "{{ data.hardware_address }}"
     # This is the subdomain value for this machine. Do NOT include .ctf, it will be automatically added.
     # For example, if the value of the record is a.b.c, a DNS record will be created for a.b.c.ctf
-    record: "{{ data.name }}"
+    record: "{{ data.name }}" # Can also be removed or null
     # This second half of the IPv6 is derived from the hwaddr.
     ipv6: "{{ data.full_ipv6_address }}"
-    config: {% if data.is_windows %}
-      security.secureboot: "false"{% else %}{}{% endif %}
-    devices: {% if data.is_windows %}
+    config: {}
+    devices: {% if data.is_windows or data.with_virtual_machine %}
       - name: "incusagent"
         type: "disk"
         properties:
-          source: "agent:config"{% else %}[]{% endif %}{% if data.is_windows %}
+          source: "agent:config"{% else %}[]{% endif %}{% if data.is_windows or data.with_virtual_machine %}
     wait_for:
-      type: "agent"{% endif %}
+      - type: "agent"{% endif %}
     services:
       # List of network services running for the track.
       # Each service name must be unique for a given instance (container/VM).
