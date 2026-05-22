@@ -23,7 +23,6 @@ from ctf.generate import app as generate_app
 from ctf.init import app as init_app
 from ctf.list import app as list_app
 from ctf.logger import LOG
-from ctf.monitor import app as monitor_app
 from ctf.new import app as new_app
 from ctf.redeploy import app as redeploy_app
 from ctf.services import app as services_app
@@ -54,12 +53,6 @@ app.add_typer(
     askgod_app,
     name="askgod",
     help="Commands for interacting with a live askgod server (github.com/nsec/askgod).",
-    rich_help_panel="Subcommands",
-)
-app.add_typer(
-    monitor_app,
-    name="monitor",
-    help="Monitor tracks subcommands.",
     rich_help_panel="Subcommands",
 )
 
