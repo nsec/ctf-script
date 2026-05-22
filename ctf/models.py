@@ -30,7 +30,7 @@ class Track(BaseModel):
     def location(self):
         from ctf.utils import find_ctf_root_directory
 
-        return find_ctf_root_directory() / self.name
+        return find_ctf_root_directory() / "challenges" / self.name
 
     def __eq__(self, other: Any) -> bool:
         match other:
