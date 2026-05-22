@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import textwrap
+from pathlib import Path
 from typing import Any, Generator
 
 import jinja2
@@ -407,10 +408,10 @@ def parse_post_yamls(track_name: str) -> list[dict]:
     return posts
 
 
-def find_ctf_root_directory() -> str:
+def find_ctf_root_directory() -> Path:
     global __CTF_ROOT_DIRECTORY
     if __CTF_ROOT_DIRECTORY:
-        return __CTF_ROOT_DIRECTORY
+        return Path(__CTF_ROOT_DIRECTORY)
 
     path: str = (
         str(ENV.get("CTF_ROOT_DIR"))
@@ -431,7 +432,7 @@ def find_ctf_root_directory() -> str:
         exit(1)
 
     LOG.debug(msg=f"Found root directory: {path}")
-    return (__CTF_ROOT_DIRECTORY := path)
+    return Path(__CTF_ROOT_DIRECTORY := path)
 
 
 def is_ctf_dir(path):
