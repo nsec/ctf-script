@@ -16,4 +16,3 @@ flags:
     cfss: "CFSS:0.3/TS:L/E:H/HSFC:Y=7-11"
     tags:
       discourse: mock_track_files_only_flag_1
-services: []
