@@ -102,7 +102,7 @@ class TrackInstance(BaseModel):
     ipv6: str | None = None
     config: InstanceConfig
     devices: list[InstanceDevice]
-    wait_for: InstanceWaitFor | None = None
+    wait_for: list[InstanceWaitFor] | None = None
     services: list[InstanceService]
 
 

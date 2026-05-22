@@ -2,7 +2,7 @@
 
 # Example on how to run stuff on all hosts of the track
 - name: "Windows deployment"
-  hosts: all{% if data.with_build %},!build{% endif %}
+  hosts: "team-orig-{{ data.name }}"
   vars_files:
     - ../track.yaml
   tasks:

@@ -1,6 +1,7 @@
 # This YAML file defines all machines that Ansible needs to know about to run playbooks and configure machines.
+# CHANGE SINCE 5.0.1: Virtual machines are deployed in another remote/project in production. Added/Modified a few variables with templates to enable that.
 all:
-  hosts:{% if not data.is_windows %}
+  hosts:{% if not data.is_windows and not data.with_virtual_machine %}
     # The following line defines how this machine will be referred to in Ansible scripts.
     {{ data.name }}:
       # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
@@ -15,6 +16,7 @@ all:
     # Do not change these.
     ansible_connection: community.general.incus
     ansible_user: root
+    # If you have virtual machines, do not alter this line.
     ansible_incus_remote: "{{ '{{' }} ansible_incus_container_remote if ansible_incus_container_remote else 'local' {{ '}}' }}"
     # Name of your track. Do not change.
     ansible_incus_project: {{ data.name }}
@@ -22,23 +24,45 @@ all:
     # Add variables if needed here.
 {% if data.with_build %}
 # This section is needed if you need a build container. It's a group of hosts regrouped under the name "build" which MUST remain the same.
-# The group "build" is removed from the "cleanup.yaml" and "common.yaml", which is why you should not change it.
+# The group "build" is removed from the "cleanup.yaml" and "common.yaml", which is why it should remain the same.
 build:
   hosts:
     # The following line defines how this machine will be referred to in "build.yaml" Ansible script.
     build-container:
       # The name must be the same as the previous line.
       ansible_incus_host: build-container
+{% endif %}{% if data.with_virtual_machine %}
+# This section is needed if you need Linux virtual machines. It's a group of hosts regrouped under the name "linux-incus-vm" which MUST remain the same.
+# The group "linux-incus-vm" is partially included in the "cleanup.yaml" playbook, which is why it should remain the same.
+# The name of any VM must begin with `team-orig-` for production
+linux-incus-vm:
+  hosts:
+    # The following line defines how this machine will be referred to in Ansible scripts. KEEP THE `team-orig-` prefix.
+    team-orig-{{ data.name }}:
+      # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `team-orig-{{ data.name }}`.
+      ansible_incus_host: team-orig-{{ data.name }}
+  vars:
+    # This variable is used to tell Ansible that the hosts are Windows hosts and require a PowerShell shell.
+    ansible_connection: community.general.incus
+    ansible_user: root
+    # For virtual machines, the remote and project changes in production.
+    ansible_incus_remote: "{{ '{{' }} ansible_incus_container_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
+    ansible_incus_project: "{{ '{{' }} ansible_incus_vm_project if ansible_incus_vm_project else ansible_incus_project {{ '}}' }}"
 {% endif %}{% if data.is_windows %}
 # This section is needed if you need Windows virtual machines. It's a group of hosts regrouped under the name "windows" which MUST remain the same.
-# The group "windows" is removed from the "cleanup.yaml" and "common.yaml", which is why you should not change it.
+# The group "windows" is removed from the "cleanup.yaml" and "common.yaml", which is why it should remain the same.
+# The name of any VM must begin with `team-orig-` for production
 windows:
   hosts:
-    # The following line defines how this machine will be referred to in Ansible scripts.
-    {{ data.name }}:
-      # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `{{ data.name }}`.
-      ansible_incus_host: {{ data.name }}
+    # The following line defines how this machine will be referred to in Ansible scripts. KEEP THE `team-orig-` prefix.
+    team-orig-{{ data.name }}:
+      # This one tells Ansible that this host is reached using incus, and the name of the machine in incus is `team-orig-{{ data.name }}`.
+      ansible_incus_host: team-orig-{{ data.name }}
   vars:
     # This variable is used to tell Ansible that the hosts are Windows hosts and require a PowerShell shell.
     ansible_shell_type: powershell
+    ansible_user: administrator
+    # For virtual machines, the remote and project changes in production.
+    ansible_incus_remote: "{{ '{{' }} ansible_incus_container_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
+    ansible_incus_project: "{{ '{{' }} ansible_incus_vm_project if ansible_incus_vm_project else ansible_incus_project {{ '}}' }}"
 {% endif %}

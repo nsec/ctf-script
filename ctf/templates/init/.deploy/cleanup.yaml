@@ -1,5 +1,5 @@
 - name: Pre-deployment system cleanup
-  hosts: all,!build,!windows
+  hosts: all,!build,!windows,!linux-incus-vm
   order: shuffle
   gather_facts: false
   any_errors_fatal: true
