@@ -23,9 +23,24 @@ flags:
     cfss: "CFSS:0.3/TS:I/E:M/HSFC:Y=7-12"
     tags:
       discourse: mock_track_python_service_flag_2
-services:
-  - name: HTTP-5000
-    instance: mock-track-python-service
-    address: '9000:d37e:c40b:b29a:216:3eff:fe09:23ea'
-    port: 5000
-    check: http
+instances:
+  mock-track-python-service:
+    image: "images:ubuntu/24.04"
+    profiles:
+      - "default"
+      - "containers"
+    type: "container"
+    description: "Mock Python service track"
+    # This second half of a MAC address was automatically generated. The first half is just below
+    hwaddr: "00:16:3e:09:23:ea"
+    # This is the subdomain value for this machine. Do NOT include .ctf, it will be automatically added.
+    # For example, if the value of the record is a.b.c, a DNS record will be created for a.b.c.ctf
+    record: "mock-track-python-service"
+    # This second half of the IPv6 is derived from the hwaddr.
+    ipv6: "9000:d37e:c40b:aa70:216:3eff:fe09:23ea"
+    config: {}
+    devices: []
+    services:
+      - name: HTTP-5000
+        port: 5000
+        check: http
