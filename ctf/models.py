@@ -26,6 +26,12 @@ class Track(BaseModel):
     has_virtual_machine: bool = False
     already_deployed: bool = False
 
+    @property
+    def location(self):
+        from ctf.utils import find_ctf_root_directory
+
+        return find_ctf_root_directory() / self.name
+
     def __eq__(self, other: Any) -> bool:
         match other:
             case str():

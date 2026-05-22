@@ -1,14 +1,19 @@
 import os
 import re
 from enum import StrEnum
+from pathlib import Path
 
 import typer
 from typing_extensions import Annotated
 
 from ctf.logger import LOG
-from ctf.utils import find_ctf_root_directory, parse_track_yaml
+from ctf.models import Track
+from ctf.utils import (
+    get_all_available_tracks,
+    parse_track_yaml,
+)
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer()
 
 
 class ApiUser(StrEnum):
@@ -25,8 +30,8 @@ def _format_yaml_block(text: str) -> str:
     return "\n".join(f"  {line}" for line in lines)
 
 
-def _default_post_filename(track: str, tag: str) -> str:
-    normalized_track = track.replace("-", "_")
+def _default_post_filename(track: Track, tag: str) -> str:
+    normalized_track = track.name.replace("-", "_")
     suffix = tag
     if tag.startswith(normalized_track + "_"):
         suffix = tag[len(normalized_track) + 1 :]
@@ -36,8 +41,8 @@ def _default_post_filename(track: str, tag: str) -> str:
     return f"{track}-{suffix.replace('_', '-')}.yaml"
 
 
-def _get_available_discourse_tags(track: str) -> list[str]:
-    track_yaml = parse_track_yaml(track_name=track)
+def _get_available_discourse_tags(track: Track) -> list[str]:
+    track_yaml = parse_track_yaml(track_name=track.name)
     tags: set[str] = set()
     for flag in track_yaml.get("flags", []):
         discourse_tag = ((flag or {}).get("tags") or {}).get("discourse")
@@ -46,24 +51,24 @@ def _get_available_discourse_tags(track: str) -> list[str]:
     return sorted(tags)
 
 
-def _add_counter_to_filename(posts_directory: str, filename: str) -> str:
+def _add_counter_to_filename(posts_directory: Path, filename: str) -> str:
     base, ext = os.path.splitext(filename)
     if not ext:
         ext = ".yaml"
 
     candidate = f"{base}{ext}"
-    if not os.path.exists(os.path.join(posts_directory, candidate)):
+    if not (posts_directory / candidate).exists():
         return candidate
 
     counter = 2
-    while os.path.exists(os.path.join(posts_directory, f"{base}-{counter}{ext}")):
+    while (posts_directory / f"{base}-{counter}{ext}").exists():
         counter += 1
     return f"{base}-{counter}{ext}"
 
 
 def _resolve_post_file_path(
-    posts_directory: str,
-    track: str,
+    posts_directory: Path,
+    track: Track,
     name: str | None,
     tag: str | None,
     force: bool,
@@ -85,7 +90,7 @@ def _resolve_post_file_path(
 
 
 def _render_post_yaml(
-    track: str,
+    track: Track,
     user: ApiUser,
     body: str,
     trigger: TriggerType | None = None,
@@ -117,8 +122,12 @@ def _render_post_yaml(
     return "\n".join(lines) + "\n"
 
 
-@app.command("new", help="Create a new discourse post YAML file for a track.")
-def new_post(
+@app.command(
+    "new",
+    help="Create a new discourse post YAML file for a track.",
+    no_args_is_help=True,
+)
+def new(
     track: Annotated[
         str,
         typer.Option(
@@ -162,50 +171,45 @@ def new_post(
         typer.Option("--force", help="Overwrite the post file if it already exists."),
     ] = False,
 ) -> None:
-    challenges_track_directory = os.path.join(
-        find_ctf_root_directory(), "challenges", track
-    )
-    if not os.path.isdir(challenges_track_directory):
-        LOG.critical(
-            f"Track directory not found: {challenges_track_directory}. Verify --track."
-        )
-        raise typer.Exit(code=1)
+    if (track_obj := Track(name=track)) not in get_all_available_tracks():
+        LOG.critical(f"Track directory not found: {track_obj.name}. Verify --track.")
+        raise typer.Exit(1)
 
-    posts_directory = os.path.join(challenges_track_directory, "posts")
+    posts_directory: Path = track_obj.location / "posts"
     os.makedirs(posts_directory, exist_ok=True)
 
     # TODO: add support for other triggers
     if trigger == TriggerType.FLAG and not tag:
         LOG.critical("--tag is required when --trigger flag is provided.")
-        raise typer.Exit(code=1)
+        raise typer.Exit(1)
 
     if trigger != TriggerType.FLAG and tag:
         LOG.critical("--tag can only be used with --trigger flag.")
-        raise typer.Exit(code=1)
+        raise typer.Exit(1)
 
     if trigger == TriggerType.FLAG and tag:
-        valid_tags = _get_available_discourse_tags(track=track)
+        valid_tags = _get_available_discourse_tags(track=track_obj)
         if tag not in valid_tags:
             if valid_tags:
                 LOG.critical(
-                    f'Invalid --tag "{tag}" for track "{track}". Valid tags: {", ".join(valid_tags)}'
+                    f'Invalid --tag "{tag}" for track "{track_obj.name}". Valid tags: {", ".join(valid_tags)}'
                 )
             else:
                 LOG.critical(
-                    f'Invalid --tag "{tag}" for track "{track}". No discourse tags were found in track.yaml flags[].tags.discourse.'
+                    f'Invalid --tag "{tag}" for track "{track_obj.name}". No discourse tags were found in track.yaml flags[].tags.discourse.'
                 )
-            raise typer.Exit(code=1)
+            raise typer.Exit(1)
 
     post_file_path = _resolve_post_file_path(
         posts_directory=posts_directory,
-        track=track,
+        track=track_obj,
         name=name,
         tag=tag,
         force=force,
     )
 
     post_yaml = _render_post_yaml(
-        track=track,
+        track=track_obj,
         user=user,
         body=body,
         trigger=trigger,
