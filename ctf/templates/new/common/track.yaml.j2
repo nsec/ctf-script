@@ -49,6 +49,8 @@ instances:
         port: {% if data.template == "python-service" %}5000{% else %}80{% endif %}
         # For automated checks during the CTF. This alerts us if something is wrong with the service.
         check: http
+        http_path: null
+        expected_http_status: null
         # During development, this service will be accessible from http://localhost:800. This allows to access the services outside the host (for example from the Windows Host if using WSL or from your host machine if using GitHub Codespaces).
         # This is not required, but provides a very helpful shortcut when using Codespaces or WSL.
         dev_port_mapping: 800{% if data.with_build %}
@@ -89,24 +91,3 @@ flags:
       # Name of the discourse trigger for this flag. If a discourse post in the posts/ directory has this trigger, it will be posted when this flag is submitted.
       # This value can also be used to reference flags in Ansible playbooks. See the "Load Flags" task in deploy.yaml.
       discourse: {{ data.name | replace("-","_") }}_flag_1
-
-# DEPRECATED AFTER NORTHSEC 2026{% if data.template == "files-only" %}
-services: []
-{% else %}
-services:
-  # List of network services running for the track.
-  # Each service name must be unique for a given instance (container/VM).
-  - name: {% if data.template == "python-service" %}HTTP-5000{% else %}HTTP{% endif %}
-    # Name of the container or VM
-    instance: {{ data.name }}
-    # The IPv6 address was randomly generated from the MAC Address (hwaddr) and the subnets defined in main.tf.
-    # If you need other machines, you can choose another MAC Address and get the IPv6 from the MAC AND the IPv6 subnet ({{ data.ipv6_subnet }}) at https://eui64-calc.princelle.org/
-    address: '{{ data.full_ipv6_address }}'
-    # On what port does the service listens to
-    port: {% if data.template == "python-service" %}5000{% else %}80{% endif %}
-    # For automated checks during the CTF. This alerts us if something is wrong with the service.
-    check: http
-    # During development, this service will be accessible from http://localhost:800. This allows to access the services outside the host (for example from the Windows Host if using WSL or from your host machine if using GitHub Codespaces).
-    # This is not required, but provides a very helpful shortcut when using Codespaces or WSL.
-    dev_port_mapping: 800
-{% endif %}

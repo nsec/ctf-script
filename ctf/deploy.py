@@ -277,13 +277,6 @@ def deploy(
 
                 services: dict[str, dict[str, str | int | None]] = {}
 
-                # Combining both service lists until we remove entirely the deprecated services list at the root.
-                if track_yaml.services:
-                    for service in track_yaml.services:
-                        if not service.dev_port_mapping:
-                            continue
-                        services[service.name] = service.model_dump()
-
                 if track_yaml.instances:
                     for k, v in track_yaml.instances.root.items():
                         for service in v.services:

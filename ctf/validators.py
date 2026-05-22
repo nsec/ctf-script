@@ -391,11 +391,6 @@ class ServicesValidator(Validator):
 
         services: list[dict[str, str]] = []
 
-        # Combining both service lists until we remove entirely the deprecated services list at the root.
-        if track_yaml.services:
-            for service in track_yaml.services:
-                services.append({"name": service.name, "instance": service.instance})
-
         if track_yaml.instances:
             for k, v in track_yaml.instances.root.items():
                 for service in v.services:
@@ -441,11 +436,6 @@ class OrphanServicesValidator(Validator):
         )
         errors: list[ValidationError] = []
         services: list[str] = []
-
-        # Combining both service lists until we remove entirely the deprecated services list at the root.
-        if track_yaml.services:
-            for service in track_yaml.services:
-                services.append(service.name)
 
         if track_yaml.instances:
             for k, v in track_yaml.instances.root.items():

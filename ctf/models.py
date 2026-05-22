@@ -94,6 +94,8 @@ class InstanceService(BaseModel):
     name: str
     port: PortNumber
     check: CheckType
+    http_path: str | None = None
+    expected_http_status: int | None = None
     dev_port_mapping: PortNumber | None = None
 
 
@@ -131,15 +133,6 @@ class TrackFlag(BaseModel):
     tags: FlagTags | None = None
 
 
-class DeprecatedTrackService(BaseModel):
-    name: str
-    instance: str
-    address: str
-    port: PortNumber
-    check: CheckType
-    dev_port_mapping: PortNumber | None = None
-
-
 class TrackYaml(BaseModel):
     name: str
     description: str
@@ -147,4 +140,3 @@ class TrackYaml(BaseModel):
     contacts: TrackContacts
     instances: TrackInstances | None = None
     flags: list[TrackFlag]
-    services: list[DeprecatedTrackService] | None = None
