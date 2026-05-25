@@ -1,0 +1,29 @@
+---
+- name: Check if sqlcmd.exe exists
+  ansible.windows.win_shell: |
+    if (Get-Command sqlcmd.exe -ErrorAction SilentlyContinue) { Write-Output "yes" } else { Write-Output "no" }
+  register: sqlcmd_exists
+
+- name: Get list of SQL Server services
+  ansible.windows.win_shell: |
+    Get-Service | Where-Object { $_.Name -like "MSSQL*" } | Select-Object Name | ConvertTo-Json
+  register: sql_services_raw
+  when: sqlcmd_exists.stdout == "yes"
+
+- name: Parse SQL service list
+  ansible.builtin.set_fact:
+    sql_services: "{{ sql_services_raw.stdout | from_json }}"
+  when: sqlcmd_exists.stdout == "yes"
+
+- name: Cap SQL Server RAM (2048 MB) for all detected instances
+  ansible.windows.win_shell: |
+    sqlcmd -S localhost -Q "EXEC sys.sp_configure N'max server memory (MB)', N'2048'; RECONFIGURE WITH OVERRIDE;"
+  when: >
+    sqlcmd_exists.stdout == "yes" and
+    sql_services is defined and
+    sql_services | length > 0
+
+- name: Debug message if SQL Server is not present
+  ansible.builtin.debug:
+    msg: "SQL Server not installed — skipping memory cap."
+  when: sqlcmd_exists.stdout != "yes" or (sql_services is defined and sql_services | length == 0)

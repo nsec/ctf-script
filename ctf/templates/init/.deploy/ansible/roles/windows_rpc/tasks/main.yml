@@ -1,0 +1,13 @@
+---
+- name: Copy block_rpc.txt to Windows host
+  ansible.windows.win_copy:
+    src: "{{ role_path }}/files/block_rpc.txt"
+    dest: 'C:\block_rpc.txt'
+
+- name: Execute the PowerShell script using win_shell
+  ansible.windows.win_shell: netsh -f C:\block_rpc.txt
+
+- name: Delete the temporary script file
+  ansible.windows.win_file:
+    path: C:\block_rpc.txt
+    state: absent

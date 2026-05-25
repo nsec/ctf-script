@@ -1,0 +1,46 @@
+---
+# Disable Services
+windows_optimize_disable_services:
+  - "diagnosticshub.standardcollector.service" # Microsoft (R) Diagnostics Hub Standard Collector Service
+  - "DiagTrack"                                # Diagnostics Tracking Service
+  - "dmwappushservice"                         # WAP Push Message Routing Service
+  - "HomeGroupListener"                        # HomeGroup Listener
+  - "HomeGroupProvider"                        # HomeGroup Provider
+  - "lfsvc"                                    # Geolocation Service
+  - "MapsBroker"                               # Downloaded Maps Manager
+  - "SharedAccess"                             # Internet Connection Sharing (ICS)
+  - "spooler"                                  # Print Spooler
+  - "TrkWks"                                   # Distributed Link Tracking Client
+  - "WbioSrvc"                                 # Windows Biometric Service
+  - "WSearch"                                  # Windows Indexing
+  - "WMPNetworkSvc"                            # Windows Media Player Network Sharing Service
+  - "XblAuthManager"                           # Xbox Live Auth Manager
+  - "XblGameSave"                              # Xbox Live Game Save Service
+  - "XboxNetApiSvc"                            # Xbox Live Networking Service
+  - "XboxGipSvc"
+  - "SysMain"                                  # Superfetch
+  - "WerSvc"                                   # Error reporting
+  - "BITS"                                     # Background transfers (OK for AD/DC/CA)
+  - "wlidsvc"                                  # Live ID auth
+  - "RemoteRegistry"
+  - "RetailDemo"
+  - "TabletInputService"
+  - "CDPSvc"                                   # Connected device platform
+  - "CDPUserSvc"
+  - "DusmSvc"                                  # Data usage
+  - "Fax"
+  - "PrintNotify"
+  - "WalletService"
+  - "wisvc"                                    # Windows Insider
+  - "Themes"
+  - "SSDPSRV"
+  - "upnphost"
+  - "WpnService"                               # Push notifications
+  - "WpnUserService"
+  - "SEMgrSvc"
+  - "PimIndexMaintenanceSvc"
+  - "WdiServiceHost"
+  - "WdiSystemHost"
+  - "DPS"                                      # Diagnostic policy
+  - "Wecsvc"                                   # Event collector
+  - "PerfHost"

@@ -1,0 +1,33 @@
+---
+- name: Disable scheduled tasks
+  community.windows.win_scheduled_task:
+    name: "{{ item.name }}"
+    path: "{{ item.path }}"
+    state: absent
+    # Prevents failure if schedule task is unable to stop
+    error_action: ignore
+  loop:
+    - {
+        path: '\Microsoft\Windows\Application Experience',
+        name: "ProgramDataUpdater",
+      }
+    - {
+        path: '\Microsoft\Windows\Application Experience',
+        name: "StartupAppTask",
+      }
+    - {
+        path: '\Microsoft\Windows\Customer Experience Improvement Program',
+        name: "KernelCeipTask",
+      }
+    - {
+        path: '\Microsoft\Windows\DiskDiagnostic',
+        name: "Microsoft-Windows-DiskDiagnosticDataCollector",
+      }
+    - { path: '\Microsoft\Windows\Maintenance', name: "WinSAT" }
+    - { path: '\Microsoft\Windows\NetTrace', name: "GatherNetworkInfo" }
+    - {
+        path: '\Microsoft\Windows\Windows Error Reporting',
+        name: "QueueReporting",
+      }
+    - { path: '\Microsoft\Windows\UpdateOrchestrator', name: "Schedule Scan" }
+    - { path: '\Microsoft\Windows\UpdateOrchestrator', name: "USO_UxBroker" }

@@ -1,0 +1,14 @@
+---
+- name: Remove unnecessary IIS modules only if IIS is installed
+  ansible.windows.win_feature:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - Web-DAV-Publishing
+    - Web-WebSockets
+    - Web-Windows-Auth
+    - Web-Digest-Auth
+    - Web-IP-Security
+    - Web-Url-Auth
+    - Web-Filtering
+    - Web-Mgmt-Tools
