@@ -1,0 +1,54 @@
+---
+- name: Disable telemetry
+  ansible.builtin.include_tasks: telemetry.yml
+
+- name: Disable auto updates
+  ansible.builtin.include_tasks: updates.yml
+
+- name: Disable useless scheduled tasks
+  ansible.builtin.include_tasks: scheduled_tasks.yml
+
+- name: Optimize IIS
+  ansible.builtin.include_tasks: iis.yml
+
+- name: Optimize SQL Server
+  ansible.builtin.include_tasks: sql_server.yml
+
+# We need to call this role in a loop externally as otherwise it will fail for
+# any services that happen not to exist on the target system
+- name: Disable unnecessary services
+  ansible.builtin.include_tasks: services.yml
+  vars:
+    service: "{{ item }}"
+  with_items: "{{ windows_optimize_disable_services }}"
+
+# Configure registry to disable more things
+- name: Disable Windows Tips / Suggestions / Consumer Features
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+    name: "{{ item.name }}"
+    data: "{{ item.data }}"
+    type: dword
+  loop:
+    - { name: DisableWindowsConsumerFeatures, data: 1 }
+    - { name: DisableSoftLanding, data: 1 }
+
+- name: Disable Superfetch/Page Combining/Memory Compression
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
+    name: "{{ item.name }}"
+    data: "{{ item.data }}"
+    type: dword
+  loop:
+    - { name: DisablePagingExecutive, data: 1 }
+    - { name: DisablePrefetcher, data: 1 }
+    - { name: DisableSuperfetch, data: 1 }
+    - { name: FeatureSettingsOverride, data: 3 }
+    - { name: FeatureSettingsOverrideMask, data: 3 }
+
+- name: Disable indexing
+  ansible.windows.win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows Search
+    name: SetupCompletedSuccessfully
+    data: 0
+    type: dword

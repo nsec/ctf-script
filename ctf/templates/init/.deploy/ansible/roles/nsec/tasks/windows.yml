@@ -1,0 +1,48 @@
+---
+# Incus exec/WebSocket to Windows VMs can flake; retry transient API errors.
+- name: Disable IPv6 temporary addresses
+  ansible.windows.win_powershell:
+    script: Set-NetIPv6Protocol -UseTemporaryAddresses Disabled
+  register: nsec_ipv6_temp
+  until: nsec_ipv6_temp is success
+  retries: 8
+  delay: 15
+  when: not (nsec_post_deployment | bool)
+
+- name: Disable IPv6 randomize identifiers
+  ansible.windows.win_powershell:
+    script: Set-NetIPv6Protocol -RandomizeIdentifiers Disabled
+  register: nsec_ipv6_rand
+  until: nsec_ipv6_rand is success
+  retries: 8
+  delay: 15
+  when: not (nsec_post_deployment | bool)
+
+- name: Disable IPv4 protocol binding
+  ansible.windows.win_powershell:
+    script: |
+      $adapters = @(Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Sort-Object InterfaceIndex)
+      if ($adapters.Count -eq 0) { throw 'No Up network adapter found for IPv4 binding.' }
+      $alias = ($adapters | Where-Object { $_.HardwareInterface } | Select-Object -First 1).Name
+      if (-not $alias) { $alias = $adapters[0].Name }
+      Disable-NetAdapterBinding -Name $alias -ComponentID ms_tcpip
+  register: ipv4_disabled
+  until: ipv4_disabled is success
+  retries: 8
+  delay: 15
+  when: not (nsec_post_deployment | bool)
+
+- name: Display result
+  ansible.builtin.debug:
+    var: ipv4_disabled.output
+  when: not (nsec_post_deployment | bool)
+
+- name: Include Windows optimization role
+  ansible.builtin.include_role:
+    name: windows_optimize
+  when: not (nsec_post_deployment | bool)
+
+- name: Include Windows RPC hardening role
+  ansible.builtin.include_role:
+    name: windows_rpc
+  when: not (nsec_post_deployment | bool) and not allow_coercion

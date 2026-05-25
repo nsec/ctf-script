@@ -1,0 +1,16 @@
+---
+- name: Include NSEC Linux role
+  ansible.builtin.include_role:
+    name: nsec
+    tasks_from: linux.yml
+  when: '"windows" not in group_names'
+
+- name: Include NSEC Windows role
+  ansible.builtin.include_role:
+    name: nsec
+    tasks_from: windows.yml
+  when: '"windows" in group_names'
+
+- name: Importing cleanup role
+  ansible.builtin.include_role:
+    name: cleanup

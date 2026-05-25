@@ -64,6 +64,20 @@ def redeploy(
             help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
         ),
     ] = False,
+    skip_pre_common: Annotated[
+        bool,
+        typer.Option(
+            "--skip-pre-common",
+            help="Skip pre-common deployment Ansible script. Useful for Windows VM that crashes all the time. (Use this only if you already ran the pre-common once)",
+        ),
+    ] = False,
+    skip_post_common: Annotated[
+        bool,
+        typer.Option(
+            "--skip-post-common",
+            help="Skip post-common deployment Ansible script. Useful for Windows VM. DO NOT USE IN PRODUCTION.",
+        ),
+    ] = False,
     exclude_tracks: Annotated[
         list[str],
         typer.Option(
@@ -90,5 +104,7 @@ def redeploy(
         keep_already_deployed=True,
         force=force,
         skip_build=skip_build,
+        skip_pre_common=skip_pre_common,
+        skip_post_common=skip_post_common,
         exclude_tracks=exclude_tracks,
     )

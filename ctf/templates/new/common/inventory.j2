@@ -65,4 +65,6 @@ windows:
     # For virtual machines, the remote and project changes in production.
     ansible_incus_remote: "{{ '{{' }} ansible_incus_container_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
     ansible_incus_project: "{{ '{{' }} ansible_incus_vm_project if ansible_incus_vm_project else ansible_incus_project {{ '}}' }}"
+    local_admin_password: CHANGE_ME
+    allow_coercion: false # If the virtual machine requires coercion to work, set this to true or set it to true for the specific virtual machine only.
 {% endif %}

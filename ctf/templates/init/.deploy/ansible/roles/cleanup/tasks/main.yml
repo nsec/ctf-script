@@ -1,0 +1,12 @@
+---
+- name: Include cleanup Linux role
+  ansible.builtin.include_role:
+    name: cleanup
+    tasks_from: linux.yml
+  when: '"windows" not in group_names and "linux-incus-vm" not in group_names'
+
+- name: Include cleanup Windows role
+  ansible.builtin.include_role:
+    name: cleanup
+    tasks_from: windows.yml
+  when: '"windows" in group_names'

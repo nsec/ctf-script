@@ -1,14 +1,18 @@
-- name: Pre-deployment Common
+- name: Pre-deployment - install Python on Linux OS
   hosts: all,!build,!windows
   order: shuffle
   gather_facts: false
   any_errors_fatal: true
-
   tasks:
     - name: Distro update and Python3 install
       ansible.builtin.raw: |
         apt update && apt upgrade -y && apt install -y python3
       changed_when: true
+      when: not (nsec_post_deployment | bool)
 
-- name: Importing cleanup.yaml Playbook
-  ansible.builtin.import_playbook: cleanup.yaml
+- name: Running common deployment roles for Linux and Windows
+  hosts: all,!build
+  order: shuffle
+  any_errors_fatal: true
+  roles:
+    - nsec

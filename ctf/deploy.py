@@ -82,6 +82,20 @@ def deploy(
             help="Skip build container. (Use this only if you already have the necessary locally for the deploy.yaml to work!)",
         ),
     ] = False,
+    skip_pre_common: Annotated[
+        bool,
+        typer.Option(
+            "--skip-pre-common",
+            help="Skip pre-common deployment Ansible script. Useful for Windows VM that crashes all the time. (Use this only if you already ran the pre-common once)",
+        ),
+    ] = False,
+    skip_post_common: Annotated[
+        bool,
+        typer.Option(
+            "--skip-post-common",
+            help="Skip post-common deployment Ansible script. Useful for Windows VM. DO NOT USE IN PRODUCTION.",
+        ),
+    ] = False,
     exclude_tracks: Annotated[
         list[str],
         typer.Option(
@@ -240,6 +254,8 @@ def deploy(
             path=path,
             vm_remote=vm_remote,
             vm_project=vm_project,
+            skip_pre_common=skip_pre_common,
+            skip_post_common=skip_post_common,
         )
 
         track.already_deployed = True
@@ -467,6 +483,8 @@ def run_ansible_playbook(
     vm_remote: str | None = None,
     vm_project: str | None = None,
     execute_common: bool = True,
+    skip_pre_common: bool = False,
+    skip_post_common: bool = False,
 ) -> None:
     extra_args = []
     if STATE["verbose"]:
@@ -484,11 +502,11 @@ def run_ansible_playbook(
     if production:
         extra_args += ["-e", "nsec_production=true"]
 
-    if execute_common:
-        LOG.info(msg=f"Running common yaml with ansible for track {track}...")
+    if not skip_pre_common and execute_common:
+        LOG.info(msg=f"Running pre-common.yaml with ansible for track {track}...")
         ansible_args = [
             "ansible-playbook",
-            os.path.join("..", "..", "..", ".deploy", "common.yaml"),
+            os.path.join("..", "..", "..", ".deploy", "ansible", "common.yaml"),
             "-i",
             "inventory",
         ] + extra_args
@@ -506,6 +524,24 @@ def run_ansible_playbook(
         "inventory",
     ] + extra_args
     subprocess.run(args=ansible_args, cwd=path, check=True)
+
+    if not skip_post_common and execute_common:
+        LOG.info(msg=f"Running post-common.yaml with ansible for track {track}...")
+        ansible_args = (
+            [
+                "ansible-playbook",
+                os.path.join("..", "..", "..", ".deploy", "ansible", "common.yaml"),
+                "-i",
+                "inventory",
+            ]
+            + extra_args
+            + ["-e", "nsec_post_deployment=true"]
+        )
+        subprocess.run(
+            args=ansible_args,
+            cwd=path,
+            check=True,
+        )
 
     artifacts_path = os.path.join(path, "artifacts")
     if os.path.exists(path=artifacts_path):
