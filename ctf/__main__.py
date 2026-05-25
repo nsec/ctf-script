@@ -2,10 +2,9 @@
 import json
 import logging
 import os
-import pathlib
-import sys
 import time
 import urllib.request
+from pathlib import Path
 
 import rich
 import typer
@@ -14,23 +13,23 @@ from rich.prompt import Prompt
 from typing_extensions import Annotated
 
 from ctf import ENV, STATE
-from ctf.askgod import app as askgod_app
-from ctf.check import app as check_app
-from ctf.deploy import app as deploy_app
-from ctf.destroy import app as destroy_app
-from ctf.flags import app as flags_app
-from ctf.generate import app as generate_app
-from ctf.init import app as init_app
-from ctf.list import app as list_app
-from ctf.logger import LOG
-from ctf.new import app as new_app
-from ctf.post import app as post_app
-from ctf.redeploy import app as redeploy_app
-from ctf.services import app as services_app
-from ctf.stats import app as stats_app
-from ctf.utils import find_ctf_root_directory, get_version, show_version
-from ctf.validate import app as validate_app
-from ctf.version import app as version_app
+from ctf.commands.askgod import app as askgod_app
+from ctf.commands.check import app as check_app
+from ctf.commands.deploy import app as deploy_app
+from ctf.commands.destroy import app as destroy_app
+from ctf.commands.flags import app as flags_app
+from ctf.commands.generate import app as generate_app
+from ctf.commands.init import app as init_app
+from ctf.commands.list import app as list_app
+from ctf.commands.new import app as new_app
+from ctf.commands.post import app as post_app
+from ctf.commands.redeploy import app as redeploy_app
+from ctf.commands.services import app as services_app
+from ctf.commands.stats import app as stats_app
+from ctf.commands.validate import app as validate_app
+from ctf.commands.version import app as version_app
+from ctf.common.logger import LOG
+from ctf.common.utils import get_version, show_version
 
 app = typer.Typer(
     help="CLI tool to manage CTF challenges as code. Run from the root CTF repo directory or set the CTF_ROOT_DIR environment variable to run the tool.",
@@ -65,13 +64,12 @@ app.add_typer(
 
 
 def check_tool_version() -> None:
-
     # Check at most once per day
-    stamp = (
-        pathlib.Path(
+    stamp: Path = (
+        Path(
             os.environ.get(
                 "XDG_CACHE_HOME",
-                str(pathlib.Path(os.environ.get("HOME", "~")).expanduser() / ".cache"),
+                Path(os.environ.get("HOME", "~")).expanduser() / ".cache",
             )
         )
         / "ctf-script"
@@ -188,17 +186,3 @@ def main():
     console = rich.get_console()
     console.width = 150 if console.width < 150 else console.width
     app()
-
-
-if __name__ == "__main__":
-    import sys
-
-    if "version" not in sys.argv and "init" not in sys.argv:
-        if not os.path.isdir(
-            s=(p := os.path.join(find_ctf_root_directory(), "challenges"))
-        ):
-            LOG.error(
-                msg=f"Directory `{p}` not found. Make sure this script is ran from the root directory OR set the CTF_ROOT_DIR environment variable to the root directory."
-            )
-            exit(code=1)
-    main()

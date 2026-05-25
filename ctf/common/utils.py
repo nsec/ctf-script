@@ -12,8 +12,8 @@ import typer
 import yaml
 
 from ctf import ENV
-from ctf.logger import LOG
-from ctf.models import Track, TrackYaml
+from ctf.common.logger import LOG
+from ctf.common.models import Track, TrackYaml
 
 __CTF_ROOT_DIRECTORY = ""
 
@@ -37,47 +37,40 @@ def check_git_lfs() -> bool:
 def get_all_available_tracks() -> set[Track]:
     tracks = set()
 
-    for entry in os.listdir(
-        path=(
-            challenges_directory := os.path.join(
-                find_ctf_root_directory(), "challenges"
-            )
-        )
-    ):
-        if not os.path.isdir(s=os.path.join(challenges_directory, entry)):
+    for entry in (
+        challenges_directory := (find_ctf_root_directory() / "challenges")
+    ).iterdir():
+        if not (challenges_directory / entry).is_dir():
             continue
 
-        tracks.add(Track(name=entry))
+        tracks.add(Track(name=entry.name))
 
     return tracks
 
 
 def does_track_require_build_container(track: Track) -> bool:
-    return os.path.isfile(
-        build_yaml_file_path := os.path.join(
-            find_ctf_root_directory(),
-            "challenges",
-            track.name,
-            "ansible",
-            "build.yaml",
+    return (
+        build_yaml_file_path := (
+            find_ctf_root_directory()
+            / "challenges"
+            / track.name
+            / "ansible"
+            / "build.yaml"
         )
-    ) and bool(load_yaml_file(build_yaml_file_path))
+    ).is_file() and bool(load_yaml_file(build_yaml_file_path))
 
 
 def track_has_virtual_machine(track: str | Track) -> bool:
     track_yaml: TrackYaml = TrackYaml.model_validate(
         parse_track_yaml(track_name=track.name if isinstance(track, Track) else track)
     )
-    with open(
-        os.path.join(
-            find_ctf_root_directory(),
-            "challenges",
-            track.name if isinstance(track, Track) else track,
-            "terraform",
-            "main.tf",
-        ),
-        "r",
-    ) as f:
+    with (
+        find_ctf_root_directory()
+        / "challenges"
+        / (track.name if isinstance(track, Track) else track)
+        / "terraform"
+        / "main.tf"
+    ).open(mode="r") as f:
         return (
             track_yaml.instances
             and any(
@@ -95,40 +88,32 @@ def track_has_virtual_machine(track: str | Track) -> bool:
 
 def validate_track_can_be_deployed(track: Track) -> bool:
     return (
-        os.path.exists(
-            path=os.path.join(
-                find_ctf_root_directory(),
-                "challenges",
-                track.name,
-                "terraform",
-                "main.tf",
-            )
-        )
-        and os.path.exists(
-            path=os.path.join(
-                find_ctf_root_directory(),
-                "challenges",
-                track.name,
-                "ansible",
-                "deploy.yaml",
-            )
-        )
-        and os.path.exists(
-            path=os.path.join(
-                find_ctf_root_directory(),
-                "challenges",
-                track.name,
-                "ansible",
-                "inventory",
-            )
-        )
+        (
+            find_ctf_root_directory()
+            / "challenges"
+            / track.name
+            / "terraform"
+            / "main.tf"
+        ).exists()
+        and (
+            find_ctf_root_directory()
+            / "challenges"
+            / track.name
+            / "ansible"
+            / "deploy.yaml"
+        ).exists()
+        and (
+            find_ctf_root_directory()
+            / "challenges"
+            / track.name
+            / "ansible"
+            / "inventory"
+        ).exists()
     )
 
 
 def add_tracks_to_terraform_modules(tracks: set[Track]):
-    with open(
-        file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="a"
-    ) as fd:
+    with (find_ctf_root_directory() / ".deploy" / "modules.tf").open(mode="a") as fd:
         template = jinja2.Environment().from_string(
             source=textwrap.dedent(
                 text="""\
@@ -161,9 +146,7 @@ def create_terraform_modules_file(
     remote: str,
     production: bool = False,
 ) -> None:
-    with open(
-        file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="w+"
-    ) as fd:
+    with (find_ctf_root_directory() / ".deploy" / "modules.tf").open(mode="w+") as fd:
         template = jinja2.Environment().from_string(
             source=textwrap.dedent(
                 text="""\
@@ -195,14 +178,12 @@ def get_common_modules_output_variables() -> set[str]:
 
     variables: set[str] = set()
 
-    for file in os.listdir(
-        path := os.path.join(find_ctf_root_directory(), ".deploy", "common")
-    ):
-        if file == "versions.tf":
+    for file in (find_ctf_root_directory() / ".deploy" / "common").iterdir():
+        if file.name == "versions.tf":
             continue
 
-        with open(os.path.join(path, file), "r") as f:
-            match file:
+        with file.open(mode="r") as f:
+            match file.name:
                 case "variables.tf":
                     for i in variable_regex.findall(f.read()):
                         variables.add(i)
@@ -229,7 +210,9 @@ def get_common_modules_output_variables() -> set[str]:
 
             var_type = input("What is the type? [string] ") or "string"
 
-            with open(os.path.join(path, "variables.tf"), "a") as f:
+            with (
+                find_ctf_root_directory() / ".deploy" / "common" / "variables.tf"
+            ).open(mode="a") as f:
                 f.write("\n")
                 template = jinja2.Environment().from_string(
                     source=textwrap.dedent(
@@ -263,9 +246,7 @@ def get_common_modules_output_variables() -> set[str]:
 
 
 def get_terraform_tracks_from_modules() -> set[Track]:
-    with open(
-        file=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf"), mode="r"
-    ) as f:
+    with (find_ctf_root_directory() / ".deploy" / "modules.tf").open(mode="r") as f:
         modules_tf = f.read()
 
     module_line_regex = re.compile(
@@ -349,40 +330,30 @@ def remove_tracks_from_terraform_modules(
     add_tracks_to_terraform_modules(tracks=(current_tracks - tracks))
 
 
-def get_all_file_paths_recursively(path: str) -> Generator[str, None, None]:
-    if os.path.isfile(path=path):
+def get_all_file_paths_recursively(path: Path) -> Generator[Path, None, None]:
+    if path.is_file():
         yield remove_ctf_script_root_directory_from_path(path=path)
     else:
-        for file in os.listdir(path=path):
-            for f in get_all_file_paths_recursively(path=os.path.join(path, file)):
+        for file in path.iterdir():
+            for f in get_all_file_paths_recursively(file):
                 yield f
 
 
-def get_ctf_script_root_directory() -> str:
-    return os.path.dirname(p=__file__)
+def get_ctf_script_schemas_directory() -> Path:
+    return find_ctf_root_directory() / "schemas"
 
 
-def get_ctf_script_templates_directory() -> str:
-    return os.path.join(get_ctf_script_root_directory(), "templates")
+def remove_ctf_script_root_directory_from_path(path: Path) -> Path:
+    return Path(os.path.relpath(path=path, start=find_ctf_root_directory()))
 
 
-def get_ctf_script_schemas_directory() -> str:
-    return os.path.join(find_ctf_root_directory(), "schemas")
-
-
-def remove_ctf_script_root_directory_from_path(path: str) -> str:
-    return os.path.relpath(path=path, start=find_ctf_root_directory())
-
-
-def load_yaml_file(file: str) -> dict[str, Any]:
+def load_yaml_file(file: Path) -> dict[str, Any]:
     return yaml.safe_load(stream=open(file, mode="r", encoding="utf-8"))
 
 
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
     r = load_yaml_file(
-        p := os.path.join(
-            find_ctf_root_directory(), "challenges", track_name, "track.yaml"
-        )
+        p := (find_ctf_root_directory() / "challenges" / track_name / "track.yaml")
     )
     r["file_location"] = remove_ctf_script_root_directory_from_path(path=p)
 
@@ -391,15 +362,11 @@ def parse_track_yaml(track_name: str) -> dict[str, Any]:
 
 def parse_post_yamls(track_name: str) -> list[dict]:
     posts = []
-    for post in os.listdir(
-        path=(
-            posts_dir := os.path.join(
-                find_ctf_root_directory(), "challenges", track_name, "posts"
-            )
-        )
-    ):
-        if post.endswith(".yml") or post.endswith(".yaml"):
-            r = load_yaml_file(os.path.join(posts_dir, post))
+    for post in (
+        posts_dir := (find_ctf_root_directory() / "challenges" / track_name / "posts")
+    ).iterdir():
+        if post.name.endswith(".yml") or post.name.endswith(".yaml"):
+            r = load_yaml_file(posts_dir / post)
             r["file_location"] = remove_ctf_script_root_directory_from_path(
                 path=posts_dir
             )
@@ -413,31 +380,27 @@ def find_ctf_root_directory() -> Path:
     if __CTF_ROOT_DIRECTORY:
         return Path(__CTF_ROOT_DIRECTORY)
 
-    path: str = (
-        str(ENV.get("CTF_ROOT_DIR"))
-        if "CTF_ROOT_DIR" in ENV
-        else os.path.join(os.getcwd(), ".")
-    )
+    path: Path = (Path(ENV.get("CTF_ROOT_DIR", "."))).expanduser().resolve()
     if not is_ctf_dir(path=path):
-        while path != (path := os.path.dirname(p=path)):
+        while path != (path := path / ".."):
             ctf_dir = is_ctf_dir(path)
 
             if ctf_dir:
                 break
 
-    if path == "/":
+    if path == Path("/"):
         LOG.critical(
             msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
         )
         exit(1)
 
-    LOG.debug(msg=f"Found root directory: {path}")
-    return Path(__CTF_ROOT_DIRECTORY := path)
+    LOG.debug(f"Found root directory: {path}")
+    return (__CTF_ROOT_DIRECTORY := path)
 
 
-def is_ctf_dir(path):
+def is_ctf_dir(path: Path):
     ctf_dir = True
-    dir = os.listdir(path=path)
+    dir = [p.name for p in path.iterdir()]
     if ".deploy" not in dir:
         ctf_dir = False
     if "challenges" not in dir:
@@ -456,7 +419,7 @@ def show_version(value: bool) -> None:
         raise typer.Exit()
 
 
-def terraform_binary() -> str:
+def terraform_binary() -> Path:
     path = shutil.which(cmd="tofu")
     if not path:
         path = shutil.which(cmd="terraform")
@@ -464,4 +427,4 @@ def terraform_binary() -> str:
     if not path:
         raise Exception("Couldn't find Terraform or OpenTofu")
 
-    return path
+    return Path(path)

@@ -2,9 +2,10 @@ import abc
 import glob
 import os
 import re
+from pathlib import Path
 
-from ctf.models import TrackYaml, ValidationError
-from ctf.utils import (
+from ctf.common.models import TrackYaml, ValidationError
+from ctf.common.utils import (
     find_ctf_root_directory,
     get_all_file_paths_recursively,
     parse_post_yamls,
@@ -29,13 +30,9 @@ class FilesValidator(Validator):
         self.files_mapping = {}
 
     def validate(self, track_name: str) -> list[ValidationError]:
-        if os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "files"
-                )
-            )
-        ):
+        if (
+            path := (find_ctf_root_directory() / "challenges" / track_name / "files")
+        ).exists():
             for file in get_all_file_paths_recursively(path=path):
                 # Lower the file name to avoid human error
                 file = os.path.relpath(path=file, start=path).lower()
@@ -123,11 +120,16 @@ class FireworksAskGodTagValidator(Validator):
     def finalize(self) -> list[ValidationError]:
         errors: list[ValidationError] = []
 
-        sound_path = os.path.join(
-            find_ctf_root_directory(), "challenges", "*", "files", "askgod", "sounds"
+        sound_path = (
+            find_ctf_root_directory()
+            / "challenges"
+            / "*"
+            / "files"
+            / "askgod"
+            / "sounds"
         )
         for sound_tag, track_names in self.sound_tags_mapping.items():
-            if len(glob.glob(pathname=os.path.join(sound_path, sound_tag))) == 0:
+            if len(glob.glob(pathname=sound_path / sound_tag)) == 0:
                 errors.append(
                     ValidationError(
                         error_name="Fireworks sound file not found",
@@ -139,11 +141,11 @@ class FireworksAskGodTagValidator(Validator):
                     )
                 )
 
-        gif_path = os.path.join(
-            find_ctf_root_directory(), "challenges", "*", "files", "askgod", "gifs"
+        gif_path: Path = (
+            find_ctf_root_directory() / "challenges" / "*" / "files" / "askgod" / "gifs"
         )
         for gif_tag, track_names in self.gif_tags_mapping.items():
-            if len(glob.glob(pathname=os.path.join(gif_path, gif_tag))) == 0:
+            if len(glob.glob(pathname=gif_path / gif_tag)) == 0:
                 errors.append(
                     ValidationError(
                         error_name="Fireworks gif file not found",
@@ -184,15 +186,13 @@ class DiscoursePostsAskGodTagValidator(Validator):
         for discourse_post in discourse_posts:
             if discourse_post.get("type", "") == "post":
                 self.discourse_posts.append((track_name, discourse_post))
-                if not os.path.exists(
-                    os.path.join(
-                        find_ctf_root_directory(),
-                        "challenges",
-                        track_name,
-                        "posts",
-                        discourse_post["topic"] + ".yaml",
-                    )
-                ):
+                if not (
+                    find_ctf_root_directory()
+                    / "challenges"
+                    / track_name
+                    / "posts"
+                    / str(discourse_post["topic"] + ".yaml")
+                ).exists():
                     errors.append(
                         ValidationError(
                             error_name="Discourse post topic not found",
@@ -200,11 +200,11 @@ class DiscoursePostsAskGodTagValidator(Validator):
                             track_name=track_name,
                             details={
                                 "Topic": discourse_post["topic"],
-                                "Posts directory": os.path.join(
-                                    find_ctf_root_directory(),
-                                    "challenges",
-                                    track_name,
-                                    "posts",
+                                "Posts directory": str(
+                                    find_ctf_root_directory()
+                                    / "challenges"
+                                    / track_name
+                                    / "posts"
                                 ),
                             },
                         )
@@ -259,60 +259,51 @@ class PlaceholderValuesValidator(Validator):
         files = []
 
         # Checking placeholders in terraform/main.tf
-        if os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(),
-                    "challenges",
-                    track_name,
-                    "terraform",
-                    "main.tf",
-                )
+        if (
+            path := (
+                find_ctf_root_directory()
+                / "challenges"
+                / track_name
+                / "terraform"
+                / "main.tf"
             )
-        ):
+        ).exists():
             files += [path]
 
         # Checking placeholders in track.yml
-        if os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "track.yaml"
-                )
+        if (
+            path := (
+                find_ctf_root_directory() / "challenges" / track_name / "track.yaml"
             )
-        ):
+        ).exists():
             files += [path]
 
         # Checking placeholders in ansible/inventory
-        if os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(),
-                    "challenges",
-                    track_name,
-                    "ansible",
-                    "inventory",
-                )
+        if (
+            path := (
+                find_ctf_root_directory()
+                / "challenges"
+                / track_name
+                / "ansible"
+                / "inventory"
             )
-        ):
+        ).exists():
             files += [path]
         # Checking placeholders in posts/*.yaml
-        if integrated_with_scenario and os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "posts"
+        if (
+            integrated_with_scenario
+            and (
+                path := (
+                    find_ctf_root_directory() / "challenges" / track_name / "posts"
                 )
-            )
+            ).exists()
         ):
-            files += list(glob.glob(pathname=os.path.join(path, "*.yaml")))
+            files += list(glob.glob(pathname=str(path / "*.yaml")))
         # Checking placeholders in ansible/*.yaml
-        if os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "ansible"
-                )
-            )
-        ):
-            files += list(glob.glob(pathname=os.path.join(path, "*.yaml")))
+        if (
+            path := (find_ctf_root_directory() / "challenges" / track_name / "ansible")
+        ).exists():
+            files += list(glob.glob(pathname=str(path / "*.yaml")))
 
         for file in files:
             with open(file=file, mode="r") as f:
@@ -326,8 +317,10 @@ class PlaceholderValuesValidator(Validator):
                                 error_name="Placeholder value found",
                                 error_description="A placeholder value was found in a challenge file. This indicates that a value was not changed.",
                                 details={
-                                    "File location": remove_ctf_script_root_directory_from_path(
-                                        path=file
+                                    "File location": str(
+                                        remove_ctf_script_root_directory_from_path(
+                                            path=file
+                                        )
                                     ),
                                     "Value found": "\n".join(s),
                                 },
@@ -347,14 +340,10 @@ class DiscourseFileNamesValidator(Validator):
         files = []
 
         # Checking placeholders in posts/*.yaml
-        if os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track_name, "posts"
-                )
-            )
-        ):
-            files += list(glob.glob(pathname=os.path.join(path, "*.yaml")))
+        if (
+            path := (find_ctf_root_directory() / "challenges" / track_name / "posts")
+        ).exists():
+            files += list(glob.glob(pathname=str(path / "*.yaml")))
 
         for file in files:
             file_name = os.path.basename(file)
@@ -443,14 +432,9 @@ class OrphanServicesValidator(Validator):
                     services.append(service.name)
 
         if services:
-            if not os.path.exists(
-                path=os.path.join(
-                    find_ctf_root_directory(),
-                    "challenges",
-                    track_name,
-                    "terraform",
-                )
-            ):
+            if not (
+                find_ctf_root_directory() / "challenges" / track_name / "terraform"
+            ).exists():
                 errors.append(
                     ValidationError(
                         error_name="Orphan service",
@@ -538,8 +522,11 @@ class HasAtLeastOneDiscoursePostValidator(Validator):
                     error_description="At least one discourse post should be defined for the track.",
                     track_name=track_name,
                     details={
-                        "Posts directory": os.path.join(
-                            find_ctf_root_directory(), "challenges", track_name, "posts"
+                        "Posts directory": str(
+                            find_ctf_root_directory()
+                            / "challenges"
+                            / track_name
+                            / "posts"
                         )
                     },
                 )

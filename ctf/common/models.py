@@ -28,7 +28,7 @@ class Track(BaseModel):
 
     @property
     def location(self):
-        from ctf.utils import find_ctf_root_directory
+        from ctf.common.utils import find_ctf_root_directory
 
         return find_ctf_root_directory() / "challenges" / self.name
 

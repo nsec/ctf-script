@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-- **`ctf deploy` no longer passes `ansible_incus_remote` as an Ansible extra variable.**  
+- **`ctf deploy` no longer passes `ansible_incus_remote` as an Ansible extra variable.**
   `ansible-playbook` with `-e ansible_incus_remote=<value>` overrides inventory on every host, which broke mixed containers / VMs deployments.
 
   **Migration:** Do not depend on `ansible_incus_remote` being injected by deploy for
   playbook-wide VM/cluster targeting.
-  
+
   Use something like:
   ```
     vars:

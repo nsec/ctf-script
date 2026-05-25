@@ -2,8 +2,8 @@ import typer
 from typing_extensions import Annotated
 
 from ctf import ENV
-from ctf.deploy import deploy
-from ctf.destroy import destroy
+from ctf.commands.deploy import deploy
+from ctf.commands.destroy import destroy
 
 app = typer.Typer()
 

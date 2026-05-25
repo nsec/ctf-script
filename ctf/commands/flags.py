@@ -9,9 +9,9 @@ import typer
 import yaml
 from typing_extensions import Annotated
 
-from ctf.logger import LOG
-from ctf.models import Track
-from ctf.utils import find_ctf_root_directory, parse_track_yaml
+from ctf.common.logger import LOG
+from ctf.common.models import Track
+from ctf.common.utils import find_ctf_root_directory, parse_track_yaml
 
 app = typer.Typer()
 
@@ -40,15 +40,11 @@ def flags(
     distinct_tracks: set[Track] = set()
 
     for entry in os.listdir(
-        path=(
-            challenges_directory := os.path.join(
-                find_ctf_root_directory(), "challenges"
-            )
-        )
+        challenges_directory := (find_ctf_root_directory() / "challenges")
     ):
-        if os.path.isdir(
-            s=(track_directory := os.path.join(challenges_directory, entry))
-        ) and os.path.exists(path=os.path.join(track_directory, "track.yaml")):
+        if (track_directory := challenges_directory / entry).is_dir() and (
+            track_directory / "track.yaml"
+        ).exists():
             if not tracks:
                 distinct_tracks.add(Track(name=entry))
             elif entry in tracks:
@@ -56,11 +52,11 @@ def flags(
 
     flags = []
     for track in distinct_tracks:
-        LOG.debug(msg=f"Parsing track.yaml for track {track.name}")
+        LOG.debug(f"Parsing track.yaml for track {track.name}")
         track_yaml = parse_track_yaml(track_name=track.name)
 
         if len(track_yaml["flags"]) == 0:
-            LOG.debug(msg=f"No flag in track {track.name}. Skipping...")
+            LOG.debug(f"No flag in track {track.name}. Skipping...")
             continue
 
         track_flags = track_yaml["flags"]
@@ -71,7 +67,7 @@ def flags(
         flags.extend(track_flags)
 
     if not flags:
-        LOG.warning(msg="No flag found...")
+        LOG.warning("No flag found...")
         return
 
     if format == OutputFormat.JSON:

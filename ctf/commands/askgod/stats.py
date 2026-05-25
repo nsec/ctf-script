@@ -6,7 +6,7 @@ import rich
 import typer
 from typing_extensions import Annotated
 
-from ctf.logger import LOG
+from ctf.common.logger import LOG
 
 app = typer.Typer()
 

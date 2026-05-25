@@ -1,4 +1,3 @@
-import os
 from enum import StrEnum
 
 import rich
@@ -6,8 +5,8 @@ import typer
 from rich.table import Table
 from typing_extensions import Annotated
 
-from ctf.models import Track
-from ctf.utils import find_ctf_root_directory, parse_post_yamls, parse_track_yaml
+from ctf.common.models import Track
+from ctf.common.utils import find_ctf_root_directory, parse_post_yamls, parse_track_yaml
 
 app = typer.Typer()
 
@@ -23,15 +22,11 @@ def list_tracks(
     ] = ListOutputFormat.PRETTY,
 ) -> None:
     tracks: set[Track] = set()
-    for track in os.listdir(path=os.path.join(find_ctf_root_directory(), "challenges")):
-        if os.path.isdir(
-            s=os.path.join(find_ctf_root_directory(), "challenges", track)
-        ) and os.path.exists(
-            path=os.path.join(
-                find_ctf_root_directory(), "challenges", track, "track.yaml"
-            )
-        ):
-            tracks.add(Track(name=track))
+    for track in (find_ctf_root_directory() / "challenges").iterdir():
+        if (find_ctf_root_directory() / "challenges" / track).is_dir() and (
+            find_ctf_root_directory() / "challenges" / track / "track.yaml"
+        ).exists():
+            tracks.add(Track(name=track.name))
 
     parsed_tracks = []
     for track in tracks:
