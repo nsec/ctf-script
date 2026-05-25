@@ -33,6 +33,11 @@ variable "ctf_dns_network_zone" {
   type    = string
 }
 
+variable "ctf_acl_network" {
+  default = "simulated-production-acl"
+  type    = string
+}
+
 locals {
   track = yamldecode(file("${path.module}/../track.yaml"))
 }
