@@ -55,11 +55,9 @@ resource "incus_network" "this" {
   config = merge({
     "ipv6.address" = "{{ data.ipv6_subnet }}::1/64"
     },
-    /* Uncomment if using ACL
     var.already_deployed ? {
-      "security.acls" = incus_network_acl.this[0].name
+      "security.acls" = join(",", [var.ctf_acl_network /*Uncomment if using your own ACL.*//*, incus_network_acl.this[0].name*/])
     } : {},
-    */
     var.deploy == "production" ? {
       "ipv4.address" = "none"
       "ipv6.nat"     = "false"
@@ -114,7 +112,7 @@ locals {
     "config" = {
       # These limits should only be adjusted if you NEED more resources.
       "limits.cpu"          = "2"
-      "boot.autorestart"      = "true"
+      "boot.autorestart"    = "true"
       "security.secureboot" = "false"
     }
   }
