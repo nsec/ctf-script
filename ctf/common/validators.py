@@ -534,6 +534,49 @@ class HasAtLeastOneDiscoursePostValidator(Validator):
         return errors
 
 
+class TrailingSpacesForPostUser(Validator):
+    """Validate that there is not trailing spaces for post users."""
+
+    def validate(self, track_name: str) -> list[ValidationError]:
+        errors: list[ValidationError] = []
+        discourse_posts: list[dict[str, str]] = []
+
+        for post in (
+            posts_dir := (
+                find_ctf_root_directory() / "challenges" / track_name / "posts"
+            )
+        ).iterdir():
+            if post.name.endswith(".yml") or post.name.endswith(".yaml"):
+                with (posts_dir / post).open(mode="r", encoding="utf-8") as f:
+                    discourse_posts.append(
+                        {
+                            "content": f.read(),
+                            "file_location": str(
+                                remove_ctf_script_root_directory_from_path(posts_dir)
+                            ),
+                        }
+                    )
+        for discourse_post in discourse_posts:
+            for line in discourse_post["content"].splitlines():
+                if not line.lstrip().startswith("user: "):
+                    continue
+
+                if re.match(r"^\s*user:\s*[^\s]+\s+?$", line):
+                    errors.append(
+                        ValidationError(
+                            error_name="Trailing spaces in post user name.",
+                            error_description="The user name for a post must exactly match, that includes trailing spaces.",
+                            track_name=track_name,
+                            details={
+                                "File location": discourse_post["file_location"],
+                                "Value found": f'"{line.lstrip().replace("user: ", "")}"',
+                            },
+                        )
+                    )
+
+        return errors
+
+
 validators_list = [
     CFSSStringValidator,
     DiscourseFileNamesValidator,
@@ -545,4 +588,5 @@ validators_list = [
     PlaceholderValuesValidator,
     ServicesValidator,
     HasAtLeastOneDiscoursePostValidator,
+    TrailingSpacesForPostUser,
 ]
