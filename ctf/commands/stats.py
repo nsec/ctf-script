@@ -10,8 +10,8 @@ import rich
 import typer
 from typing_extensions import Annotated
 
-from ctf.logger import LOG
-from ctf.utils import find_ctf_root_directory, parse_track_yaml
+from ctf.common.logger import LOG
+from ctf.common.utils import find_ctf_root_directory, parse_track_yaml
 
 try:
     import pybadges
@@ -64,19 +64,19 @@ def stats(
         ),
     ] = False,
 ) -> None:
-    LOG.debug(msg="Generating statistics...")
+    LOG.debug("Generating statistics...")
     stats = {}
     distinct_tracks: set[str] = set()
-    for entry in os.listdir(
-        (challenges_directory := os.path.join(find_ctf_root_directory(), "challenges"))
-    ):
-        if os.path.isdir(
-            (track_directory := os.path.join(challenges_directory, entry))
-        ) and os.path.isfile(os.path.join(track_directory, "track.yaml")):
+    for entry in (
+        challenges_directory := (find_ctf_root_directory() / "challenges")
+    ).iterdir():
+        if (track_directory := (challenges_directory / entry)).is_dir() and (
+            track_directory / "track.yaml"
+        ).is_file():
             if not tracks:
-                distinct_tracks.add(entry)
+                distinct_tracks.add(entry.name)
             elif entry in tracks:
-                distinct_tracks.add(entry)
+                distinct_tracks.add(entry.name)
 
     stats["number_of_tracks"] = len(distinct_tracks)
     stats["number_of_tracks_integrated_with_scenario"] = 0
@@ -139,10 +139,8 @@ def stats(
         if not qa - track_designers:
             stats["qa_not_done"].append(track)
 
-        if os.path.exists(
-            path=(files_directory := os.path.join(challenges_directory, track, "files"))
-        ):
-            for file in os.listdir(path=files_directory):
+        if (files_directory := (challenges_directory / track / "files")).exists():
+            for _ in files_directory.iterdir():
                 stats["number_of_files"] += 1
     stats["median_flag_value"] = statistics.median(flags)
     stats["mean_flag_value"] = round(statistics.mean(flags), 2)
@@ -169,9 +167,9 @@ def stats(
     rich.print(json.dumps(stats, indent=2, ensure_ascii=False))
     if generate_badges:
         if not _has_pybadges:
-            LOG.critical(msg="Module pybadges was not found.")
-            exit(code=1)
-        LOG.info(msg="Generating badges...")
+            LOG.critical("Module pybadges was not found.")
+            exit(1)
+        LOG.info("Generating badges...")
         os.makedirs(name=".badges", exist_ok=True)
         write_badge(
             "flag",
@@ -230,9 +228,9 @@ def stats(
 
     if charts:
         if not _has_matplotlib:
-            LOG.critical(msg="Module matplotlib was not found.")
-            exit(code=1)
-        LOG.info(msg="Generating charts...")
+            LOG.critical("Module matplotlib was not found.")
+            exit(1)
+        LOG.info("Generating charts...")
         mpl_logger = logging.getLogger("matplotlib")
         mpl_logger.setLevel(logging.INFO)
         os.makedirs(name=".charts", exist_ok=True)
@@ -420,7 +418,7 @@ def stats(
                 plt.savefig(os.path.join(".charts", "points_over_time.png"))
                 plt.clf()
 
-    LOG.debug(msg="Done...")
+    LOG.debug("Done...")
 
 
 def write_badge(name: str, svg: str) -> None:

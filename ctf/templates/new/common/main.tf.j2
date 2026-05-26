@@ -56,7 +56,7 @@ resource "incus_network" "this" {
     "ipv6.address" = "{{ data.ipv6_subnet }}::1/64"
     },
     var.already_deployed ? {
-      "security.acls" = join(",", [var.ctf_acl_network /*Uncomment if using your own ACL.*//*, incus_network_acl.this[0].name*/])
+      "security.acls" = join(",", [var.ctf_acl_network /*Uncomment the following if using your own ACL.*/ /*, incus_network_acl.this[0].name*/])
     } : {},
     var.deploy == "production" ? {
       "ipv4.address" = "none"

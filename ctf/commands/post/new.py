@@ -6,9 +6,9 @@ from pathlib import Path
 import typer
 from typing_extensions import Annotated
 
-from ctf.logger import LOG
-from ctf.models import Track
-from ctf.utils import (
+from ctf.common.logger import LOG
+from ctf.common.models import Track
+from ctf.common.utils import (
     get_all_available_tracks,
     parse_track_yaml,
 )
@@ -72,7 +72,7 @@ def _resolve_post_file_path(
     name: str | None,
     tag: str | None,
     force: bool,
-) -> str:
+) -> Path:
     filename = (
         f"{track}-{name}.yaml"
         if name
@@ -86,7 +86,7 @@ def _resolve_post_file_path(
     if not force:
         filename = _add_counter_to_filename(posts_directory, filename)
 
-    return os.path.join(posts_directory, filename)
+    return posts_directory / filename
 
 
 def _render_post_yaml(

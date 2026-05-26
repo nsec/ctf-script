@@ -1,6 +1,6 @@
 import typer
 
-from ctf.utils import show_version
+from ctf.common.utils import show_version
 
 app = typer.Typer()
 

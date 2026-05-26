@@ -6,8 +6,8 @@ import rich
 import typer
 from typing_extensions import Annotated
 
-from ctf.logger import LOG
-from ctf.utils import find_ctf_root_directory, parse_track_yaml
+from ctf.common.logger import LOG
+from ctf.common.utils import find_ctf_root_directory, parse_track_yaml
 
 app = typer.Typer()
 
@@ -28,15 +28,11 @@ def services(
 ) -> None:
     distinct_tracks: set[str] = set()
     for entry in os.listdir(
-        path=(
-            challenges_directory := os.path.join(
-                find_ctf_root_directory(), "challenges"
-            )
-        )
+        challenges_directory := (find_ctf_root_directory() / "challenges")
     ):
-        if os.path.isdir(
-            s=(track_directory := os.path.join(challenges_directory, entry))
-        ) and os.path.exists(path=os.path.join(track_directory, "track.yaml")):
+        if (track_directory := (challenges_directory / entry)).is_dir() and (
+            track_directory / "track.yaml"
+        ).exists():
             if not tracks:
                 distinct_tracks.add(entry)
             elif entry in tracks:
@@ -45,7 +41,7 @@ def services(
     all_services = []
 
     for track in distinct_tracks:
-        LOG.debug(msg=f"Parsing track.yaml for track {track}")
+        LOG.debug(f"Parsing track.yaml for track {track}")
         track_yaml = parse_track_yaml(track_name=track)
 
         services = track_yaml.get("services", [])
@@ -56,7 +52,7 @@ def services(
             ]
 
         if len(services) == 0:
-            LOG.debug(msg=f"No service in track {track}. Skipping...")
+            LOG.debug(f"No service in track {track}. Skipping...")
             continue
 
         for service in services:

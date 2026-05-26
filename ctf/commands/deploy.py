@@ -4,17 +4,18 @@ import shutil
 import subprocess
 import textwrap
 import time
+from pathlib import Path
 
 import typer
 from rich.prompt import IntPrompt
 from typing_extensions import Annotated
 
 from ctf import ENV, STATE
-from ctf.destroy import destroy
-from ctf.generate import generate
-from ctf.logger import LOG
-from ctf.models import Track, TrackYaml
-from ctf.utils import (
+from ctf.commands.destroy import destroy
+from ctf.commands.generate import generate
+from ctf.common.logger import LOG
+from ctf.common.models import Track, TrackYaml
+from ctf.common.utils import (
     add_tracks_to_terraform_modules,
     check_git_lfs,
     find_ctf_root_directory,
@@ -122,7 +123,7 @@ def deploy(
         LOG.critical(
             msg="Git LFS is missing from  your system. Install it before deploying."
         )
-        exit(code=1)
+        exit(1)
 
     # Pull LFS files
     LOG.debug("Pulling Git LFS files for specific tracks.")
@@ -161,9 +162,7 @@ def deploy(
                 remote=remote,
                 production=production,
                 track=track.name,
-                path=os.path.join(
-                    find_ctf_root_directory(), "challenges", track.name, "ansible"
-                ),
+                path=find_ctf_root_directory() / "challenges" / track.name / "ansible",
                 playbook="build.yaml",
                 vm_remote=vm_remote,
                 vm_project=vm_project,
@@ -187,18 +186,14 @@ def deploy(
                 ):
                     distinct_tracks = regenerated_tracks
 
-        if not os.path.exists(
-            path=(
-                path := os.path.join(
-                    find_ctf_root_directory(), "challenges", track.name, "ansible"
-                )
-            )
-        ):
+        if not (
+            path := find_ctf_root_directory() / "challenges" / track.name / "ansible"
+        ).exists():
             continue
 
         if track.has_virtual_machine:
             incus_list = json.loads(
-                s=subprocess.run(
+                subprocess.run(
                     args=["incus", "list", f"--project={track}", "--format", "json"],
                     check=True,
                     capture_output=True,
@@ -283,10 +278,10 @@ def deploy(
                 )[0]["address"]
                 ipv6_to_container_name[ipv6_address] = machine["name"]
 
-            LOG.debug(msg=f"Mapping: {ipv6_to_container_name}")
+            LOG.debug(f"Mapping: {ipv6_to_container_name}")
 
             if remote == "local":
-                LOG.debug(msg=f"Parsing track.yaml for track {track}")
+                LOG.debug(f"Parsing track.yaml for track {track}")
                 track_yaml: TrackYaml = TrackYaml.model_validate(
                     parse_track_yaml(track_name=track.name)
                 )
@@ -342,13 +337,13 @@ def deploy(
                             check=True,
                         )
 
-            LOG.info(msg=f"Running `incus --project={track} list`")
+            LOG.info(f"Running `incus --project={track} list`")
             subprocess.run(
                 args=["incus", f"--project={track}", "list"], check=True, env=ENV
             )
 
     if distinct_tracks:
-        LOG.info(msg="Applying post-deploy Terraform resources...")
+        LOG.info("Applying post-deploy Terraform resources...")
         try:
             terraform_apply(
                 tracks=tracks,
@@ -362,7 +357,7 @@ def deploy(
             LOG.critical(
                 "Could not apply post-deploy Terraform resources. Fix the Terraform configuration and rerun `ctf deploy`."
             )
-            exit(code=1)
+            exit(1)
 
     if not production and distinct_tracks:
         tracks_list = list(distinct_tracks)
@@ -408,7 +403,7 @@ def terraform_apply(
     try:
         subprocess.run(
             args=args,
-            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+            cwd=find_ctf_root_directory() / ".deploy",
             check=True,
         )
     except subprocess.CalledProcessError:
@@ -441,7 +436,7 @@ def terraform_apply(
 
                 subprocess.run(
                     args=args,
-                    cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+                    cwd=find_ctf_root_directory() / ".deploy",
                     check=True,
                 )
 
@@ -469,7 +464,7 @@ def terraform_apply(
             remote=remote,
             force=True,
         )
-        exit(code=0)
+        exit(0)
 
     return set()
 
@@ -478,7 +473,7 @@ def run_ansible_playbook(
     remote: str,
     production: bool,
     track: str,
-    path: str,
+    path: Path,
     playbook: str = "deploy.yaml",
     vm_remote: str | None = None,
     vm_project: str | None = None,
@@ -503,7 +498,7 @@ def run_ansible_playbook(
         extra_args += ["-e", "nsec_production=true"]
 
     if not skip_pre_common and execute_common:
-        LOG.info(msg=f"Running pre-common.yaml with ansible for track {track}...")
+        LOG.info(f"Running pre-common.yaml with ansible for track {track}...")
         ansible_args = [
             "ansible-playbook",
             os.path.join("..", "..", "..", ".deploy", "ansible", "common.yaml"),
@@ -516,7 +511,7 @@ def run_ansible_playbook(
             check=True,
         )
 
-    LOG.info(msg=f"Running {playbook} with ansible for track {track}...")
+    LOG.info(f"Running {playbook} with ansible for track {track}...")
     ansible_args = [
         "ansible-playbook",
         playbook,
@@ -526,7 +521,7 @@ def run_ansible_playbook(
     subprocess.run(args=ansible_args, cwd=path, check=True)
 
     if not skip_post_common and execute_common:
-        LOG.info(msg=f"Running post-common.yaml with ansible for track {track}...")
+        LOG.info(f"Running post-common.yaml with ansible for track {track}...")
         ansible_args = (
             [
                 "ansible-playbook",
@@ -543,6 +538,5 @@ def run_ansible_playbook(
             check=True,
         )
 
-    artifacts_path = os.path.join(path, "artifacts")
-    if os.path.exists(path=artifacts_path):
+    if (artifacts_path := path / "artifacts").exists():
         shutil.rmtree(artifacts_path)

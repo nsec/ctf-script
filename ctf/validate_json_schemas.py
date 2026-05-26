@@ -1,6 +1,7 @@
 import argparse
 import glob
 import json
+from pathlib import Path
 
 import jsonschema
 import rich
@@ -14,18 +15,18 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from ctf.logger import LOG
+from ctf.common.logger import LOG
 
 
-def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
-    LOG.debug(msg="Starting JSON Schema validator")
-    LOG.debug(msg=f"Schema: {schema}")
+def validate_with_json_schemas(schema: Path, files_pattern: str) -> None:
+    LOG.debug("Starting JSON Schema validator")
+    LOG.debug(f"Schema: {schema}")
 
-    schema = json.load(open(file=schema, mode="r", encoding="utf-8"))
+    schema = json.load(open(schema, mode="r", encoding="utf-8"))
 
     if not isinstance(schema, dict):
         LOG.error(msg=f"Loaded schema was not a dictionary: {schema}")
-        exit(code=1)
+        exit(1)
 
     errors = []
     with Progress(
@@ -37,7 +38,7 @@ def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
         files = list(glob.glob(pathname=files_pattern))
         task = progress.add_task(f"Validating JSON ({files_pattern})", total=len(files))
         for file in files:
-            LOG.debug(msg=f"Validating {file}")
+            LOG.debug(f"Validating {file}")
             yaml_document = yaml.safe_load(
                 stream=open(file=file, mode="r", encoding="utf-8")
             )
@@ -55,9 +56,9 @@ def validate_with_json_schemas(schema: str, files_pattern: str) -> None:
         for filename, error in errors:
             table.add_row(filename, error.message)
         rich.print(table)
-        exit(code=1)
+        exit(1)
     else:
-        LOG.debug(msg="No error found!")
+        LOG.debug("No error found!")
 
 
 if __name__ == "__main__":

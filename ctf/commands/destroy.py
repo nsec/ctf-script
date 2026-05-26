@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 
 import typer
@@ -7,9 +6,9 @@ from pydantic import ValidationError
 from typing_extensions import Annotated
 
 from ctf import ENV
-from ctf.logger import LOG
-from ctf.models import Track
-from ctf.utils import (
+from ctf.common.logger import LOG
+from ctf.common.models import Track
+from ctf.common.utils import (
     find_ctf_root_directory,
     get_terraform_tracks_from_modules,
     remove_tracks_from_terraform_modules,
@@ -65,11 +64,9 @@ def destroy(
 ) -> None:
     ENV["INCUS_REMOTE"] = remote
 
-    if not os.path.exists(
-        path=os.path.join(find_ctf_root_directory(), ".deploy", "modules.tf")
-    ):
-        LOG.critical(msg="Nothing to destroy.")
-        exit(code=1)
+    if not (find_ctf_root_directory() / ".deploy" / "modules.tf").exists():
+        LOG.critical("Nothing to destroy.")
+        exit(1)
 
     terraform_tracks: set[Track] = get_terraform_tracks_from_modules()
 
@@ -114,7 +111,7 @@ def destroy(
             LOG.critical(
                 msg="No project to switch to. This should never happen as the default should always exists."
             )
-            exit(code=1)
+            exit(1)
 
         cmd = [
             "incus",
@@ -123,7 +120,7 @@ def destroy(
             "default" if "default" in project_list else project_list[0].name,
         ]
 
-        LOG.info(msg=f"Running `{' '.join(cmd)}`")
+        LOG.info(f"Running `{' '.join(cmd)}`")
         subprocess.run(args=cmd, check=True, env=ENV)
 
     subprocess.run(
@@ -139,7 +136,7 @@ def destroy(
                 ]
             ),
         ],
-        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+        cwd=find_ctf_root_directory() / ".deploy",
         check=False,
     )
 
@@ -183,7 +180,7 @@ def destroy(
 
     for module in terraform_tracks:
         if module in projects:
-            LOG.warning(msg=f"The project {module.name} was not destroyed properly.")
+            LOG.warning(f"The project {module.name} was not destroyed properly.")
             if (
                 force
                 or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
@@ -234,7 +231,7 @@ def destroy(
         production=production,
     )
     if total_deployed_tracks == len(terraform_tracks):
-        LOG.info(msg="Successfully destroyed every track")
+        LOG.info("Successfully destroyed every track")
     else:
         LOG.info(
             f"Successfully destroyed: {', '.join([track.name for track in terraform_tracks])}"

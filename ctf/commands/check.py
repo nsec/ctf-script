@@ -1,13 +1,12 @@
-import os
 import subprocess
 
 import typer
 from typing_extensions import Annotated
 
 from ctf import ENV
-from ctf.generate import generate
-from ctf.logger import LOG
-from ctf.utils import check_git_lfs, find_ctf_root_directory, terraform_binary
+from ctf.commands.generate import generate
+from ctf.common.logger import LOG
+from ctf.common.utils import check_git_lfs, find_ctf_root_directory, terraform_binary
 
 app = typer.Typer()
 
@@ -46,7 +45,7 @@ def check(
     # Then run terraform plan.
     subprocess.run(
         args=[terraform_binary(), "plan"],
-        cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+        cwd=find_ctf_root_directory() / ".deploy",
         check=True,
     )
 

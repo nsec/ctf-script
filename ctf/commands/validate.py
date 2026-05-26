@@ -1,4 +1,3 @@
-import os
 import re
 import subprocess
 import textwrap
@@ -13,10 +12,10 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-from ctf.logger import LOG
-from ctf.utils import find_ctf_root_directory, get_ctf_script_schemas_directory
+from ctf.common.logger import LOG
+from ctf.common.utils import find_ctf_root_directory, get_ctf_script_schemas_directory
+from ctf.common.validators import ValidationError, validators_list
 from ctf.validate_json_schemas import validate_with_json_schemas
-from ctf.validators import ValidationError, validators_list
 
 app = typer.Typer()
 
@@ -25,43 +24,39 @@ app = typer.Typer()
     help="Run many static validations to ensure coherence and quality in the tracks and repo as a whole."
 )
 def validate() -> None:
-    LOG.info(msg="Starting ctf validate...")
+    LOG.info("Starting ctf validate...")
 
-    LOG.info(msg=f"Found {len(validators_list)} Validators")
+    LOG.info(f"Found {len(validators_list)} Validators")
 
     validators = [validator_class() for validator_class in validators_list]
 
     tracks = []
-    for track in os.listdir(path=os.path.join(find_ctf_root_directory(), "challenges")):
-        if os.path.isdir(
-            s=os.path.join(find_ctf_root_directory(), "challenges", track)
-        ) and os.path.exists(
-            path=os.path.join(
-                find_ctf_root_directory(), "challenges", track, "track.yaml"
-            )
-        ):
-            tracks.append(track)
+    for track in (find_ctf_root_directory() / "challenges").iterdir():
+        if (find_ctf_root_directory() / "challenges" / track).is_dir() and (
+            find_ctf_root_directory() / "challenges" / track / "track.yaml"
+        ).exists():
+            tracks.append(track.name)
 
-    LOG.info(msg=f"Found {len(tracks)} tracks")
+    LOG.info(f"Found {len(tracks)} tracks")
 
     errors: list[ValidationError] = []
 
-    LOG.debug(msg="Validating track.yaml files against JSON Schema...")
+    LOG.debug("Validating track.yaml files against JSON Schema...")
     validate_with_json_schemas(
-        schema=os.path.join(get_ctf_script_schemas_directory(), "track.yaml.json"),
-        files_pattern=os.path.join(
-            find_ctf_root_directory(), "challenges", "*", "track.yaml"
+        schema=get_ctf_script_schemas_directory() / "track.yaml.json",
+        files_pattern=str(
+            find_ctf_root_directory() / "challenges" / "*" / "track.yaml"
         ),
     )
-    LOG.debug(msg="Validating discourse post YAML files against JSON Schema...")
+    LOG.debug("Validating discourse post YAML files against JSON Schema...")
     validate_with_json_schemas(
-        schema=os.path.join(get_ctf_script_schemas_directory(), "post.json"),
-        files_pattern=os.path.join(
-            find_ctf_root_directory(), "challenges", "*", "posts", "*.yaml"
+        schema=get_ctf_script_schemas_directory() / "post.json",
+        files_pattern=str(
+            find_ctf_root_directory() / "challenges" / "*" / "posts" / "*.yaml"
         ),
     )
 
-    LOG.info(msg="Validating terraform files format...")
+    LOG.info("Validating terraform files format...")
     r = subprocess.run(
         args=[
             "tofu",
@@ -104,7 +99,7 @@ def validate() -> None:
         )
 
         for validator in validators:
-            LOG.debug(msg=f"Running {type(validator).__name__}")
+            LOG.debug(f"Running {type(validator).__name__}")
             for track in tracks:
                 errors += validator.validate(track_name=track)
                 progress.update(task, advance=1)
@@ -115,7 +110,7 @@ def validate() -> None:
             progress.update(task, advance=1)
 
     if not errors:
-        LOG.info(msg="No error found!")
+        LOG.info("No error found!")
     else:
         LOG.error(msg=f"{len(errors)} errors found.")
 
@@ -148,4 +143,4 @@ def validate() -> None:
 
         rich.print(table)
 
-        exit(code=1)
+        exit(1)

@@ -5,9 +5,9 @@ import typer
 from typing_extensions import Annotated
 
 from ctf import ENV
-from ctf.logger import LOG
-from ctf.models import Track
-from ctf.utils import (
+from ctf.common.logger import LOG
+from ctf.common.models import Track
+from ctf.common.utils import (
     add_tracks_to_terraform_modules,
     create_terraform_modules_file,
     does_track_require_build_container,
@@ -89,7 +89,7 @@ def generate(
     )
 
     if distinct_tracks:
-        LOG.debug(msg=f"Found {len(distinct_tracks)} tracks")
+        LOG.debug(f"Found {len(distinct_tracks)} tracks")
         # Generate the Terraform modules file.
         if not keep_already_deployed:
             create_terraform_modules_file(remote=remote, production=production)
@@ -117,59 +117,60 @@ def generate(
 
         for track in distinct_tracks:
             relpath = os.path.relpath(
-                os.path.join(find_ctf_root_directory(), ".deploy", "common"),
+                find_ctf_root_directory() / ".deploy" / "common",
                 (
-                    terraform_directory := os.path.join(
-                        find_ctf_root_directory(), "challenges", track.name, "terraform"
+                    terraform_directory := (
+                        find_ctf_root_directory()
+                        / "challenges"
+                        / track.name
+                        / "terraform"
                     )
                 ),
             )
 
             # If the file exists and is a symlink, refresh it by deleting it first.
-            if os.path.exists(
-                path=(p := os.path.join(terraform_directory, "variables.tf"))
-            ) and os.path.islink(path=p):
-                os.unlink(path=p)
+            if (
+                p := (terraform_directory / "variables.tf")
+            ).exists() and p.is_symlink():
+                p.unlink()
 
-                LOG.debug(msg=f"Refreshing symlink {p}.")
+                LOG.debug(f"Refreshing symlink {p}.")
 
-            if not os.path.exists(path=p):
+            if not p.exists():
                 os.symlink(
                     src=os.path.join(relpath, "variables.tf"),
                     dst=p,
                 )
 
-                LOG.debug(msg=f"Created symlink {p}.")
+                LOG.debug(f"Created symlink {p}.")
 
             # If the file exists and is a symlink, refresh it by deleting it first.
-            if os.path.exists(
-                path=(p := os.path.join(terraform_directory, "versions.tf"))
-            ) and os.path.islink(path=p):
-                os.unlink(path=p)
+            if (p := (terraform_directory / "versions.tf")).exists() and p.is_symlink():
+                p.unlink()
 
-                LOG.debug(msg=f"Refreshing symlink {p}.")
+                LOG.debug(f"Refreshing symlink {p}.")
 
-            if not os.path.exists(path=p):
+            if not p.exists():
                 os.symlink(
                     src=os.path.join(relpath, "versions.tf"),
                     dst=p,
                 )
 
-                LOG.debug(msg=f"Created symlink {p}.")
+                LOG.debug(f"Created symlink {p}.")
 
         subprocess.run(
             args=[terraform_binary(), "init", "-upgrade"],
-            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+            cwd=find_ctf_root_directory() / ".deploy",
             stdout=subprocess.DEVNULL,
             check=True,
         )
         subprocess.run(
             args=[terraform_binary(), "validate"],
-            cwd=os.path.join(find_ctf_root_directory(), ".deploy"),
+            cwd=find_ctf_root_directory() / ".deploy",
             check=True,
         )
     else:
         LOG.critical("No track was found")
-        exit(code=1)
+        exit(1)
 
     return distinct_tracks
