@@ -423,6 +423,6 @@ def stats(
 
 def write_badge(name: str, svg: str) -> None:
     with open(
-        file=os.path.join(".badges", f"badge-{name}.svg"), mode="w", encoding="utf-8"
+        os.path.join(".badges", f"badge-{name}.svg"), mode="w", encoding="utf-8"
     ) as f:
         f.write(svg)

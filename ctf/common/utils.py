@@ -15,7 +15,7 @@ from ctf import ENV
 from ctf.common.logger import LOG
 from ctf.common.models import Track, TrackYaml
 
-__CTF_ROOT_DIRECTORY = ""
+__CTF_ROOT_DIRECTORY: Path | None = None
 
 
 def available_incus_remotes() -> list[str]:
@@ -344,11 +344,11 @@ def get_ctf_script_schemas_directory() -> Path:
 
 
 def remove_ctf_script_root_directory_from_path(path: Path) -> Path:
-    return Path(os.path.relpath(path=path, start=find_ctf_root_directory()))
+    return Path(os.path.relpath(path, find_ctf_root_directory()))
 
 
 def load_yaml_file(file: Path) -> dict[str, Any]:
-    return yaml.safe_load(stream=open(file, mode="r", encoding="utf-8"))
+    return yaml.safe_load(file.open(mode="r", encoding="utf-8"))
 
 
 def parse_track_yaml(track_name: str) -> dict[str, Any]:
@@ -378,7 +378,7 @@ def parse_post_yamls(track_name: str) -> list[dict]:
 def find_ctf_root_directory() -> Path:
     global __CTF_ROOT_DIRECTORY
     if __CTF_ROOT_DIRECTORY:
-        return Path(__CTF_ROOT_DIRECTORY)
+        return __CTF_ROOT_DIRECTORY
 
     path: Path = (Path(ENV.get("CTF_ROOT_DIR", "."))).expanduser().resolve()
     while not is_ctf_dir(path) and path != (path := (path / "..").resolve()):

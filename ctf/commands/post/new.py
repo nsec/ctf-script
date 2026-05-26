@@ -1,10 +1,11 @@
 import datetime
+import json
 import os
 from enum import StrEnum
 from pathlib import Path
 
 import typer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, field_validator
 from rich.prompt import Confirm, IntPrompt, Prompt
 from typing_extensions import Annotated
 
@@ -12,17 +13,11 @@ from ctf.common.logger import LOG
 from ctf.common.models import Track
 from ctf.common.utils import (
     get_all_available_tracks,
+    get_ctf_script_schemas_directory,
     parse_track_yaml,
 )
 
-# TODO: Find a way to allow this year's users. Maybe this could be done with this issue https://github.com/nsec/ctf-script/issues/42.
-
 app = typer.Typer()
-
-
-class ApiUser(StrEnum):
-    NSEC = "nsec"
-    SYSTEM = "system"
 
 
 class TriggerType(StrEnum):
@@ -33,8 +28,52 @@ class TriggerType(StrEnum):
 
 
 class ApiPost(BaseModel):
-    user: ApiUser = Field(default=ApiUser.NSEC)
-    body: str = Field(default="")
+    user: str
+    body: str
+
+    @field_validator("user", mode="after")
+    @classmethod
+    def is_even(cls, value: str) -> str:
+        if value not in _get_api_users_from_schema():
+            raise ValueError(
+                f"{value} is not a valid user from {_get_api_users_from_schema()}"
+            )
+        return value
+
+
+__API_USERS: list[str] = []
+
+
+def _get_api_users_from_schema(lowercase: bool = False) -> list[str]:
+    global __API_USERS
+    if not __API_USERS:
+        __API_USERS = json.load(
+            (get_ctf_script_schemas_directory() / "post.json").open(
+                mode="r", encoding="utf-8"
+            )
+        )["properties"]["api"]["properties"]["user"]["enum"]
+
+    if lowercase:
+        return [user.lower() if lowercase else user for user in __API_USERS]
+
+    return __API_USERS
+
+
+def _validate_user(value: str | None) -> str | None:
+    if value and value not in _get_api_users_from_schema(lowercase=True):
+        raise typer.BadParameter(
+            f"{value} is not a valid user from {_get_api_users_from_schema()}"
+        )
+
+    return value
+
+
+def _autocomplete_user(value: str) -> list[str]:
+    completion: list[str] = []
+    for name in _get_api_users_from_schema():
+        if name.lower().startswith(value.lower()):
+            completion.append(name)
+    return completion
 
 
 def _format_yaml_block(text: str, indent: int = 2) -> str:
@@ -150,7 +189,7 @@ def _render_post_yaml(
             lines.extend(
                 [
                     "  - api:",
-                    f"      user: {api_post.user.value}",
+                    f"      user: {api_post.user}",
                     "    body: |-",
                     _format_yaml_block(api_post.body, indent=6),
                 ]
@@ -160,7 +199,7 @@ def _render_post_yaml(
         lines.extend(
             [
                 "api:",
-                f"  user: {api_posts[0].user.value}",
+                f"  user: {api_posts[0].user}",
                 "body: |-",
                 _format_yaml_block(api_posts[0].body),
             ]
@@ -199,12 +238,15 @@ def new(
         ),
     ] = None,
     user: Annotated[
-        ApiUser,
+        str | None,
         typer.Option(
             "--user",
             help="Discourse user posting this message. If multiple users, use --multiple-users instead.",
+            callback=_validate_user,
+            autocompletion=_autocomplete_user,
+            case_sensitive=False,
         ),
-    ] = ApiUser.NSEC,
+    ] = None,
     body: Annotated[
         str,
         typer.Option(
@@ -267,14 +309,31 @@ def new(
         while True:
             u = Prompt.ask(
                 "user",
-                choices=[ApiUser.NSEC, ApiUser.SYSTEM],
+                choices=_get_api_users_from_schema(),
                 show_choices=True,
+                case_sensitive=False,
             )
             b = Prompt.ask("body")
-            api_posts.append(ApiPost(user=ApiUser(u), body=b))
+
+            api_posts.append(ApiPost(user=u, body=b))
+
             if not Confirm.ask("Adding more?"):
                 break
     else:
+        if not user:
+            user = Prompt.ask(
+                "user",
+                choices=_get_api_users_from_schema(),
+                show_choices=True,
+                case_sensitive=False,
+            )
+
+        if (
+            user not in _get_api_users_from_schema()
+            and user in _get_api_users_from_schema(lowercase=True)
+        ):
+            user = [u for u in _get_api_users_from_schema() if user == u.lower()][0]
+
         api_posts.append(ApiPost(user=user, body=body))
 
     match trigger:
@@ -339,14 +398,14 @@ def new(
             ):
                 raise typer.Exit(0)
 
-    post_file_path = _resolve_post_file_path(
+    post_file_path: Path = _resolve_post_file_path(
         posts_directory=posts_directory,
         track=track_obj,
         name=name,
         force=force,
     )
 
-    post_yaml = _render_post_yaml(
+    post_yaml: str = _render_post_yaml(
         track=track_obj,
         api_posts=api_posts,
         trigger=trigger,

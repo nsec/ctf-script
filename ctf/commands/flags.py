@@ -1,7 +1,6 @@
 import csv
 import io
 import json
-import os
 from enum import StrEnum
 
 import rich
@@ -39,16 +38,16 @@ def flags(
 ) -> None:
     distinct_tracks: set[Track] = set()
 
-    for entry in os.listdir(
+    for entry in (
         challenges_directory := (find_ctf_root_directory() / "challenges")
-    ):
+    ).iterdir():
         if (track_directory := challenges_directory / entry).is_dir() and (
             track_directory / "track.yaml"
         ).exists():
             if not tracks:
-                distinct_tracks.add(Track(name=entry))
-            elif entry in tracks:
-                distinct_tracks.add(Track(name=entry))
+                distinct_tracks.add(Track(name=entry.name))
+            elif entry.name in tracks:
+                distinct_tracks.add(Track(name=entry.name))
 
     flags = []
     for track in distinct_tracks:

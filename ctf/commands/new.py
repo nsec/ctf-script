@@ -70,7 +70,7 @@ def new(
     LOG.info(f"Creating a new track: {name}")
     if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=name):
         LOG.critical(
-            msg="""The track name Valid instance names must fulfill the following requirements:
+            """The track name Valid instance names must fulfill the following requirements:
 * The name must be between 1 and 63 characters long;
 * The name must contain only letters, numbers and dashes from the ASCII table;
 * The name must not start with a digit or a dash;
@@ -136,8 +136,8 @@ def new(
                 "with_virtual_machine": with_virtual_machine,
             }
         )
-        with open(
-            (p := new_challenge_directory / "track.yaml"), mode="w", encoding="utf-8"
+        with (p := new_challenge_directory / "track.yaml").open(
+            mode="w", encoding="utf-8"
         ) as f:
             f.write(render)
 
@@ -145,8 +145,8 @@ def new(
 
         readme_template = env.get_template(name=os.path.join("common", "README.md.j2"))
         render = readme_template.render(data={"name": name})
-        with open(
-            (p := new_challenge_directory / "README.md"), mode="w", encoding="utf-8"
+        with (p := new_challenge_directory / "README.md").open(
+            mode="w", encoding="utf-8"
         ) as f:
             f.write(render)
 
@@ -159,8 +159,8 @@ def new(
 
         track_template = env.get_template(name=os.path.join("common", "topic.yaml.j2"))
         render = track_template.render(data={"name": name})
-        with open(
-            (p := posts_directory / f"{name}.yaml"), mode="w", encoding="utf-8"
+        with (p := posts_directory / f"{name}.yaml").open(
+            mode="w", encoding="utf-8"
         ) as f:
             f.write(render)
 
@@ -168,8 +168,7 @@ def new(
 
         track_template = env.get_template(name=os.path.join("common", "post.yaml.j2"))
         render = track_template.render(data={"name": name})
-        with open(
-            (p := os.path.join(posts_directory, f"{name}_flag1.yaml")),
+        with (p := posts_directory / f"{name}_flag1.yaml").open(
             mode="w",
             encoding="utf-8",
         ) as f:
@@ -205,8 +204,8 @@ def new(
                 "is_windows": template == Template.WINDOWS_VM,
             }
         )
-        with open(
-            (p := terraform_directory / "main.tf"), mode="w", encoding="utf-8"
+        with (p := terraform_directory / "main.tf").open(
+            mode="w", encoding="utf-8"
         ) as f:
             f.write(render)
 
@@ -243,8 +242,8 @@ def new(
                 "with_virtual_machine": with_virtual_machine,
             }
         )
-        with open(
-            (p := ansible_directory / "deploy.yaml"), mode="w", encoding="utf-8"
+        with (p := ansible_directory / "deploy.yaml").open(
+            mode="w", encoding="utf-8"
         ) as f:
             f.write(render)
 
@@ -264,8 +263,8 @@ def new(
                 data={"name": name, "with_build": with_build_container}
             )
 
-            with open(
-                (p := ansible_directory / "build.yaml"), mode="w", encoding="utf-8"
+            with (p := ansible_directory / "build.yaml").open(
+                mode="w", encoding="utf-8"
             ) as f:
                 f.write(render)
             LOG.debug(f"Wrote {p}.")
@@ -279,8 +278,8 @@ def new(
                 "is_windows": template == Template.WINDOWS_VM,
             }
         )
-        with open(
-            (p := ansible_directory / "inventory"), mode="w", encoding="utf-8"
+        with (p := ansible_directory / "inventory").open(
+            mode="w", encoding="utf-8"
         ) as f:
             f.write(render)
 
@@ -296,8 +295,7 @@ def new(
                 os.path.join(Template.APACHE_PHP, "index.php.j2")
             )
             render = track_template.render(data={"name": name})
-            with open(
-                (p := ansible_challenge_directory / "index.php"),
+            with (p := ansible_challenge_directory / "index.php").open(
                 mode="w",
                 encoding="utf-8",
             ) as f:
@@ -310,8 +308,7 @@ def new(
                 os.path.join(Template.PYTHON_SERVICE, "app.py.j2")
             )
             render = track_template.render(data={"name": name})
-            with open(
-                (p := ansible_challenge_directory / "app.py"),
+            with (p := ansible_challenge_directory / "app.py").open(
                 mode="w",
                 encoding="utf-8",
             ) as f:
@@ -319,8 +316,7 @@ def new(
 
             LOG.debug(f"Wrote {p}.")
 
-            with open(
-                (p := ansible_challenge_directory / "flag-1.txt"),
+            with (p := ansible_challenge_directory / "flag-1.txt").open(
                 mode="w",
                 encoding="utf-8",
             ) as f:
@@ -341,8 +337,7 @@ def new(
                 os.path.join(Template.RUST_WEBSERVICE, "Cargo.toml.j2")
             )
             render = manifest_template.render(data={"name": name})
-            with open(
-                (p := ansible_challenge_directory / "Cargo.toml"),
+            with (p := ansible_challenge_directory / "Cargo.toml").open(
                 mode="w",
                 encoding="utf-8",
             ) as f:
