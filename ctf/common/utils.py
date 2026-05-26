@@ -381,16 +381,12 @@ def find_ctf_root_directory() -> Path:
         return Path(__CTF_ROOT_DIRECTORY)
 
     path: Path = (Path(ENV.get("CTF_ROOT_DIR", "."))).expanduser().resolve()
-    if not is_ctf_dir(path=path):
-        while path != (path := path / ".."):
-            ctf_dir = is_ctf_dir(path)
-
-            if ctf_dir:
-                break
+    while not is_ctf_dir(path) and path != (path := (path / "..").resolve()):
+        ...
 
     if path == Path("/"):
         LOG.critical(
-            msg='Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
+            'Could not automatically find the root directory nor the "CTF_ROOT_DIR" environment variable. To initialize a new root directory, use `ctf init [path]`'
         )
         exit(1)
 
