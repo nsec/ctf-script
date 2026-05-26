@@ -227,7 +227,10 @@ def destroy(
                     env=ENV,
                 )
 
-    if Track(name="ctf") in network_zones:
+    if (
+        total_deployed_tracks == len(terraform_tracks)
+        and Track(name="ctf") in network_zones
+    ):
         LOG.warning('The network zone "ctf" was not destroyed properly.')
         if force or Confirm.ask("Do you want to destroy it?", default=True):
             subprocess.run(
@@ -237,7 +240,10 @@ def destroy(
                 env=ENV,
             )
 
-    if Track(name="simulated-production-acl") in network_acls:
+    if (
+        total_deployed_tracks == len(terraform_tracks)
+        and Track(name="simulated-production-acl") in network_acls
+    ):
         LOG.warning(
             'The network ACL "simulated-production-acl" was not destroyed properly.'
         )
