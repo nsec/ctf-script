@@ -129,7 +129,7 @@ class FireworksAskGodTagValidator(Validator):
             / "sounds"
         )
         for sound_tag, track_names in self.sound_tags_mapping.items():
-            if len(glob.glob(pathname=sound_path / sound_tag)) == 0:
+            if len(glob.glob(pathname=str(sound_path / sound_tag))) == 0:
                 errors.append(
                     ValidationError(
                         error_name="Fireworks sound file not found",
@@ -145,7 +145,7 @@ class FireworksAskGodTagValidator(Validator):
             find_ctf_root_directory() / "challenges" / "*" / "files" / "askgod" / "gifs"
         )
         for gif_tag, track_names in self.gif_tags_mapping.items():
-            if len(glob.glob(pathname=gif_path / gif_tag)) == 0:
+            if len(glob.glob(pathname=str(gif_path / gif_tag))) == 0:
                 errors.append(
                     ValidationError(
                         error_name="Fireworks gif file not found",
