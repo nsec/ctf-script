@@ -22,7 +22,7 @@ def validate_with_json_schemas(schema: Path, files_pattern: str) -> None:
     LOG.debug("Starting JSON Schema validator")
     LOG.debug(f"Schema: {schema}")
 
-    schema = json.load(open(schema, mode="r", encoding="utf-8"))
+    schema = json.load(schema.open(mode="r", encoding="utf-8"))
 
     if not isinstance(schema, dict):
         LOG.error(msg=f"Loaded schema was not a dictionary: {schema}")
@@ -40,7 +40,7 @@ def validate_with_json_schemas(schema: Path, files_pattern: str) -> None:
         for file in files:
             LOG.debug(f"Validating {file}")
             yaml_document = yaml.safe_load(
-                stream=open(file=file, mode="r", encoding="utf-8")
+                stream=open(file, mode="r", encoding="utf-8")
             )
             try:
                 jsonschema.validate(instance=yaml_document, schema=schema)

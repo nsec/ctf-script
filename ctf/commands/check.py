@@ -52,5 +52,5 @@ def check(
     # Check if Git LFS is installed on the system as it will be required for deployment.
     if not check_git_lfs():
         LOG.warning(
-            msg="Git LFS is missing from  your system. Install it before deploying."
+            "Git LFS is missing from  your system. Install it before deploying."
         )

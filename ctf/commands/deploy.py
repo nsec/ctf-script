@@ -121,7 +121,7 @@ def deploy(
     # Check if Git LFS is installed on the system as it is required for deployment.
     if not check_git_lfs():
         LOG.critical(
-            msg="Git LFS is missing from  your system. Install it before deploying."
+            "Git LFS is missing from  your system. Install it before deploying."
         )
         exit(1)
 
@@ -376,18 +376,14 @@ def deploy(
             and (track_index := int(track_index))
             and 0 < track_index <= len(tracks_list)
         ):
-            LOG.info(
-                msg=f"Running `incus project switch {tracks_list[track_index - 1]}`"
-            )
+            LOG.info(f"Running `incus project switch {tracks_list[track_index - 1]}`")
             subprocess.run(
                 args=["incus", "project", "switch", tracks_list[track_index - 1].name],
                 check=True,
                 env=ENV,
             )
         elif track_index:
-            LOG.warning(
-                msg=f"Could not switch project, unrecognized input: {track_index}."
-            )
+            LOG.warning(f"Could not switch project, unrecognized input: {track_index}.")
 
 
 def terraform_apply(

@@ -1,4 +1,3 @@
-import os
 import socket
 
 import requests
@@ -27,16 +26,16 @@ def services(
     ] = False,
 ) -> None:
     distinct_tracks: set[str] = set()
-    for entry in os.listdir(
+    for entry in (
         challenges_directory := (find_ctf_root_directory() / "challenges")
-    ):
+    ).iterdir():
         if (track_directory := (challenges_directory / entry)).is_dir() and (
             track_directory / "track.yaml"
         ).exists():
             if not tracks:
-                distinct_tracks.add(entry)
-            elif entry in tracks:
-                distinct_tracks.add(entry)
+                distinct_tracks.add(entry.name)
+            elif entry.name in tracks:
+                distinct_tracks.add(entry.name)
 
     all_services = []
 

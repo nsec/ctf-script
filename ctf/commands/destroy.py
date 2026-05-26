@@ -3,6 +3,7 @@ import subprocess
 
 import typer
 from pydantic import ValidationError
+from rich.prompt import Confirm
 from typing_extensions import Annotated
 
 from ctf import ENV
@@ -109,7 +110,7 @@ def destroy(
         project_list = list((projects - terraform_tracks))
         if len(project_list) == 0:
             LOG.critical(
-                msg="No project to switch to. This should never happen as the default should always exists."
+                "No project to switch to. This should never happen as the default should always exists."
             )
             exit(1)
 
@@ -178,13 +179,22 @@ def destroy(
         )
     }
 
+    network_zones = {
+        Track(name=network_zone["name"])
+        for network_zone in json.loads(
+            s=subprocess.run(
+                args=["incus", "network", "zone", "list", "--format=json"],
+                check=False,
+                capture_output=True,
+                env=ENV,
+            ).stdout.decode()
+        )
+    }
+
     for module in terraform_tracks:
         if module in projects:
             LOG.warning(f"The project {module.name} was not destroyed properly.")
-            if (
-                force
-                or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
-            ):
+            if force or Confirm.ask("Do you want to destroy it?", default=True):
                 subprocess.run(
                     args=["incus", "project", "delete", module.name, "--force"],
                     check=False,
@@ -194,13 +204,8 @@ def destroy(
                 )
 
         if (tmp_module_name := module.name[:15]) in networks:
-            LOG.warning(
-                msg=f"The network {tmp_module_name} was not destroyed properly."
-            )
-            if (
-                force
-                or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
-            ):
+            LOG.warning(f"The network {tmp_module_name} was not destroyed properly.")
+            if force or Confirm.ask("Do you want to destroy it?", default=True):
                 subprocess.run(
                     args=["incus", "network", "delete", tmp_module_name],
                     check=False,
@@ -212,18 +217,37 @@ def destroy(
             tmp_module := Track(name=f"{module.name}-default")
         ) in network_acls:
             LOG.warning(
-                msg=f"The network ACL {tmp_module.name} was not destroyed properly."
+                f"The network ACL {tmp_module.name} was not destroyed properly."
             )
-            if (
-                force
-                or (input("Do you want to destroy it? [Y/n] ").lower() or "y") == "y"
-            ):
+            if force or Confirm.ask("Do you want to destroy it?", default=True):
                 subprocess.run(
                     args=["incus", "network", "acl", "delete", tmp_module.name],
                     check=False,
                     capture_output=True,
                     env=ENV,
                 )
+
+    if Track(name="ctf") in network_zones:
+        LOG.warning('The network zone "ctf" was not destroyed properly.')
+        if force or Confirm.ask("Do you want to destroy it?", default=True):
+            subprocess.run(
+                args=["incus", "network", "zone", "delete", "ctf"],
+                check=False,
+                capture_output=True,
+                env=ENV,
+            )
+
+    if Track(name="simulated-production-acl") in network_acls:
+        LOG.warning(
+            'The network ACL "simulated-production-acl" was not destroyed properly.'
+        )
+        if force or Confirm.ask("Do you want to destroy it?", default=True):
+            subprocess.run(
+                args=["incus", "network", "acl", "delete", "simulated-production-acl"],
+                check=False,
+                capture_output=True,
+                env=ENV,
+            )
 
     remove_tracks_from_terraform_modules(
         tracks=terraform_tracks,
