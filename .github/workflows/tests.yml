@@ -54,8 +54,7 @@ jobs:
               echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
               ;;
             uv)
-              python3 -m venv --copies .venv
-              uv pip install -e ".[workflow]"
+              uv run --locked --extra workflow ctf --help
               echo "$PWD/.venv/bin" >> $GITHUB_PATH
               ;;
           esac
