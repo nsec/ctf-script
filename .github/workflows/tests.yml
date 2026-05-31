@@ -54,8 +54,7 @@ jobs:
               echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
               ;;
             uv)
-              uv venv .venv
-              uv pip install -e .[workflow]
+              uv sync --extra workflow
               echo "$PWD/.venv/bin" >> $GITHUB_PATH
               ;;
           esac
