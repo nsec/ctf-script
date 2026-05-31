@@ -1,7 +1,9 @@
+import datetime
 import importlib.resources
 import shutil
 from pathlib import Path
 
+import jinja2
 import typer
 from typing_extensions import Annotated
 
@@ -24,6 +26,13 @@ def init(
             "--force", help="Overwrite the directory if it's already initialized"
         ),
     ] = False,
+    name: Annotated[
+        str,
+        typer.Option(
+            help="Full display name of the CTF. Example: NorthSec CTF 2027",
+            prompt="CTF name (e.g. NorthSec CTF 2027)",
+        ),
+    ] = f"NorthSec CTF {datetime.datetime.now().year + 1}",
 ) -> None:
     # If path is not set, take the one from --location or CTF_ROOT_DIR, else it's the current directory.
     if not path:
@@ -47,12 +56,25 @@ def init(
             exit(1)
 
         with importlib.resources.path("ctf.templates", "init") as templates_location:
+            jinja_env = jinja2.Environment(
+                loader=jinja2.FileSystemLoader(
+                    searchpath=templates_location, encoding="utf-8"
+                ),
+                keep_trailing_newline=True,
+            )
             for asset in templates_location.iterdir():
-                dst_asset: Path = path / asset.name
-                if asset.is_dir():
+                if asset.suffix == ".j2":
+                    dst_asset = path / asset.stem
+                    content = jinja_env.get_template(asset.name).render(name=name)
+                    with dst_asset.open(mode="w", encoding="utf-8") as f:
+                        f.write(content)
+                    LOG.info(f'Created "{dst_asset}" file')
+                elif asset.is_dir():
+                    dst_asset = path / asset.name
                     shutil.copytree(asset, dst_asset, dirs_exist_ok=True)
                     LOG.info(f'Created "{dst_asset}" folder')
                 else:
+                    dst_asset = path / asset.name
                     shutil.copy(asset, dst_asset)
                     LOG.info(f'Created "{dst_asset}" file')
 

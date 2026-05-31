@@ -13,7 +13,7 @@ import yaml
 
 from ctf import ENV
 from ctf.common.logger import LOG
-from ctf.common.models import Track, TrackYaml
+from ctf.common.models import CtfConfig, Track, TrackYaml
 
 __CTF_ROOT_DIRECTORY: Path | None = None
 
@@ -413,6 +413,14 @@ def show_version(value: bool) -> None:
     if value:
         typer.echo(f"ctf-script v{get_version()}")
         raise typer.Exit()
+
+
+def load_ctf_config():
+
+    config_path = find_ctf_root_directory() / "ctfconfig.yaml"
+    if not config_path.exists():
+        return CtfConfig()
+    return CtfConfig.model_validate(load_yaml_file(config_path) or {})
 
 
 def terraform_binary() -> Path:

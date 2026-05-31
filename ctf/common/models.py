@@ -140,3 +140,14 @@ class TrackYaml(BaseModel):
     contacts: TrackContacts
     instances: TrackInstances | None = None
     flags: list[TrackFlag]
+
+
+class CtfConfig(BaseModel):
+    """
+    ctfconfig.yaml is parsed into this model.
+    """
+
+    name: str | None = None
+    uses_cfss: bool = True
+    frontend: Literal["discourse"] | None = "discourse"
+    disabled_validators: list[str] = []

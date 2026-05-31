@@ -4,6 +4,7 @@
     },
     "yaml.schemas": {
         "schemas/track.yaml.json": "challenges/*/track.yaml",
-        "schemas/post.json": "challenges/*/posts/*.yaml"
+        "schemas/post.json": "challenges/*/posts/*.yaml",
+        "schemas/ctfconfig.json": "ctfconfig.yaml"
     }
 }

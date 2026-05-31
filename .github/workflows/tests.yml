@@ -47,7 +47,7 @@ jobs:
 
       - name: CTF init
         run: |
-          ctf --no-update-check init test-ctf
+          ctf --no-update-check init test-ctf --name "NorthSec CTF CI"
 
       - name: Copy CTF files
         run: |
