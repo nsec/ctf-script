@@ -1806,4 +1806,4 @@ workflow = ["matplotlib", "pybadges", "standard-imghdr"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "b5f930cc2f961c1d36d2cde7ea13fd1ce3e7543b2168e490e74dfe28bcb0a6db"
+content-hash = "9e34fffd30c6f73c8f7432eb814381b20cd57e70b7929c4b40b5c6b1d91bac59"
