@@ -30,6 +30,8 @@ classifiers = [
 dev = ["pre-commit", "ruff"]
 workflow = [
     "pybadges",
+    # pybadges imports pkg_resources, which setuptools >= 81 no longer ships.
+    "setuptools<81",
     "matplotlib",
     "standard-imghdr ; python_version >= \"3.13\""
 ]

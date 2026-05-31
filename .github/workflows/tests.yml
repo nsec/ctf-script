@@ -50,7 +50,7 @@ jobs:
               ;;
             poetry)
               pipx install poetry
-              poetry install --no-interaction --extras workflow
+              poetry sync --no-interaction --extras workflow
               echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
               ;;
             uv)

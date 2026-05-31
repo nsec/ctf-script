@@ -1801,9 +1801,9 @@ python-discovery = ">=1.2.2"
 
 [extras]
 dev = ["pre-commit", "ruff"]
-workflow = ["matplotlib", "pybadges", "standard-imghdr"]
+workflow = ["matplotlib", "pybadges", "setuptools", "standard-imghdr"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "9e34fffd30c6f73c8f7432eb814381b20cd57e70b7929c4b40b5c6b1d91bac59"
+content-hash = "07c25d0a992ce67550599c89400b8e22db4aad8be085f54d60dda7eafe3ccaf1"
