@@ -12,7 +12,7 @@
       "description": {
         "type": "string",
         "minLength": 1,
-        "description": "Description of the track."
+        "description": "Internal description of the track. This information is NOT shared with the participants."
       },
       "integrated_with_scenario": {
         "type": "boolean",
@@ -231,7 +231,7 @@
             },
             "description": {
               "type": "string",
-              "description": "INTERNAL description of the flag. Example: Free flag in source of index.php.",
+              "description": "Description of the flag. This is displayed to participants in `askgod history` after they successfully submit it. Example: Free flag in source of index.php.",
               "minLength": 1
             },
             "return_string": {
