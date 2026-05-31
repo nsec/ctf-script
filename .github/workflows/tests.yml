@@ -14,11 +14,13 @@ concurrency:
 
 jobs:
   deploy:
-    name: Full deployment test
+    name: Full deployment test (${{ matrix.install-method }})
     if: github.repository == 'nsec/ctf-script'
     timeout-minutes: 45
     strategy:
       fail-fast: false
+      matrix:
+        install-method: [pip, poetry, uv]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -36,9 +38,26 @@ jobs:
           echo "Pulled files:"
           { git lfs ls-files | grep -E '[a-f0-9]{10}\s\*'; } || true
 
+      - name: Set up uv
+        if: matrix.install-method == 'uv'
+        uses: astral-sh/setup-uv@v5
+
       - name: Install python dependencies
         run: |
-          pip install -e .[workflow]
+          case "${{ matrix.install-method }}" in
+            pip)
+              pip install -e .[workflow]
+              ;;
+            poetry)
+              pipx install poetry
+              poetry sync --no-interaction --extras workflow
+              echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
+              ;;
+            uv)
+              uv run --locked --extra workflow ctf --help
+              echo "$PWD/.venv/bin" >> $GITHUB_PATH
+              ;;
+          esac
 
       - name: ruff
         run: |

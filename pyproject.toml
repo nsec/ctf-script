@@ -9,11 +9,11 @@ description = "NorthSec CTF challenges"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "black",
+    "black>=26.3.1",
     "jinja2==3.1.6",
     "jsonschema==4.26.0",
     "pyyaml<7",
-    "requests",
+    "requests>=2.33.0",
     "rich==15.0.0",
     "ruff==0.15.10",
     "setuptools",
@@ -30,6 +30,8 @@ classifiers = [
 dev = ["pre-commit", "ruff"]
 workflow = [
     "pybadges",
+    # pybadges imports pkg_resources, which setuptools >= 81 no longer ships.
+    "setuptools<81",
     "matplotlib",
     "standard-imghdr ; python_version >= \"3.13\""
 ]
