@@ -147,12 +147,17 @@ class Frontend(StrEnum):
     DISCOURSE = "discourse"
 
 
+class ScoringSystem(StrEnum):
+    CFSS = "cfss"
+    OTHER = "other"
+
+
 class CtfConfig(BaseModel):
     """
     ctfconfig.yaml is parsed into this model.
     """
 
     name: str | None = None
-    uses_cfss: bool = True
+    scoring_system: ScoringSystem = ScoringSystem.CFSS
     frontend: Frontend | None = Frontend.DISCOURSE
     disabled_validators: list[str] = []

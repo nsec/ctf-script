@@ -4,7 +4,7 @@ import os
 import re
 from pathlib import Path
 
-from ctf.common.models import CtfConfig, TrackYaml, ValidationError
+from ctf.common.models import CtfConfig, ScoringSystem, TrackYaml, ValidationError
 from ctf.common.utils import (
     find_ctf_root_directory,
     get_all_file_paths_recursively,
@@ -472,7 +472,7 @@ class CFSSStringValidator(Validator):
 
     @classmethod
     def is_enabled(cls, config: CtfConfig) -> bool:
-        return config.uses_cfss
+        return config.scoring_system == ScoringSystem.CFSS
 
     CFSS_VALUE_REGEX = re.compile(
         r"^CFSS:[0-9]\.[0-9][0-9]?/TS:[LBIA]/E:[LMH]/HSFC:[NY]=([0-9][0-9]?-[0-9][0-9]?)$"

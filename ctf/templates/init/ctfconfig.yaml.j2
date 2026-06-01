@@ -1,7 +1,7 @@
 # Name of the CTF (like "NorthSec CTF 2027")
 name: {{ name }}
-# Setting it to false disables CFSS validators if the CTF doesn't use CFSS scoring.
-uses_cfss: true
+# Scoring system used by the CTF. Set it to "cfss" to enable CFSS validators, or "other" to disable them.
+scoring_system: cfss
 # Setting it to false disables discourse validators.
 frontend: discourse
 # List of validators to disable. Example: ["FilesValidator", "FlagsValidator"]

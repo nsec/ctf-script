@@ -8,10 +8,11 @@
       "type": "string",
       "description": "Full display name of the CTF. Example: NorthSec CTF 2027"
     },
-    "uses_cfss": {
-      "type": "boolean",
-      "default": true,
-      "description": "Whether the CTF uses CFSS scoring. When false, CFSS-specific validators are skipped."
+    "scoring_system": {
+      "type": "string",
+      "enum": ["cfss", "other"],
+      "default": "cfss",
+      "description": "Scoring system used by the CTF. When set to \"cfss\", CFSS-specific validators run; any other value (e.g. \"other\") skips them."
     },
     "frontend": {
       "oneOf": [
