@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -140,3 +141,23 @@ class TrackYaml(BaseModel):
     contacts: TrackContacts
     instances: TrackInstances | None = None
     flags: list[TrackFlag]
+
+
+class Frontend(StrEnum):
+    DISCOURSE = "discourse"
+
+
+class ScoringSystem(StrEnum):
+    CFSS = "cfss"
+    OTHER = "other"
+
+
+class CtfConfig(BaseModel):
+    """
+    ctfconfig.yaml is parsed into this model.
+    """
+
+    name: str | None = None
+    scoring_system: ScoringSystem = ScoringSystem.CFSS
+    frontend: Frontend | None = Frontend.DISCOURSE
+    disabled_validators: list[str] = []

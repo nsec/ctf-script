@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "CTF-wide configuration file.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Full display name of the CTF. Example: NorthSec CTF 2027"
+    },
+    "scoring_system": {
+      "type": "string",
+      "enum": ["cfss", "other"],
+      "default": "cfss",
+      "description": "Scoring system used by the CTF. When set to \"cfss\", CFSS-specific validators run; any other value (e.g. \"other\") skips them."
+    },
+    "frontend": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["discourse"],
+          "description": "Frontend used by the CTF."
+        },
+        {
+          "type": "null",
+          "description": "No frontend. All discourse-related validators are skipped."
+        }
+      ],
+      "default": "discourse"
+    },
+    "disabled_validators": {
+      "type": "array",
+      "description": "List of validator class names to skip regardless of other settings. Example: OrphanServicesValidator",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "uniqueItems": true
+    }
+  }
+}

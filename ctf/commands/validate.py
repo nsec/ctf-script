@@ -13,7 +13,11 @@ from rich.progress import (
 )
 
 from ctf.common.logger import LOG
-from ctf.common.utils import find_ctf_root_directory, get_ctf_script_schemas_directory
+from ctf.common.utils import (
+    find_ctf_root_directory,
+    get_ctf_script_schemas_directory,
+    load_ctf_config,
+)
 from ctf.common.validators import ValidationError, validators_list
 from ctf.validate_json_schemas import validate_with_json_schemas
 
@@ -26,9 +30,17 @@ app = typer.Typer()
 def validate() -> None:
     LOG.info("Starting ctf validate...")
 
-    LOG.info(f"Found {len(validators_list)} Validators")
+    ctf_config = load_ctf_config()
+    active_validators = [
+        validator_class
+        for validator_class in validators_list
+        if validator_class.is_enabled(ctf_config)
+        and validator_class.__name__ not in ctf_config.disabled_validators
+    ]
 
-    validators = [validator_class() for validator_class in validators_list]
+    LOG.info(f"Found {len(active_validators)} Validators")
+
+    validators = [validator_class() for validator_class in active_validators]
 
     tracks = []
     for track in (find_ctf_root_directory() / "challenges").iterdir():

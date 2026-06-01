@@ -4,7 +4,7 @@ import os
 import re
 from pathlib import Path
 
-from ctf.common.models import TrackYaml, ValidationError
+from ctf.common.models import CtfConfig, ScoringSystem, TrackYaml, ValidationError
 from ctf.common.utils import (
     find_ctf_root_directory,
     get_all_file_paths_recursively,
@@ -21,6 +21,10 @@ class Validator(abc.ABC):
 
     def finalize(self) -> list[ValidationError]:
         return []
+
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return True
 
 
 class FilesValidator(Validator):
@@ -91,6 +95,10 @@ class FlagsValidator(Validator):
 
 class FireworksAskGodTagValidator(Validator):
     """Validate that ui_sound and ui_gif tags of each flag in track.yaml also as a file associated."""
+
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return config.frontend == "discourse"
 
     def __init__(self):
         self.sound_tags_mapping = {}
@@ -165,6 +173,10 @@ class DiscoursePostsAskGodTagValidator(Validator):
     Also validate that each discourse tag is unique.
     Also validates that the topic matches an existing file name in the posts directory.
     """
+
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return config.frontend == "discourse"
 
     def __init__(self):
         self.discourse_tags_mapping = {}
@@ -333,6 +345,10 @@ class PlaceholderValuesValidator(Validator):
 class DiscourseFileNamesValidator(Validator):
     """Validate that the discourse posts have unique file names."""
 
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return config.frontend == "discourse"
+
     def __init__(self):
         self.discourse_posts_mapping = {}
 
@@ -454,6 +470,10 @@ class OrphanServicesValidator(Validator):
 class CFSSStringValidator(Validator):
     """Validate the CFSS string of each flag in the track.yaml."""
 
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return config.scoring_system == ScoringSystem.CFSS
+
     CFSS_VALUE_REGEX = re.compile(
         r"^CFSS:[0-9]\.[0-9][0-9]?/TS:[LBIA]/E:[LMH]/HSFC:[NY]=([0-9][0-9]?-[0-9][0-9]?)$"
     )
@@ -512,6 +532,10 @@ class CFSSStringValidator(Validator):
 class HasAtLeastOneDiscoursePostValidator(Validator):
     """Validate that each track has at least one discourse post."""
 
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return config.frontend == "discourse"
+
     def validate(self, track_name: str) -> list[ValidationError]:
         errors: list[ValidationError] = []
         discourse_posts = parse_post_yamls(track_name=track_name)
@@ -536,6 +560,10 @@ class HasAtLeastOneDiscoursePostValidator(Validator):
 
 class TrailingSpacesForPostUser(Validator):
     """Validate that there is not trailing spaces for post users."""
+
+    @classmethod
+    def is_enabled(cls, config: CtfConfig) -> bool:
+        return config.frontend == "discourse"
 
     def validate(self, track_name: str) -> list[ValidationError]:
         errors: list[ValidationError] = []
