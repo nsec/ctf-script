@@ -1,5 +1,6 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests
 import rich
@@ -149,7 +150,7 @@ def stats(
     )
 
     # Bucket submissions into 4-second intervals and compute AI% per bucket
-    bucket_size = 10
+    bucket_size = 1000
     buckets: dict[int, dict] = {}
     for score in scores:
         t = datetime.fromisoformat(score["submit_time"].replace("Z", "+00:00"))
@@ -162,9 +163,9 @@ def stats(
             buckets[bucket_key]["ai_count"] += 1
     stats["ai_agent_percentage_over_time"] = [
         {
-            "bucket_start": datetime.fromtimestamp(k, tz=timezone.utc).strftime(
-                "%a %H:%M:%S"
-            ),
+            "bucket_start": datetime.fromtimestamp(
+                k, tz=ZoneInfo("America/Montreal")
+            ).strftime("%a %H:%M:%S"),
             "ai_count": v["ai_count"],
             "total_count": v["total_count"],
             "ai_percentage": round(v["ai_count"] / v["total_count"] * 100),
@@ -223,8 +224,8 @@ def generate_html(stats: dict) -> str:
 
     over_time = stats["ai_agent_percentage_over_time"]
     time_labels = [b["bucket_start"] for b in over_time]
-    time_ai_pct = [b["ai_percentage"] for b in over_time]
-    time_human_pct = [100 - v for v in time_ai_pct]
+    time_ai_count = [b["ai_count"] for b in over_time]
+    time_human_count = [b["total_count"] - b["ai_count"] for b in over_time]
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -326,8 +327,15 @@ def generate_html(stats: dict) -> str:
     <canvas id="perPointChart"></canvas>
   </div>
   <div class="chart-box">
-    <h2>AI Submission % over Time (4s buckets)</h2>
+    <h2>AI Submissions over Time</h2>
     <canvas id="overTimeChart"></canvas>
+  </div>
+</div>
+
+<div class="charts-row" style="grid-template-columns: 1fr;">
+  <div class="chart-box">
+    <h2>AI vs Human Submission % over Time</h2>
+    <canvas id="overTimePctChart"></canvas>
   </div>
 </div>
 
@@ -341,8 +349,8 @@ const pointLabels = {json.dumps(point_labels)};
 const pointAIPct = {json.dumps(point_ai_pct)};
 const pointHumanPct = {json.dumps(point_human_pct)};
 const timeLabels = {json.dumps(time_labels)};
-const timeAIPct = {json.dumps(time_ai_pct)};
-const timeHumanPct = {json.dumps(time_human_pct)};
+const timeAICount = {json.dumps(time_ai_count)};
+const timeHumanCount = {json.dumps(time_human_count)};
 
 const stackedOpts = {{
   responsive: true,
@@ -401,15 +409,54 @@ new Chart(document.getElementById('overTimeChart'), {{
   data: {{
     labels: timeLabels,
     datasets: [
+      {{ label: 'AI Agent', data: timeAICount, backgroundColor: '#2563eb' }},
+      {{ label: 'Human', data: timeHumanCount, backgroundColor: '#cbd5e1' }}
+    ]
+  }},
+  options: {{
+    responsive: true,
+    plugins: {{
+      legend: {{ position: 'bottom' }},
+      tooltip: {{
+        callbacks: {{
+          label: ctx => `${{ctx.dataset.label}}: ${{ctx.parsed.y}}`
+        }}
+      }}
+    }},
+    scales: {{
+      x: {{ stacked: true, ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 20 }} }},
+      y: {{ stacked: true, beginAtZero: true }}
+    }}
+  }}
+}});
+const timeAIPct = timeAICount.map((ai, i) => {{
+  const total = ai + timeHumanCount[i];
+  return total > 0 ? Math.round(ai / total * 100) : 0;
+}});
+const timeHumanPct = timeAIPct.map(v => 100 - v);
+
+new Chart(document.getElementById('overTimePctChart'), {{
+  type: 'bar',
+  data: {{
+    labels: timeLabels,
+    datasets: [
       {{ label: 'AI Agent', data: timeAIPct, backgroundColor: '#2563eb' }},
       {{ label: 'Human', data: timeHumanPct, backgroundColor: '#cbd5e1' }}
     ]
   }},
   options: {{
-    ...stackedOpts,
+    responsive: true,
+    plugins: {{
+      legend: {{ position: 'bottom' }},
+      tooltip: {{
+        callbacks: {{
+          label: ctx => `${{ctx.dataset.label}}: ${{ctx.parsed.y}}%`
+        }}
+      }}
+    }},
     scales: {{
-      ...stackedOpts.scales,
-      x: {{ ...stackedOpts.scales.x, ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 20 }} }}
+      x: {{ stacked: true, ticks: {{ maxRotation: 45, autoSkip: true, maxTicksLimit: 20 }} }},
+      y: {{ stacked: true, beginAtZero: true, max: 100, ticks: {{ callback: v => v + '%' }} }}
     }}
   }}
 }});
