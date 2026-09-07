@@ -1,6 +1,7 @@
 name: mock-track-with-build
 description: "Mock track with a build container"
 integrated_with_scenario: false
+open_source_after_ctf: true
 contacts:
   dev:
     - user_dev
