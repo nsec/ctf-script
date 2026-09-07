@@ -138,6 +138,7 @@ class TrackYaml(BaseModel):
     name: str
     description: str
     integrated_with_scenario: bool
+    open_source_after_ctf: bool = True
     contacts: TrackContacts
     instances: TrackInstances | None = None
     flags: list[TrackFlag]

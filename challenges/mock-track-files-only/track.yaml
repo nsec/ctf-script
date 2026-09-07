@@ -1,6 +1,7 @@
 name: mock-track-files-only
 description: "The hackiest hackers hacking hackily ever after"
 integrated_with_scenario: false
+open_source_after_ctf: true
 contacts:
   dev:
     - user_dev

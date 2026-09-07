@@ -18,6 +18,10 @@
         "type": "boolean",
         "description": "Set to true only if the track has been integrated with the CTF scenario. This means that Eric Boivin wrote/modified the posts."
       },
+      "open_source_after_ctf": {
+        "type": "boolean",
+        "description": "Whether the track source code will be published/open-sourced after the CTF ends. Defaults to true."
+      },
       "contacts": {
         "description": "Handles or real names. Ex: Émilio Gonzalez or Res260",
         "type": "object",
@@ -274,6 +278,7 @@
       "name",
       "description",
       "integrated_with_scenario",
+      "open_source_after_ctf",
       "contacts",
       "flags"
     ]

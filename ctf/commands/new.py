@@ -66,6 +66,14 @@ def new(
             help="If a virtual machine is required.",
         ),
     ] = False,
+    open_source_after_ctf: Annotated[
+        bool,
+        typer.Option(
+            "--no-open-source/--open-source",
+            help="Whether the track should be open-sourced after the CTF.",
+            prompt="Open-source this track after the CTF?",
+        ),
+    ] = True,
 ) -> None:
     LOG.info(f"Creating a new track: {name}")
     if not re.match(pattern=r"^[a-z][a-z0-9\-]{0,61}[a-z0-9]$", string=name):
@@ -134,6 +142,7 @@ def new(
                 "template": template.value,
                 "with_build": with_build_container,
                 "with_virtual_machine": with_virtual_machine,
+                "open_source_after_ctf": open_source_after_ctf,
             }
         )
         with (p := new_challenge_directory / "track.yaml").open(
