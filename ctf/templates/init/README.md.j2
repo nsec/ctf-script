@@ -1,6 +1,13 @@
 # {{ name }}
 
-This repository was generated using the [`ctf-script` tool](https://github.com/nsec/ctf-script). To contribute, install it first.
+This repository was generated using the [`ctf-script` tool](https://github.com/nsec/ctf-script). To contribute, install it first:
+```bash
+uv tool install git+https://github.com/nsec/ctf-script.git
+# OR
+pipx install git+https://github.com/nsec/ctf-script.git
+# OR
+pip install git+https://github.com/nsec/ctf-script.git
+```
 
 There are two main ways to do development: With a **local environment** or by using **GitHub codespaces**. Both are documented below.
 
@@ -84,7 +91,7 @@ incus version  # You MUST see the Server version in this output
 
 ##### Incus and Docker
 
-If you have Docker and Incus installed, there might be networking issues. This is documented here: [https://linuxcontainers.org/incus/docs/main/howto/network_bridge_firewalld/#prevent-connectivity-issues-with-incus-and-docker](https://linuxcontainers.org/incus/docs/main/howto/network_bridge_firewalld/#prevent-connectivity-issues-with-incus-and-docker)
+If you have Docker and Incus installed, there might be networking issues. This is [documented here](https://linuxcontainers.org/incus/docs/main/howto/network_bridge_firewalld/#prevent-connectivity-issues-with-incus-and-docker)
 
 You need to enable IPv4 forwarding.
 
@@ -98,7 +105,7 @@ Read this section only if you're on non-debian OS. Incus uses user namespaces to
 
 However, these may not be defined depending on the OS. The fix is simple, but it may vary from OS to OS. Please read [Incus installation document](https://linuxcontainers.org/incus/docs/main/installing/) and your OS documentation on Incus.
 
-Here's an example for Archlinux: `usermod -v 1000000-1000999999 -w 1000000-1000999999 root`, source: [https://wiki.archlinux.org/title/Incus#Unprivileged_containers](https://wiki.archlinux.org/title/Incus#Unprivileged_containers)
+Here's an example for Archlinux: `usermod -v 1000000-1000999999 -w 1000000-1000999999 root`, [source](https://wiki.archlinux.org/title/Incus#Unprivileged_containers)
 
 #### 0.4 OpenTofu (open-source Terraform fork)
 
@@ -170,7 +177,7 @@ ctf new --name myawesometrack
 ### 8. Deploy the challenge locally
 
 ```bash
-ctf deploy --track myawesometrack
+ctf deploy --tracks myawesometrack
 ```
 
 If you have an error here regarding storage pool, create a default incus storage pool:
@@ -179,7 +186,7 @@ If you have an error here regarding storage pool, create a default incus storage
 incus storage create default dir
 ```
 
-And run the `ctf deploy --track myawesometrack` command again.
+And run the `ctf deploy --tracks myawesometrack` command again.
 
 Once done, you should have a container running that runs an apache PHP server that you can reach at the IP provided in the output!
 
