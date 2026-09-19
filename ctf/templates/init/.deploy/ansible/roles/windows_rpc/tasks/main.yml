@@ -3,11 +3,23 @@
   ansible.windows.win_copy:
     src: "{{ role_path }}/files/block_rpc.txt"
     dest: 'C:\block_rpc.txt'
+  register: _windows_rcp_ret
+  until: _windows_rcp_ret is success
+  retries: 8
+  delay: 15
 
 - name: Execute the PowerShell script using win_shell
   ansible.windows.win_shell: netsh -f C:\block_rpc.txt
+  register: _windows_rcp_ret
+  until: _windows_rcp_ret is success
+  retries: 8
+  delay: 15
 
 - name: Delete the temporary script file
   ansible.windows.win_file:
     path: C:\block_rpc.txt
     state: absent
+  register: _windows_rcp_ret
+  until: _windows_rcp_ret is success
+  retries: 8
+  delay: 15

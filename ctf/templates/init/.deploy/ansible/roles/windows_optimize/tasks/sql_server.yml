@@ -2,28 +2,38 @@
 - name: Check if sqlcmd.exe exists
   ansible.windows.win_shell: |
     if (Get-Command sqlcmd.exe -ErrorAction SilentlyContinue) { Write-Output "yes" } else { Write-Output "no" }
-  register: sqlcmd_exists
+  register: _windows_optimize_sqlcmd_exists
+  until: _windows_optimize_sqlcmd_exists is success
+  retries: 8
+  delay: 15
 
 - name: Get list of SQL Server services
   ansible.windows.win_shell: |
     Get-Service | Where-Object { $_.Name -like "MSSQL*" } | Select-Object Name | ConvertTo-Json
-  register: sql_services_raw
-  when: sqlcmd_exists.stdout == "yes"
+  register: _windows_optimize_list_sql_server
+  when: _windows_optimize_sqlcmd_exists.stdout == "yes"
+  until: _windows_optimize_list_sql_server is success
+  retries: 8
+  delay: 15
 
 - name: Parse SQL service list
   ansible.builtin.set_fact:
-    sql_services: "{{ sql_services_raw.stdout | from_json }}"
-  when: sqlcmd_exists.stdout == "yes"
+    _windows_optimize_sql_services: "{{ _windows_optimize_list_sql_server.stdout | from_json }}"
+  when: _windows_optimize_sqlcmd_exists.stdout == "yes"
 
 - name: Cap SQL Server RAM (2048 MB) for all detected instances
   ansible.windows.win_shell: |
     sqlcmd -S localhost -Q "EXEC sys.sp_configure N'max server memory (MB)', N'2048'; RECONFIGURE WITH OVERRIDE;"
   when: >
-    sqlcmd_exists.stdout == "yes" and
-    sql_services is defined and
-    sql_services | length > 0
+    _windows_optimize_sqlcmd_exists.stdout == "yes" and
+    _windows_optimize_sql_services is defined and
+    _windows_optimize_sql_services | length > 0
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15
 
 - name: Debug message if SQL Server is not present
   ansible.builtin.debug:
     msg: "SQL Server not installed — skipping memory cap."
-  when: sqlcmd_exists.stdout != "yes" or (sql_services is defined and sql_services | length == 0)
+  when: _windows_optimize_sqlcmd_exists.stdout != "yes" or (_windows_optimize_sql_services is defined and _windows_optimize_sql_services | length == 0)

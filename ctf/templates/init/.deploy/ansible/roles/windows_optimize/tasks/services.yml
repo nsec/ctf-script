@@ -1,12 +1,19 @@
 ---
-- name: Check if {{ service }} is installed
+- name: "Check if service is installed: {{ service }}"
   ansible.windows.win_service_info:
     name: "{{ service }}"
-  register: service_info
+  register: _windows_optimize_service_info
+  until: _windows_optimize_service_info is success
+  retries: 8
+  delay: 15
 
-- name: Disable {{ service }} service
+- name: "Disable service: {{ service }}"
   ansible.windows.win_service:
     name: "{{ service }}"
     state: stopped
     start_mode: disabled
-  when: service_info.exists
+  when: _windows_optimize_service_info.exists
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15

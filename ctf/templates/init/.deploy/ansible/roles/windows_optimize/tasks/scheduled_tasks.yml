@@ -31,3 +31,7 @@
       }
     - { path: '\Microsoft\Windows\UpdateOrchestrator', name: "Schedule Scan" }
     - { path: '\Microsoft\Windows\UpdateOrchestrator', name: "USO_UxBroker" }
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15

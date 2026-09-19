@@ -5,3 +5,7 @@
     name: AllowTelemetry
     data: 0
     type: dword
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15
