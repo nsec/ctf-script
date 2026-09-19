@@ -46,7 +46,7 @@ linux-incus-vm:
     ansible_connection: community.general.incus
     ansible_user: root
     # For virtual machines, the remote and project changes in production.
-    ansible_incus_remote: "{{ '{{' }} ansible_incus_container_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
+    ansible_incus_remote: "{{ '{{' }} ansible_incus_vm_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
     ansible_incus_project: "{{ '{{' }} ansible_incus_vm_project if ansible_incus_vm_project else ansible_incus_project {{ '}}' }}"
 {% endif %}{% if data.is_windows %}
 # This section is needed if you need Windows virtual machines. It's a group of hosts regrouped under the name "windows" which MUST remain the same.
@@ -63,7 +63,7 @@ windows:
     ansible_shell_type: powershell
     ansible_user: administrator
     # For virtual machines, the remote and project changes in production.
-    ansible_incus_remote: "{{ '{{' }} ansible_incus_container_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
+    ansible_incus_remote: "{{ '{{' }} ansible_incus_vm_remote if ansible_incus_vm_remote else ansible_incus_container_remote {{ '}}' }}"
     ansible_incus_project: "{{ '{{' }} ansible_incus_vm_project if ansible_incus_vm_project else ansible_incus_project {{ '}}' }}"
     local_admin_password: CHANGE_ME
     allow_coercion: false # If the virtual machine requires coercion to work, set this to true or set it to true for the specific virtual machine only.

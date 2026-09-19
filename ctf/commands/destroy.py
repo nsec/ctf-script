@@ -2,6 +2,7 @@ import json
 import subprocess
 
 import typer
+import yaml
 from pydantic import ValidationError
 from rich.prompt import Confirm
 from typing_extensions import Annotated
@@ -98,7 +99,7 @@ def destroy(
         projects: set[Track] = {
             Track(name=project["name"])
             for project in json.loads(
-                s=subprocess.run(
+                subprocess.run(
                     args=["incus", "project", "list", "--format=json"],
                     check=False,
                     capture_output=True,
@@ -123,6 +124,40 @@ def destroy(
 
         LOG.info(f"Running `{' '.join(cmd)}`")
         subprocess.run(args=cmd, check=True, env=ENV)
+
+    for project in terraform_tracks:
+        if not project.has_virtual_machine:
+            continue
+
+        for profile in json.loads(
+            subprocess.run(
+                args=[
+                    "incus",
+                    f"--project={project.name}",
+                    "profile",
+                    "list",
+                    "--format=json",
+                ],
+                check=False,
+                capture_output=True,
+                env=ENV,
+            ).stdout.decode()
+        ):
+            if "config" in profile and "boot.autorestart" in profile["config"]:
+                del profile["config"]["boot.autorestart"]
+
+                subprocess.run(
+                    args=[
+                        "incus",
+                        f"--project={project.name}",
+                        "profile",
+                        "edit",
+                        profile["name"],
+                    ],
+                    check=True,
+                    env=ENV,
+                    input=yaml.safe_dump(profile).encode(),
+                )
 
     subprocess.run(
         args=[
