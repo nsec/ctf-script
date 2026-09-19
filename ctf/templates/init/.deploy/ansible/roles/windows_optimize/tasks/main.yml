@@ -32,6 +32,10 @@
   loop:
     - { name: DisableWindowsConsumerFeatures, data: 1 }
     - { name: DisableSoftLanding, data: 1 }
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15
 
 - name: Disable Superfetch/Page Combining/Memory Compression
   ansible.windows.win_regedit:
@@ -45,6 +49,10 @@
     - { name: DisableSuperfetch, data: 1 }
     - { name: FeatureSettingsOverride, data: 3 }
     - { name: FeatureSettingsOverrideMask, data: 3 }
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15
 
 - name: Disable indexing
   ansible.windows.win_regedit:
@@ -52,3 +60,7 @@
     name: SetupCompletedSuccessfully
     data: 0
     type: dword
+  register: _windows_optimize_ret
+  until: _windows_optimize_ret is success
+  retries: 8
+  delay: 15

@@ -4,16 +4,28 @@
     name: C:\windows\system32\sysprep\unattend.xml
     state: absent
   when: not (nsec_post_deployment | bool)
+  register: _cleanup_ret
+  until: _cleanup_ret is success
+  retries: 8
+  delay: 15
 
 - name: Delete the unattend panther file
   ansible.windows.win_file:
     name: C:\windows\panther\unattend.xml
     state: absent
   when: not (nsec_post_deployment | bool)
+  register: _cleanup_ret
+  until: _cleanup_ret is success
+  retries: 8
+  delay: 15
 
 - name: Disable windows defender sending sample
   ansible.windows.win_shell: Set-MpPreference -SubmitSamplesConsent 2
   when: not (nsec_post_deployment | bool)
+  register: _cleanup_ret
+  until: _cleanup_ret is success
+  retries: 8
+  delay: 15
 
 - name: Disable Defender via registry
   ansible.windows.win_regedit:
@@ -22,6 +34,10 @@
     data: 1
     type: dword
   when: not (nsec_post_deployment | bool)
+  register: _cleanup_ret
+  until: _cleanup_ret is success
+  retries: 8
+  delay: 15
 
 - name: Change the local Administrator password
   ansible.windows.win_command: |
@@ -29,9 +45,17 @@
       net user Administrator {{ local_admin_password }};
       Set-LocalUser -Name 'Administrator' -PasswordNeverExpires $true;
   when: nsec_post_deployment | bool
+  register: _cleanup_ret
+  until: _cleanup_ret is success
+  retries: 8
+  delay: 15
 
 # If using incus-windows, there is a default `admin` user that is created.
 - name: Remove the local admin user
   ansible.windows.win_command: powershell -Command "net user /delete admin"
   ignore_errors: true
   when: nsec_post_deployment | bool
+  register: _cleanup_ret
+  until: _cleanup_ret is success
+  retries: 8
+  delay: 15
