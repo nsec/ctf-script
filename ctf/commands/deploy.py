@@ -97,6 +97,13 @@ def deploy(
             help="Skip post-common deployment Ansible script. Useful for Windows VM. DO NOT USE IN PRODUCTION.",
         ),
     ] = False,
+    skip_post_deploy_terraform: Annotated[
+        bool,
+        typer.Option(
+            "--skip-post-deploy-terraform",
+            help="Skip post-deployment Terraform. Useful to skip the additional ACLs post deployment to simulate production ACL which blocks Internet access except for APT and DNS. DO NOT USE IN PRODUCTION.",
+        ),
+    ] = False,
     exclude_tracks: Annotated[
         list[str],
         typer.Option(
@@ -342,7 +349,7 @@ def deploy(
                 args=["incus", f"--project={track}", "list"], check=True, env=ENV
             )
 
-    if distinct_tracks:
+    if distinct_tracks and not skip_post_deploy_terraform:
         LOG.info("Applying post-deploy Terraform resources...")
         try:
             terraform_apply(
