@@ -1,5 +1,4 @@
 ---
-# Incus exec/WebSocket to Windows VMs can flake; retry transient API errors.
 - name: Disable IPv6 temporary addresses
   ansible.windows.win_powershell:
     script: Set-NetIPv6Protocol -UseTemporaryAddresses Disabled
@@ -30,12 +29,7 @@
   until: _nsec_ret is success
   retries: 8
   delay: 15
-  when: not (nsec_post_deployment | bool)
-
-- name: Display result
-  ansible.builtin.debug:
-    var: ipv4_disabled.output
-  when: not (nsec_post_deployment | bool)
+  when: nsec_post_deployment | bool
 
 - name: Include Windows optimization role
   ansible.builtin.include_role:

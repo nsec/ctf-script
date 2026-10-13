@@ -56,11 +56,11 @@ resource "incus_network" "this" {
     "ipv6.address" = "{{ data.ipv6_subnet }}::1/64"
     },
     var.already_deployed ? {
-      "security.acls" = join(",", [var.ctf_acl_network /*Uncomment the following if using your own ACL.*/ /*, incus_network_acl.this[0].name*/])
+      "security.acls" = join(",", [var.ctf_acl_network/*Uncomment the following if using your own ACL.*//*, incus_network_acl.this[0].name*/])
     } : {},
     var.deploy == "production" ? {
-      "ipv4.address" = "none"
-      "ipv6.nat"     = "false"
+      "ipv4.address" {% if data.is_windows or data.with_virtual_machine %}              {% endif %}= "none"
+      "ipv6.nat"     {% if data.is_windows or data.with_virtual_machine %}              {% endif %}= "false"
       # Uncomment only when using virtual machines.
       {% if not data.is_windows and not data.with_virtual_machine %}# {% endif %}"bridge.external_interfaces" = "enp1s0" # This must be changed by the infra team near the CTF.
     }
