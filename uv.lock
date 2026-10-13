@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -282,7 +282,7 @@ wheels = [
 
 [[package]]
 name = "ctf-script"
-version = "6.2.0"
+version = "6.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "black" },
